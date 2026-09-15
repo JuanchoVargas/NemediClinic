@@ -52,3 +52,7 @@ tests/e2e/ui/.results/
 
 # HTML intermedio de la guía (el PDF sí se versiona)
 docs/manual/Guia_de_uso_NemediClinic.html
+
+# Despliegue
+deploy/.env
+deploy/backups/

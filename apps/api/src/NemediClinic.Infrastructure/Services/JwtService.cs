@@ -22,7 +22,7 @@ public class JwtService : IJwtService
     {
         var jwtSection = _configuration.GetSection("Jwt");
         var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(jwtSection["Key"]!));
+            Encoding.UTF8.GetBytes(jwtSection["Secret"]!));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var expirationMinutes = int.TryParse(jwtSection["ExpirationMinutes"], out var mins) ? mins : 60;
@@ -50,7 +50,7 @@ public class JwtService : IJwtService
     public ClaimsPrincipal? ValidateToken(string token)
     {
         var jwtSection = _configuration.GetSection("Jwt");
-        var key = Encoding.UTF8.GetBytes(jwtSection["Key"]!);
+        var key = Encoding.UTF8.GetBytes(jwtSection["Secret"]!);
 
         var tokenHandler = new JwtSecurityTokenHandler();
         try

@@ -126,7 +126,17 @@ Consequences when writing controllers and queries:
 
 ### Config gotcha
 
-`Program.cs` and `JwtService` read JWT settings from the `Jwt` section (`Issuer`, `Audience`, `Key`, `ExpirationMinutes`, `RefreshTokenExpirationDays`). `appsettings.Development.json` overrides `Jwt:ExpirationMinutes` to 480 for demos; its `JwtSettings` block is legacy and **not read**. Put per-env JWT overrides under `Jwt`, not `JwtSettings`.
+`Program.cs` and `JwtService` read JWT settings from the `Jwt` section (`Issuer`, `Audience`, `Secret`, `ExpirationMinutes`, `RefreshTokenExpirationDays`). `appsettings.Development.json` overrides `Jwt:ExpirationMinutes` to 480 for demos; its `JwtSettings` block is legacy and **not read**. Put per-env JWT overrides under `Jwt`, not `JwtSettings`. In **Production** the API refuses to start unless `Jwt__Secret` (env var) is set, is at least 32 chars and differs from the dev value in `appsettings.json`.
+
+### Production behaviour (`ASPNETCORE_ENVIRONMENT=Production`)
+
+- On startup the API retries `Database.Migrate()` for up to 60 s (creates the DB, applies pending migrations) and exits with code 1 and a clear log line if SQL Server never answers.
+- CORS origins come from `CORS_ORIGINS` (comma-separated); in Development they default to `localhost:3000` / `localhost:5173`.
+- No Swagger, no HTTPS redirection (TLS is terminated by Caddy; `UseForwardedHeaders` is on), `DevController` returns 404.
+
+## Deployment (`deploy/`)
+
+`deploy/docker-compose.yml` runs **mssql** (SQL Server 2022, persistent volume, healthcheck, `./backups` mounted), **api** (`apps/api/Dockerfile`, multi-stage sdk→aspnet, non-root `app` user, port 8080), **web** (`apps/web/Dockerfile`, Vite build with `VITE_API_URL=${PUBLIC_URL}` → `nginx:alpine` with SPA fallback) and **caddy** (`deploy/Caddyfile`: `{$DOMAIN}`, `/api/*` → `api:8080`, rest → `web:80`, automatic HTTPS). Variables live in `deploy/.env` (never committed; template in `deploy/.env.example`): `DOMAIN`, `PUBLIC_URL`, `MSSQL_SA_PASSWORD`, `ConnectionStrings__DefaultConnection`, `Jwt__Secret`, `Jwt__ExpirationMinutes`, `CORS_ORIGINS`. `deploy/backup.sh` is the daily `BACKUP DATABASE` with 14-day retention; `deploy/README.md` has the VPS runbook (install Docker, clone, `.env`, `up -d --build`, first tenant via `POST /api/v1/auth/seed`). Docker is not installed on the dev machine: the compose stack was validated by running the published Release build with the Production env vars against local SQL Server, not with `docker compose up`.
 
 ## Web architecture (`apps/web/`)
 

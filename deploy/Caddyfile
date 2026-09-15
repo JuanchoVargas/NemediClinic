@@ -1,0 +1,14 @@
+# DOMAIN viene de deploy/.env.
+#   clinica.ejemplo.com  → HTTPS automático con Let's Encrypt (puertos 80/443 abiertos y DNS apuntando al VPS)
+#   http://localhost     → solo HTTP, para probar en local sin certificados
+{$DOMAIN} {
+	encode gzip
+
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+
+	handle {
+		reverse_proxy web:80
+	}
+}

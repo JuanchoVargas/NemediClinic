@@ -237,7 +237,7 @@ public class AppointmentsController : ControllerBase
         {
             var session = appointment.PatientPackageSession;
             session.Estado = SessionStatus.Completada;
-            session.FechaCompletada = DateTime.UtcNow;
+            session.FechaCompletada = DateTime.Now;
             if (session.PatientPackage is not null)
             {
                 session.PatientPackage.SesionesCompletadas++;

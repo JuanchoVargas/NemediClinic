@@ -125,7 +125,7 @@ public class ClinicalRecordsController : ControllerBase
             Observaciones = request.Observaciones,
             ProductosUsados = request.ProductosUsados,
             FotoEvolucionUrl = request.FotoEvolucionUrl,
-            FechaCreacion = DateTime.UtcNow
+            FechaCreacion = DateTime.Now
         };
 
         _db.ClinicalNotes.Add(note);

@@ -74,19 +74,11 @@ import {
   type AppointmentStatus as AppointmentStatusValue,
 } from "@/types/appointment";
 import type { PatientSummary } from "@/types/patient";
+import { toLocalIso, toLocalDateTimeInput } from "@/lib/dates";
 
 type CalendarView = "dayGridMonth" | "timeGridWeek" | "timeGridDay";
 
-// ────────────────────────────────────────────────────────────
-// Helpers de fecha (locales, no UTC)
-// ────────────────────────────────────────────────────────────
-function toLocalDateTimeInputValue(d: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`;
-}
-
+// Helpers de fecha: hora local sin UTC, ver src/lib/dates.ts
 function addMinutesISO(local: string, minutes: number) {
   const d = new Date(local);
   d.setMinutes(d.getMinutes() + minutes);
@@ -110,7 +102,7 @@ export function CalendarPage() {
     start.setDate(start.getDate() - 7);
     const end = new Date(now);
     end.setDate(end.getDate() + 14);
-    return { start: start.toISOString(), end: end.toISOString() };
+    return { start: toLocalIso(start), end: toLocalIso(end) };
   });
   const [esteticistFilter, setEsteticistFilter] = useState<string>("all");
 
@@ -235,8 +227,8 @@ export function CalendarPage() {
           events={events}
           datesSet={(arg: DatesSetArg) => {
             setRange({
-              start: arg.start.toISOString(),
-              end: arg.end.toISOString(),
+              start: toLocalIso(arg.start),
+              end: toLocalIso(arg.end),
             });
             setTitle(arg.view.title);
           }}
@@ -288,7 +280,7 @@ function CreateAppointmentSheet({
   // Reset al abrir/cerrar y pre-llena la fecha desde el click
   useEffect(() => {
     if (open && defaultStart) {
-      setFechaInicio(toLocalDateTimeInputValue(defaultStart));
+      setFechaInicio(toLocalDateTimeInput(defaultStart));
     } else if (!open) {
       setPatient(null);
       setProcedureId("");
@@ -325,7 +317,7 @@ function CreateAppointmentSheet({
         esteticistId,
         procedureId,
         branchId,
-        fechaInicio: new Date(fechaInicio).toISOString(),
+        fechaInicio: toLocalIso(new Date(fechaInicio)),
         notas: notas || undefined,
       });
       useToastStore.success("Cita creada");

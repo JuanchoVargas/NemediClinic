@@ -236,7 +236,7 @@ public class PatientPackagesController : ControllerBase
             return BadRequest(new { error = "La sesión ya fue completada." });
 
         session.Estado = SessionStatus.Completada;
-        session.FechaCompletada = DateTime.UtcNow;
+        session.FechaCompletada = DateTime.Now;
 
         patientPackage.SesionesCompletadas++;
 

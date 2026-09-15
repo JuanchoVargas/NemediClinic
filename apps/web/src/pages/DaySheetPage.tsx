@@ -28,18 +28,10 @@ import {
   type AppointmentStatus,
 } from "@/types/appointment";
 
-function todayISO() {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
+import { toLocalDate, addDaysToLocalDate } from "@/lib/dates";
 
-function addDays(dateStr: string, days: number) {
-  const d = new Date(`${dateStr}T00:00:00`);
-  d.setDate(d.getDate() + days);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
+const todayISO = () => toLocalDate(new Date());
+const addDays = addDaysToLocalDate;
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("es-CO", {

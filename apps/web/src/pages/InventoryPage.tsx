@@ -106,6 +106,7 @@ import {
 } from "@/api/inventory.api";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useToastStore } from "@/stores/toast.store";
+import { toLocalDate, toLocalIso } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import {
   ENTRY_REASON_LABELS,
@@ -759,9 +760,7 @@ function RegisterEntrySheet({
       setCantidad(0);
       setMotivo("Compra");
       setObservacion("");
-      const d = new Date();
-      const pad = (n: number) => String(n).padStart(2, "0");
-      setFecha(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+      setFecha(toLocalDate(new Date()));
     }
   }, [open, defaultProduct]);
 
@@ -775,7 +774,7 @@ function RegisterEntrySheet({
         cantidad,
         motivoEntrada: motivo,
         observacion: observacion || undefined,
-        fechaEntrada: new Date(fecha).toISOString(),
+        fechaEntrada: toLocalIso(new Date(`${fecha}T00:00:00`)),
       });
       useToastStore.success(
         "Entrada registrada",

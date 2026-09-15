@@ -38,11 +38,9 @@ import { useAssignPackage } from "@/api/patient-packages.api";
 import { useToastStore } from "@/stores/toast.store";
 import type { PatientSummary } from "@/types/patient";
 
-function todayISO() {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
+import { toLocalDate } from "@/lib/dates";
+
+const todayISO = () => toLocalDate(new Date());
 
 export function PackageDetailPage() {
   const params = useParams({ strict: false }) as { id?: string };

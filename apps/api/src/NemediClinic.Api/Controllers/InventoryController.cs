@@ -37,7 +37,7 @@ public class InventoryController : ControllerBase
         if (userId == Guid.Empty)
             return Unauthorized(new { error = "Token sin user id válido." });
 
-        var fecha = request.FechaEntrada ?? DateTime.UtcNow;
+        var fecha = request.FechaEntrada ?? DateTime.Now;
 
         await using var tx = await _db.Database.BeginTransactionAsync();
 

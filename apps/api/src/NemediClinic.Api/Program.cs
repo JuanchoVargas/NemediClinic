@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using NemediClinic.Api.Json;
 using NemediClinic.Api.Middleware;
 using NemediClinic.Api.Providers;
 using NemediClinic.Application.Interfaces;
@@ -96,7 +97,13 @@ builder.Services.AddCors(options =>
 });
 
 // ── Controllers ─────────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Hora local sin conversión UTC en toda la API (ver LocalDateTimeJsonConverter).
+        options.JsonSerializerOptions.Converters.Add(new LocalDateTimeJsonConverter());
+    });
 
 var app = builder.Build();
 

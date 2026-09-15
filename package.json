@@ -3,9 +3,11 @@
   "private": true,
   "description": "Raíz del monorepo: solo tests end-to-end que actúan como gate de push. Cada app se construye sola (apps/api, apps/web).",
   "scripts": {
-    "test": "playwright test",
+    "test": "playwright test --project=api",
     "test:report": "playwright show-report",
-    "prepare": "git config core.hooksPath .githooks"
+    "prepare": "git config core.hooksPath .githooks",
+    "test:ui": "playwright test --project=admin",
+    "test:all": "playwright test"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.0",

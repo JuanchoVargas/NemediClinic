@@ -46,3 +46,6 @@ obj/
 # Playwright (tests e2e raíz)
 test-results/
 playwright-report/
+
+# Resultados del recorrido de UI (se regeneran en cada corrida)
+tests/e2e/ui/.results/

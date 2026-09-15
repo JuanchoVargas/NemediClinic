@@ -47,7 +47,14 @@ Dev DB connection (in `appsettings.Development.json`) points to **`localhost\SQL
 
 Demo data: `POST /api/v1/dev/seed-demo` (anonymous, **Development only**, 404 elsewhere, idempotent on patient cédula `1000000001`). It resets the SuperAdmin password to `Admin2026!`, creates two Esteticista users (`laura.perez@nemedi.demo`, `camila.ruiz@nemedi.demo`, password `Demo2026!`), procedures, packages, 8 patients, assigned packages with payments, 12 appointments around today and 6 products with inventory entries. Requires a tenant created earlier via `POST /api/v1/auth/seed`.
 
-There are no tests yet.
+### Tests e2e (repo root) — push gate
+
+```bash
+corepack pnpm install   # once; also runs "prepare" → git config core.hooksPath .githooks
+corepack pnpm test      # playwright test (API-level, no browser needed)
+```
+
+`tests/e2e/tenant-isolation.spec.ts` is the F03 multi-tenant isolation test: it creates two tenants with data, logs in as each and asserts zero cross-tenant rows plus 404 on foreign ids, verifying row existence through `sqlcmd` (`tests/e2e/sql.ts`, Windows auth, `-I` for `QUOTED_IDENTIFIER`). `playwright.config.ts` starts the API with `dotnet run` if nothing listens on 5055. It needs the dev DB with a SuperAdmin (env `E2E_SUPERADMIN_EMAIL` / `E2E_SUPERADMIN_PASSWORD`, defaults to the demo seed) and cleans up its own tenants with a hard delete. `.githooks/pre-push` runs it and blocks the push on failure (`git push --no-verify` to bypass in an emergency). There are no unit tests in the apps yet.
 
 ### Frontend (`apps/web/`)
 

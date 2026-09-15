@@ -1,0 +1,13 @@
+#!/bin/sh
+# Gate de push: el aislamiento multi-tenant (tests/e2e) debe pasar.
+# Se activa con `pnpm install` en la raíz (script "prepare") o manualmente:
+#   git config core.hooksPath .githooks
+# Para saltarlo en una emergencia: git push --no-verify (y explica por qué en el PR).
+set -e
+cd "$(git rev-parse --show-toplevel)"
+echo "pre-push: ejecutando tests e2e de aislamiento multi-tenant..."
+if command -v pnpm >/dev/null 2>&1; then
+  pnpm test
+else
+  corepack pnpm test
+fi

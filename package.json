@@ -1,0 +1,14 @@
+{
+  "name": "nemedi-clinic",
+  "private": true,
+  "description": "Raíz del monorepo: solo tests end-to-end que actúan como gate de push. Cada app se construye sola (apps/api, apps/web).",
+  "scripts": {
+    "test": "playwright test",
+    "test:report": "playwright show-report",
+    "prepare": "git config core.hooksPath .githooks"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "@types/node": "^24.0.0"
+  }
+}

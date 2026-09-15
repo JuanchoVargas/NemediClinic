@@ -42,3 +42,7 @@ obj/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Playwright (tests e2e raíz)
+test-results/
+playwright-report/

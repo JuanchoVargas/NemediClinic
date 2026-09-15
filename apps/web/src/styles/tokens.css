@@ -1,0 +1,26 @@
+/* ============================================================
+ * tokens.css — Design tokens del proyecto/cliente
+ *
+ * Aquí se sobrescriben las CSS variables definidas por shadcn
+ * con los colores específicos de la marca del proyecto.
+ *
+ * Cómo cambiar la marca:
+ *   1. Convierte tus colores HEX a oklch o hsl (shadcn v4 usa oklch
+ *      por defecto). Ejemplo: "oklch(0.6 0.18 30)".
+ *   2. Pega los valores aquí dentro de :root y .dark según corresponda.
+ *      Los valores aquí ganan porque este archivo se importa al final
+ *      de globals.css.
+ *
+ * EQUIVALENTE A: _vars.scss en SINERGIA
+ * ============================================================ */
+
+:root {
+  /* Ejemplos (descomentar y ajustar al cliente):
+   * --primary: oklch(0.6 0.18 30);
+   * --primary-foreground: oklch(1 0 0);
+   */
+}
+
+.dark {
+  /* Overrides para dark mode */
+}

@@ -1,0 +1,23 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace NemediClinic.Application.DTOs.Procedures;
+
+public class UpdateProcedureRequest
+{
+    [MaxLength(200)]
+    public string? Nombre { get; set; }
+
+    [MaxLength(1000)]
+    public string? Descripcion { get; set; }
+
+    [Range(0, double.MaxValue)]
+    public decimal? PrecioBase { get; set; }
+
+    [Range(1, 480)]
+    public int? DuracionMinutos { get; set; }
+
+    [MaxLength(100)]
+    public string? AreaCorporal { get; set; }
+
+    public bool? Activo { get; set; }
+}

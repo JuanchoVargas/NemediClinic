@@ -1,0 +1,48 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{404FA396-E006-4DE2-8CC6-0B9DC2C1F046}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NemediClinic.Api", "src\NemediClinic.Api\NemediClinic.Api.csproj", "{7DA44557-852C-4426-9206-1DECD775CF19}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NemediClinic.Domain", "src\NemediClinic.Domain\NemediClinic.Domain.csproj", "{F87ABBFF-511E-4B67-AEB5-BE85A40E69BF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NemediClinic.Application", "src\NemediClinic.Application\NemediClinic.Application.csproj", "{B226E047-F8DF-4439-83ED-7956C70F1213}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NemediClinic.Infrastructure", "src\NemediClinic.Infrastructure\NemediClinic.Infrastructure.csproj", "{C759955A-D1C4-4FD0-8338-95234341DB43}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7DA44557-852C-4426-9206-1DECD775CF19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7DA44557-852C-4426-9206-1DECD775CF19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7DA44557-852C-4426-9206-1DECD775CF19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7DA44557-852C-4426-9206-1DECD775CF19}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F87ABBFF-511E-4B67-AEB5-BE85A40E69BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F87ABBFF-511E-4B67-AEB5-BE85A40E69BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F87ABBFF-511E-4B67-AEB5-BE85A40E69BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F87ABBFF-511E-4B67-AEB5-BE85A40E69BF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B226E047-F8DF-4439-83ED-7956C70F1213}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B226E047-F8DF-4439-83ED-7956C70F1213}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B226E047-F8DF-4439-83ED-7956C70F1213}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B226E047-F8DF-4439-83ED-7956C70F1213}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C759955A-D1C4-4FD0-8338-95234341DB43}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C759955A-D1C4-4FD0-8338-95234341DB43}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C759955A-D1C4-4FD0-8338-95234341DB43}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C759955A-D1C4-4FD0-8338-95234341DB43}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{7DA44557-852C-4426-9206-1DECD775CF19} = {404FA396-E006-4DE2-8CC6-0B9DC2C1F046}
+		{F87ABBFF-511E-4B67-AEB5-BE85A40E69BF} = {404FA396-E006-4DE2-8CC6-0B9DC2C1F046}
+		{B226E047-F8DF-4439-83ED-7956C70F1213} = {404FA396-E006-4DE2-8CC6-0B9DC2C1F046}
+		{C759955A-D1C4-4FD0-8338-95234341DB43} = {404FA396-E006-4DE2-8CC6-0B9DC2C1F046}
+	EndGlobalSection
+EndGlobal

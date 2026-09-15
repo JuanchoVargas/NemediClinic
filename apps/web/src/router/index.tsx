@@ -1,0 +1,233 @@
+// ============================================================
+// router/index.tsx — Árbol de rutas (Nemedi Clinic)
+//
+// Estructura:
+//   root (RootLayout: Header + Outlet + Footer)
+//   ├── /              → HomePage (pública)
+//   ├── /login         → LoginPage (pública)
+//   └── _protected     → guard via beforeLoad
+//       ├── /dashboard          → DashboardPage
+//       ├── /patients           → PatientsPage
+//       ├── /patients/new       → PatientFormPage (modo crear)
+//       ├── /patients/$id       → PatientDetailPage
+//       └── /patients/$id/edit  → PatientFormPage (modo editar)
+//
+// EQUIVALENTE A: router/index.js de SINERGIA con beforeEach guards
+// PATTERNS.md sección: "Routing"
+// ============================================================
+
+import {
+  createRouter,
+  createRootRoute,
+  createRoute,
+  redirect,
+} from "@tanstack/react-router";
+import { TanStackRouterDevtools } from "@tanstack/router-devtools";
+import { z } from "zod";
+
+import { RootLayout } from "@/components/layout/RootLayout";
+import { HomePage } from "@/pages/HomePage";
+import { LoginPage } from "@/pages/LoginPage";
+import { DashboardPage } from "@/pages/DashboardPage";
+import { PatientsPage } from "@/pages/PatientsPage";
+import { PatientFormPage } from "@/pages/PatientFormPage";
+import { PatientDetailPage } from "@/pages/PatientDetailPage";
+import { CalendarPage } from "@/pages/CalendarPage";
+import { DaySheetPage } from "@/pages/DaySheetPage";
+import { ProceduresPage } from "@/pages/ProceduresPage";
+import { PackagesPage } from "@/pages/PackagesPage";
+import { PackageFormPage } from "@/pages/PackageFormPage";
+import { PackageDetailPage } from "@/pages/PackageDetailPage";
+import { InventoryPage } from "@/pages/InventoryPage";
+import { UsersPage } from "@/pages/admin/UsersPage";
+import { BranchesPage } from "@/pages/admin/BranchesPage";
+import { TenantsPage } from "@/pages/super/TenantsPage";
+import { useAuthStore } from "@/stores/auth.store";
+import { useToastStore } from "@/stores/toast.store";
+
+// Guard por rol: usa el rol del JWT (auth store). Si el usuario no tiene
+// un rol permitido, avisa con un toast y lo manda al dashboard.
+function requireRoles(allowed: string[]) {
+  const role = useAuthStore.getState().user?.role;
+  if (!role || !allowed.includes(role)) {
+    useToastStore.error("No tienes permisos para acceder a esa sección");
+    throw redirect({ to: "/dashboard" });
+  }
+}
+
+// ─── Root: layout persistente ──────────────────────────────
+const rootRoute = createRootRoute({
+  component: () => (
+    <>
+      <RootLayout />
+      {import.meta.env.DEV && <TanStackRouterDevtools position="bottom-right" />}
+    </>
+  ),
+});
+
+// ─── Rutas públicas ────────────────────────────────────────
+const indexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/",
+  component: HomePage,
+});
+
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login",
+  validateSearch: z.object({
+    redirect: z.string().optional(),
+  }),
+  component: LoginPage,
+});
+
+// ─── Rutas protegidas (layout route con beforeLoad guard) ──
+const protectedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: "_protected",
+  beforeLoad: ({ location }) => {
+    const isAuth = useAuthStore.getState().isAuthenticated();
+    if (!isAuth) {
+      throw redirect({
+        to: "/login",
+        search: { redirect: location.href },
+      });
+    }
+  },
+});
+
+const dashboardRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/dashboard",
+  component: DashboardPage,
+});
+
+const patientsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/patients",
+  component: PatientsPage,
+});
+
+// /patients/new debe declararse ANTES que /patients/$id para que
+// TSR no lo capture como un id="new".
+const patientNewRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/patients/new",
+  component: PatientFormPage,
+});
+
+const patientDetailRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/patients/$id",
+  component: PatientDetailPage,
+});
+
+const patientEditRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/patients/$id/edit",
+  component: PatientFormPage,
+});
+
+// /calendar/day-sheet ANTES que /calendar para coincidir exacto primero
+const daySheetRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/calendar/day-sheet",
+  component: DaySheetPage,
+});
+
+const calendarRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/calendar",
+  component: CalendarPage,
+});
+
+const proceduresRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/procedures",
+  component: ProceduresPage,
+});
+
+const packagesRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/packages",
+  component: PackagesPage,
+});
+
+// /packages/new ANTES de /packages/$id para que TSR no lo capture como id="new"
+const packageNewRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/packages/new",
+  component: PackageFormPage,
+});
+
+const packageDetailRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/packages/$id",
+  component: PackageDetailPage,
+});
+
+const packageEditRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/packages/$id/edit",
+  component: PackageFormPage,
+});
+
+const inventoryRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/inventory",
+  component: InventoryPage,
+});
+
+// ─── Administración (guard por rol) ────────────────────────
+const usersRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/admin/users",
+  beforeLoad: () => requireRoles(["SuperAdmin", "Admin"]),
+  component: UsersPage,
+});
+
+const branchesRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/admin/branches",
+  beforeLoad: () => requireRoles(["SuperAdmin"]),
+  component: BranchesPage,
+});
+
+const tenantsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/super/tenants",
+  beforeLoad: () => requireRoles(["SuperAdmin"]),
+  component: TenantsPage,
+});
+
+// ─── Árbol ─────────────────────────────────────────────────
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  loginRoute,
+  protectedRoute.addChildren([
+    dashboardRoute,
+    patientsRoute,
+    patientNewRoute,
+    patientDetailRoute,
+    patientEditRoute,
+    daySheetRoute,
+    calendarRoute,
+    proceduresRoute,
+    packagesRoute,
+    packageNewRoute,
+    packageDetailRoute,
+    packageEditRoute,
+    inventoryRoute,
+    usersRoute,
+    branchesRoute,
+    tenantsRoute,
+  ]),
+]);
+
+export const router = createRouter({ routeTree });
+
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
+}

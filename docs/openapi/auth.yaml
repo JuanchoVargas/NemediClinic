@@ -1,0 +1,207 @@
+openapi: 3.1.0
+info:
+  title: NemediClinic Auth API
+  version: 1.0.0
+  description: Endpoints de autenticación para NemediClinic
+
+servers:
+  - url: http://localhost:5000
+    description: Desarrollo local
+
+paths:
+  /api/v1/auth/login:
+    post:
+      summary: Iniciar sesión
+      operationId: login
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Credenciales inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/register:
+    post:
+      summary: Registrar nuevo usuario (SuperAdmin crea su tenant)
+      operationId: register
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registro exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Datos inválidos o email ya registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/refresh:
+    post:
+      summary: Renovar access token usando refresh token
+      operationId: refreshToken
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Token renovado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Refresh token inválido o expirado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: admin@mistetica.com
+        password:
+          type: string
+          format: password
+          example: S3cur3P@ss!
+
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - fullName
+        - tenantName
+      properties:
+        email:
+          type: string
+          format: email
+          example: dueña@nuevaestetica.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: M1P@ssword!
+        fullName:
+          type: string
+          example: María López
+        tenantName:
+          type: string
+          example: Estética Bella Vida
+
+    RefreshRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            refreshToken:
+              type: string
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            expiresIn:
+              type: integer
+              description: Segundos hasta que expire el access token
+              example: 3600
+            user:
+              $ref: '#/components/schemas/UserInfo'
+        message:
+          type: string
+          example: Login exitoso
+        errors:
+          type: array
+          items:
+            type: string
+          example: []
+
+    UserInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        role:
+          type: string
+          enum:
+            - SuperAdmin
+            - Admin
+            - Esteticista
+        tenantId:
+          type: string
+          format: uuid
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        data:
+          type: 'null'
+        message:
+          type: string
+          example: Credenciales inválidas
+        errors:
+          type: array
+          items:
+            type: string
+          example:
+            - El email o la contraseña son incorrectos

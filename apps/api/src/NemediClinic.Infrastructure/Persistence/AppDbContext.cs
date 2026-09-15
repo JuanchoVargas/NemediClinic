@@ -15,6 +15,14 @@ public class AppDbContext : DbContext
         _tenantProvider = tenantProvider;
     }
 
+    /// <summary>
+    /// Tenant de la request actual. El filtro global debe referenciar ESTE miembro
+    /// del DbContext (no el provider directamente): EF Core cachea el modelo una sola
+    /// vez por proceso y solo re-evalúa por request las expresiones que acceden a
+    /// miembros de la instancia actual del DbContext.
+    /// </summary>
+    public Guid CurrentTenantId => _tenantProvider.TenantId;
+
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<Branch> Branches => Set<Branch>();
     public DbSet<User> Users => Set<User>();
@@ -308,13 +316,16 @@ public class AppDbContext : DbContext
 
     private LambdaExpression BuildFilterExpression(Type entityType)
     {
-        // e => e.TenantId == _tenantProvider.TenantId && !e.IsDeleted
+        // e => e.TenantId == this.CurrentTenantId && !e.IsDeleted
+        // IMPORTANTE: la constante debe ser el DbContext (this). Antes era el
+        // ITenantProvider, y como EF cachea el modelo por proceso, el filtro
+        // quedaba fijado al tenant de la PRIMERA request que construyó el modelo.
         var parameter = System.Linq.Expressions.Expression.Parameter(entityType, "e");
 
         var tenantIdProperty = System.Linq.Expressions.Expression.Property(parameter, nameof(BaseEntity.TenantId));
         var tenantIdValue = System.Linq.Expressions.Expression.Property(
-            System.Linq.Expressions.Expression.Constant(_tenantProvider),
-            nameof(ITenantProvider.TenantId));
+            System.Linq.Expressions.Expression.Constant(this),
+            nameof(CurrentTenantId));
         var tenantFilter = System.Linq.Expressions.Expression.Equal(tenantIdProperty, tenantIdValue);
 
         var isDeletedProperty = System.Linq.Expressions.Expression.Property(parameter, nameof(BaseEntity.IsDeleted));

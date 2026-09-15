@@ -74,14 +74,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { FormDialog } from "@/components/shared/FormDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -105,6 +98,8 @@ import {
   useUpdateProduct,
 } from "@/api/inventory.api";
 import { useDebounce } from "@/hooks/use-debounce";
+import { usePermissions } from "@/hooks/use-permissions";
+import { usePageReset } from "@/hooks/use-page-reset";
 import { useToastStore } from "@/stores/toast.store";
 import { toLocalDate, toLocalIso } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -129,10 +124,14 @@ export function InventoryPage() {
     open: boolean;
     editing?: Product;
   }>({ open: false });
+  // `seq` remonta el formulario de entrada en cada apertura (estado limpio sin useEffect)
   const [entrySheet, setEntrySheet] = useState<{
     open: boolean;
     defaultProduct?: Product;
-  }>({ open: false });
+    seq: number;
+  }>({ open: false, seq: 0 });
+  const openEntry = (defaultProduct?: Product) =>
+    setEntrySheet((s) => ({ open: true, defaultProduct, seq: s.seq + 1 }));
 
   return (
     <PageContainer>
@@ -157,12 +156,10 @@ export function InventoryPage() {
           />
         </TabsContent>
         <TabsContent value="entries" className="mt-4">
-          <EntriesTab onNew={() => setEntrySheet({ open: true })} />
+          <EntriesTab onNew={() => openEntry()} />
         </TabsContent>
         <TabsContent value="alerts" className="mt-4">
-          <AlertsTab
-            onRegisterEntry={(p) => setEntrySheet({ open: true, defaultProduct: p })}
-          />
+          <AlertsTab onRegisterEntry={(p) => openEntry(p)} />
         </TabsContent>
       </Tabs>
 
@@ -172,9 +169,10 @@ export function InventoryPage() {
         onClose={() => setProductSheet({ open: false })}
       />
       <RegisterEntrySheet
+        key={entrySheet.seq}
         open={entrySheet.open}
         defaultProduct={entrySheet.defaultProduct}
-        onClose={() => setEntrySheet({ open: false })}
+        onClose={() => setEntrySheet((s) => ({ ...s, open: false }))}
       />
     </PageContainer>
   );
@@ -190,12 +188,12 @@ function ProductsTab({
   onNew: () => void;
   onEdit: (p: Product) => void;
 }) {
+  const { can } = usePermissions();
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounce(searchInput, 300);
   const [tipo, setTipo] = useState<string>("all");
   const [semaforo, setSemaforo] = useState<string>("all");
-  const [page, setPage] = useState(1);
-  useEffect(() => setPage(1), [search, tipo, semaforo]);
+  const [page, setPage] = usePageReset(`${search}|${tipo}|${semaforo}`);
 
   const { data, isLoading } = useProducts(
     page,
@@ -245,10 +243,12 @@ function ProductsTab({
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={onNew}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo producto
-        </Button>
+        {can("products.create") && (
+          <Button onClick={onNew}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo producto
+          </Button>
+        )}
       </div>
 
       <div className="rounded-md border">
@@ -300,10 +300,12 @@ function ProductsTab({
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
-                    <Button variant="outline" size="sm" onClick={() => onEdit(p)} aria-label={`Editar ${p.nombre}`}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <DeleteProductButton product={p} />
+                    {can("products.update") && (
+                      <Button variant="outline" size="sm" onClick={() => onEdit(p)} aria-label={`Editar ${p.nombre}`}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {can("products.delete") && <DeleteProductButton product={p} />}
                   </div>
                 </TableCell>
               </TableRow>
@@ -474,18 +476,21 @@ function ProductSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="sm:max-w-md flex flex-col">
-        <SheetHeader>
-          <SheetTitle>{isEdit ? "Editar producto" : "Nuevo producto"}</SheetTitle>
-          <SheetDescription>
-            {isEdit
+    <FormDialog
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title={<>{isEdit ? "Editar producto" : "Nuevo producto"}</>}
+      description={<>{isEdit
               ? "El stock actual no se modifica desde acá. Para ajustarlo, registrá una entrada."
-              : "El stock actual arranca en 0. Para agregar inventario, registrá una entrada después de crear el producto."}
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto px-4">
+              : "El stock actual arranca en 0. Para agregar inventario, registrá una entrada después de crear el producto."}</>}
+      dirty={form.formState.isDirty}
+      actions={
+        <Button form="product-form" type="submit" disabled={isPending}>
+            {isPending ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear"}
+          </Button>
+      }
+    >
+        <div className="pt-1">
           <Form {...form}>
             <form id="product-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -631,14 +636,7 @@ function ProductSheet({
           </Form>
         </div>
 
-        <SheetFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button form="product-form" type="submit" disabled={isPending}>
-            {isPending ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear"}
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </FormDialog>
   );
 }
 
@@ -646,6 +644,8 @@ function ProductSheet({
 // Tab 2: Entradas
 // ────────────────────────────────────────────────────────────
 function EntriesTab({ onNew }: { onNew: () => void }) {
+  const { can } = usePermissions();
+  const canRegister = can("inventory.entries.create");
   const [page, setPage] = useState(1);
   const { data, isLoading } = useInventoryEntries(page, PAGE_SIZE);
   const totalPages = data ? Math.max(1, Math.ceil(data.totalCount / PAGE_SIZE)) : 1;
@@ -657,10 +657,12 @@ function EntriesTab({ onNew }: { onNew: () => void }) {
         <p className="text-sm text-muted-foreground">
           Historial cronológico de entradas registradas (más recientes primero).
         </p>
-        <Button onClick={onNew}>
-          <Plus className="mr-2 h-4 w-4" />
-          Registrar entrada
-        </Button>
+        {canRegister && (
+          <Button onClick={onNew}>
+            <Plus className="mr-2 h-4 w-4" />
+            Registrar entrada
+          </Button>
+        )}
       </div>
 
       <div className="rounded-md border">
@@ -748,21 +750,18 @@ function RegisterEntrySheet({
 }) {
   const register = useRegisterEntry();
 
-  const [product, setProduct] = useState<Product | null>(null);
+  // Estado inicial por render: el padre remonta este componente (key) en cada apertura.
+  const [product, setProduct] = useState<Product | null>(defaultProduct ?? null);
   const [cantidad, setCantidad] = useState<number>(0);
   const [motivo, setMotivo] = useState<EntryReason>("Compra");
   const [observacion, setObservacion] = useState<string>("");
-  const [fecha, setFecha] = useState<string>("");
+  const [fecha, setFecha] = useState<string>(() => toLocalDate(new Date()));
 
-  useEffect(() => {
-    if (open) {
-      setProduct(defaultProduct ?? null);
-      setCantidad(0);
-      setMotivo("Compra");
-      setObservacion("");
-      setFecha(toLocalDate(new Date()));
-    }
-  }, [open, defaultProduct]);
+  const entryDirty =
+    (product?.id ?? null) !== (defaultProduct?.id ?? null) ||
+    cantidad > 0 ||
+    motivo !== "Compra" ||
+    observacion !== "";
 
   const canSubmit = !!product && cantidad > 0 && !!fecha;
 
@@ -787,16 +786,19 @@ function RegisterEntrySheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="sm:max-w-md flex flex-col">
-        <SheetHeader>
-          <SheetTitle>Registrar entrada</SheetTitle>
-          <SheetDescription>
-            Aumenta el stock del producto y deja registro en el historial.
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto px-4 space-y-4">
+    <FormDialog
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title={<>Registrar entrada</>}
+      description={<>Aumenta el stock del producto y deja registro en el historial.</>}
+      dirty={entryDirty}
+      actions={
+        <Button onClick={handleSubmit} disabled={!canSubmit || register.isPending}>
+            {register.isPending ? "Registrando..." : "Registrar"}
+          </Button>
+      }
+    >
+        <div className="pt-1 space-y-4">
           <ProductCombobox value={product} onChange={setProduct} />
 
           <div className="space-y-1.5">
@@ -844,14 +846,7 @@ function RegisterEntrySheet({
           </div>
         </div>
 
-        <SheetFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit || register.isPending}>
-            {register.isPending ? "Registrando..." : "Registrar"}
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </FormDialog>
   );
 }
 
@@ -982,6 +977,8 @@ function AlertCard({
   product: Product;
   onRegisterEntry: () => void;
 }) {
+  const { can } = usePermissions();
+  const canRegister = can("inventory.entries.create");
   const estado = product.semaforoStock as StockStatus;
   const urgenciaLabel = estado === "Rojo" ? "Crítico" : STOCK_STATUS_LABELS[estado];
   const variant = STOCK_STATUS_COLORS[estado];
@@ -1029,10 +1026,12 @@ function AlertCard({
             />
           </div>
         </div>
-        <Button onClick={onRegisterEntry} size="sm" className="w-full">
-          <Plus className="mr-1 h-4 w-4" />
-          Registrar entrada
-        </Button>
+        {canRegister && (
+          <Button onClick={onRegisterEntry} size="sm" className="w-full">
+            <Plus className="mr-1 h-4 w-4" />
+            Registrar entrada
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

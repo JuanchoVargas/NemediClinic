@@ -147,9 +147,11 @@ const proceduresRoute = createRoute({
   component: ProceduresPage,
 });
 
+// Paquetes: PackagesController es policy Admin (Esteticista recibe 403 incluso en GET)
 const packagesRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/packages",
+  beforeLoad: () => requireRoles(["SuperAdmin", "Admin"]),
   component: PackagesPage,
 });
 
@@ -157,18 +159,21 @@ const packagesRoute = createRoute({
 const packageNewRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/packages/new",
+  beforeLoad: () => requireRoles(["SuperAdmin", "Admin"]),
   component: PackageFormPage,
 });
 
 const packageDetailRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/packages/$id",
+  beforeLoad: () => requireRoles(["SuperAdmin", "Admin"]),
   component: PackageDetailPage,
 });
 
 const packageEditRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/packages/$id/edit",
+  beforeLoad: () => requireRoles(["SuperAdmin", "Admin"]),
   component: PackageFormPage,
 });
 
@@ -186,10 +191,11 @@ const usersRoute = createRoute({
   component: UsersPage,
 });
 
+// Sedes: BranchesController deja leer/editar/eliminar a Admin; solo crear es SuperAdmin
 const branchesRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/admin/branches",
-  beforeLoad: () => requireRoles(["SuperAdmin"]),
+  beforeLoad: () => requireRoles(["SuperAdmin", "Admin"]),
   component: BranchesPage,
 });
 

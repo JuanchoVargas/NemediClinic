@@ -39,17 +39,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { FormDialog } from "@/components/shared/FormDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { usePermissions } from "@/hooks/use-permissions";
 
 import { usePatient } from "@/api/patients.api";
 import { useClinicalNotes, useClinicalRecord } from "@/api/clinical-records.api";
@@ -72,6 +66,8 @@ export function PatientDetailPage() {
   const params = useParams({ strict: false }) as { id?: string };
   const id = params.id;
   const { data: patient, isLoading } = usePatient(id);
+  const { can } = usePermissions();
+  const canReadPackages = can("patientPackages.read");
 
   if (isLoading) {
     return (
@@ -124,25 +120,28 @@ export function PatientDetailPage() {
           <Button asChild variant="outline">
             <Link to="/patients"><ArrowLeft className="mr-2 h-4 w-4" />Volver</Link>
           </Button>
-          <Button asChild>
-            <Link
-              to="/patients/$id/edit"
-              params={{ id: patient.id }}
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </Link>
-          </Button>
+          {can("patients.update") && (
+            <Button asChild>
+              <Link
+                to="/patients/$id/edit"
+                params={{ id: patient.id }}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
       {/* ── Tabs ───────────────────────────────────────────── */}
+      {/* Paquetes y pagos: PatientPackagesController es policy Admin → ocultos para Esteticista */}
       <Tabs defaultValue="info">
         <TabsList>
           <TabsTrigger value="info">Información</TabsTrigger>
           <TabsTrigger value="clinical">Historia clínica</TabsTrigger>
-          <TabsTrigger value="packages">Paquetes</TabsTrigger>
-          <TabsTrigger value="payments">Pagos</TabsTrigger>
+          {canReadPackages && <TabsTrigger value="packages">Paquetes</TabsTrigger>}
+          {canReadPackages && <TabsTrigger value="payments">Pagos</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="info" className="mt-4">
@@ -151,12 +150,16 @@ export function PatientDetailPage() {
         <TabsContent value="clinical" className="mt-4">
           <ClinicalTab patientId={patient.id} />
         </TabsContent>
-        <TabsContent value="packages" className="mt-4">
-          <PackagesTab patientId={patient.id} />
-        </TabsContent>
-        <TabsContent value="payments" className="mt-4">
-          <PaymentsTab patientId={patient.id} />
-        </TabsContent>
+        {canReadPackages && (
+          <TabsContent value="packages" className="mt-4">
+            <PackagesTab patientId={patient.id} />
+          </TabsContent>
+        )}
+        {canReadPackages && (
+          <TabsContent value="payments" className="mt-4">
+            <PaymentsTab patientId={patient.id} />
+          </TabsContent>
+        )}
       </Tabs>
     </PageContainer>
   );
@@ -429,6 +432,7 @@ function PaymentsTab({ patientId }: { patientId: string }) {
 
 function PackagePaymentsSection({ pkg }: { pkg: PatientPackage }) {
   const { data: payments, isLoading } = usePatientPackagePayments(pkg.id);
+  const { can } = usePermissions();
   const [registerOpen, setRegisterOpen] = useState(false);
 
   const saldoCero = pkg.saldoPendiente <= 0;
@@ -445,10 +449,12 @@ function PackagePaymentsSection({ pkg }: { pkg: PatientPackage }) {
           </div>
           <div className="flex items-center gap-2">
             {statusBadge(pkg.estado)}
-            <Button size="sm" onClick={() => setRegisterOpen(true)}>
-              <Plus className="mr-1 h-4 w-4" />
-              Registrar pago
-            </Button>
+            {can("payments.create") && (
+              <Button size="sm" onClick={() => setRegisterOpen(true)}>
+                <Plus className="mr-1 h-4 w-4" />
+                Registrar pago
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -581,17 +587,24 @@ function RegisterPaymentSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="sm:max-w-md flex flex-col">
-        <SheetHeader>
-          <SheetTitle>Registrar pago</SheetTitle>
-          <SheetDescription>
-            Registra un pago para este paquete. Saldo actual: $
-            {saldoPendiente.toLocaleString("es-CO")}.
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto px-4">
+    <FormDialog
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title={<>Registrar pago</>}
+      description={<>Registra un pago para este paquete. Saldo actual: $
+            {saldoPendiente.toLocaleString("es-CO")}.</>}
+      dirty={form.formState.isDirty}
+      actions={
+        <Button
+            form="payment-form"
+            type="submit"
+            disabled={register.isPending}
+          >
+            {register.isPending ? "Guardando..." : "Registrar pago"}
+          </Button>
+      }
+    >
+        <div className="pt-1">
           <Form {...form}>
             <form
               id="payment-form"
@@ -679,19 +692,6 @@ function RegisterPaymentSheet({
           </Form>
         </div>
 
-        <SheetFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            form="payment-form"
-            type="submit"
-            disabled={register.isPending}
-          >
-            {register.isPending ? "Guardando..." : "Registrar pago"}
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </FormDialog>
   );
 }

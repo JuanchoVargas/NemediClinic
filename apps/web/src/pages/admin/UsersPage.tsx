@@ -41,14 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { FormDialog } from "@/components/shared/FormDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -71,6 +64,8 @@ import {
 } from "@/api/users.api";
 import { useBranches } from "@/api/branches.api";
 import { useDebounce } from "@/hooks/use-debounce";
+import { usePermissions } from "@/hooks/use-permissions";
+import { usePageReset } from "@/hooks/use-page-reset";
 import { useToastStore } from "@/stores/toast.store";
 
 const PAGE_SIZE = 20;
@@ -103,11 +98,11 @@ const roleBadgeVariant = (rol: string): "default" | "secondary" | "success" => {
 };
 
 export function UsersPage() {
+  const { can } = usePermissions();
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounce(searchInput, 300);
   const [rolFilter, setRolFilter] = useState<"all" | RolName>("all");
-  const [page, setPage] = useState(1);
-  useEffect(() => setPage(1), [search, rolFilter]);
+  const [page, setPage] = usePageReset(`${search}|${rolFilter}`);
 
   const { data, isLoading } = useUsersPaged(
     page,
@@ -136,10 +131,12 @@ export function UsersPage() {
             Gestión de usuarios del sistema y sus roles.
           </p>
         </div>
-        <Button onClick={() => setSheetState({ open: true })}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo usuario
-        </Button>
+        {can("users.create") && (
+          <Button onClick={() => setSheetState({ open: true })}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo usuario
+          </Button>
+        )}
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -219,15 +216,17 @@ export function UsersPage() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSheetState({ open: true, editing: u })}
-                      aria-label={`Editar ${u.nombre}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <DeleteUserButton user={u} />
+                    {can("users.update") && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSheetState({ open: true, editing: u })}
+                        aria-label={`Editar ${u.nombre}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {can("users.delete") && <DeleteUserButton user={u} />}
                   </div>
                 </TableCell>
               </TableRow>
@@ -346,18 +345,21 @@ function UserSheet({
   const showSuperAdminOption = isEdit && editing?.rol === "SuperAdmin";
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="sm:max-w-md flex flex-col">
-        <SheetHeader>
-          <SheetTitle>{isEdit ? "Editar usuario" : "Nuevo usuario"}</SheetTitle>
-          <SheetDescription>
-            {isEdit
+    <FormDialog
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title={<>{isEdit ? "Editar usuario" : "Nuevo usuario"}</>}
+      description={<>{isEdit
               ? "Modifica los datos del usuario."
-              : "Da de alta un usuario del sistema."}
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto px-4">
+              : "Da de alta un usuario del sistema."}</>}
+      dirty={form.formState.isDirty}
+      actions={
+        <Button form="user-form" type="submit" disabled={isPending}>
+            {isPending ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear"}
+          </Button>
+      }
+    >
+        <div className="pt-1">
           <Form {...form}>
             <form id="user-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -465,14 +467,7 @@ function UserSheet({
           </Form>
         </div>
 
-        <SheetFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button form="user-form" type="submit" disabled={isPending}>
-            {isPending ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear"}
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </FormDialog>
   );
 }
 

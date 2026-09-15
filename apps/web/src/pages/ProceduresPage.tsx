@@ -35,14 +35,7 @@ import {
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { FormDialog } from "@/components/shared/FormDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -62,6 +55,8 @@ import {
   useUpdateProcedure,
 } from "@/api/procedures.api";
 import { useDebounce } from "@/hooks/use-debounce";
+import { usePermissions } from "@/hooks/use-permissions";
+import { usePageReset } from "@/hooks/use-page-reset";
 import { useToastStore } from "@/stores/toast.store";
 import type { Procedure } from "@/types/procedure";
 
@@ -91,10 +86,10 @@ const EMPTY: ProcedureFormValues = {
 };
 
 export function ProceduresPage() {
+  const { can } = usePermissions();
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounce(searchInput, 300);
-  const [page, setPage] = useState(1);
-  useEffect(() => setPage(1), [search]);
+  const [page, setPage] = usePageReset(search);
 
   const { data, isLoading } = useProceduresPaged(page, PAGE_SIZE, search);
 
@@ -115,10 +110,12 @@ export function ProceduresPage() {
             Catálogo de procedimientos disponibles en la clínica.
           </p>
         </div>
-        <Button onClick={() => setSheetState({ open: true })}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo procedimiento
-        </Button>
+        {can("procedures.create") && (
+          <Button onClick={() => setSheetState({ open: true })}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo procedimiento
+          </Button>
+        )}
       </div>
 
       <div className="mb-4 relative max-w-md">
@@ -179,15 +176,17 @@ export function ProceduresPage() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSheetState({ open: true, editing: p })}
-                      aria-label={`Editar ${p.nombre}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <DeleteProcedureButton procedure={p} />
+                    {can("procedures.update") && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSheetState({ open: true, editing: p })}
+                        aria-label={`Editar ${p.nombre}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {can("procedures.delete") && <DeleteProcedureButton procedure={p} />}
                   </div>
                 </TableCell>
               </TableRow>
@@ -286,18 +285,21 @@ function ProcedureSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="sm:max-w-md flex flex-col">
-        <SheetHeader>
-          <SheetTitle>{isEdit ? "Editar procedimiento" : "Nuevo procedimiento"}</SheetTitle>
-          <SheetDescription>
-            {isEdit
+    <FormDialog
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title={<>{isEdit ? "Editar procedimiento" : "Nuevo procedimiento"}</>}
+      description={<>{isEdit
               ? "Modifica los datos del procedimiento."
-              : "Da de alta un procedimiento nuevo del catálogo."}
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto px-4">
+              : "Da de alta un procedimiento nuevo del catálogo."}</>}
+      dirty={form.formState.isDirty}
+      actions={
+        <Button form="procedure-form" type="submit" disabled={isPending}>
+            {isPending ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear"}
+          </Button>
+      }
+    >
+        <div className="pt-1">
           <Form {...form}>
             <form id="procedure-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -407,14 +409,7 @@ function ProcedureSheet({
           </Form>
         </div>
 
-        <SheetFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button form="procedure-form" type="submit" disabled={isPending}>
-            {isPending ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear"}
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </FormDialog>
   );
 }
 

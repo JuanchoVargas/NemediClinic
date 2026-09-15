@@ -9,7 +9,7 @@
 // existía allá). El patrón es idéntico — solo cambia la sintaxis JSX.
 // ============================================================
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -43,14 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { FormDialog } from "@/components/shared/FormDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageContainer } from "@/components/shared/PageContainer";
 
@@ -64,7 +57,7 @@ import { useProcedures, type ProcedureDto } from "@/api/procedures.api";
 import { useEsteticistas } from "@/api/users.api";
 import { usePatients } from "@/api/patients.api";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useAuthStore } from "@/stores/auth.store";
+import { usePermissions } from "@/hooks/use-permissions";
 import { useToastStore } from "@/stores/toast.store";
 import { cn } from "@/lib/utils";
 import {
@@ -91,8 +84,8 @@ function addMinutesISO(local: string, minutes: number) {
 export function CalendarPage() {
   const calendarRef = useRef<FullCalendar | null>(null);
 
-  const user = useAuthStore((s) => s.user);
-  const isAdmin = user?.role === "Admin" || user?.role === "SuperAdmin";
+  const { can } = usePermissions();
+  const canFilter = can("appointments.filterByEsteticist");
 
   const [view, setView] = useState<CalendarView>("timeGridWeek");
   const [title, setTitle] = useState("");
@@ -106,11 +99,12 @@ export function CalendarPage() {
   });
   const [esteticistFilter, setEsteticistFilter] = useState<string>("all");
 
-  // Sheet state
+  // Estado de diálogos. `seq` remonta el formulario de creación en cada apertura.
   const [createSheet, setCreateSheet] = useState<{
     open: boolean;
     defaultStart?: Date;
-  }>({ open: false });
+    seq: number;
+  }>({ open: false, seq: 0 });
   const [detailSheetId, setDetailSheetId] = useState<string | undefined>();
 
   const { data: appointments, isLoading } = useAppointments(
@@ -140,7 +134,7 @@ export function CalendarPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {isAdmin && (
+          {canFilter && (
             <Select value={esteticistFilter} onValueChange={setEsteticistFilter}>
               <SelectTrigger className="w-56">
                 <SelectValue placeholder="Esteticista" />
@@ -233,7 +227,8 @@ export function CalendarPage() {
             setTitle(arg.view.title);
           }}
           select={(arg: DateSelectArg) => {
-            setCreateSheet({ open: true, defaultStart: arg.start });
+            if (!can("appointments.create")) return;
+            setCreateSheet((s) => ({ open: true, defaultStart: arg.start, seq: s.seq + 1 }));
           }}
           eventClick={(arg: EventClickArg) => {
             setDetailSheetId(arg.event.id);
@@ -243,9 +238,10 @@ export function CalendarPage() {
 
       {/* ── Sheets ─────────────────────────────────────── */}
       <CreateAppointmentSheet
+        key={createSheet.seq}
         open={createSheet.open}
         defaultStart={createSheet.defaultStart}
-        onClose={() => setCreateSheet({ open: false })}
+        onClose={() => setCreateSheet((s) => ({ ...s, open: false }))}
       />
       <AppointmentDetailSheet
         id={detailSheetId}
@@ -271,24 +267,25 @@ function CreateAppointmentSheet({
   const { data: procedures } = useProcedures();
   const { data: esteticistas } = useEsteticistas();
 
+  // El rol Esteticista solo agenda citas propias (el backend permite más; la UI lo restringe)
+  const { role, userId } = usePermissions();
+  const lockedToSelf = role === "Esteticista" && !!userId;
+
+  // Estado inicial por render: el padre remonta este componente (key) en cada apertura,
+  // así no hace falta un useEffect para resetear.
+  const initialFecha = defaultStart ? toLocalDateTimeInput(defaultStart) : "";
   const [patient, setPatient] = useState<PatientSummary | null>(null);
   const [procedureId, setProcedureId] = useState<string>("");
-  const [esteticistId, setEsteticistId] = useState<string>("");
-  const [fechaInicio, setFechaInicio] = useState<string>("");
+  const [esteticistId, setEsteticistId] = useState<string>(lockedToSelf ? userId : "");
+  const [fechaInicio, setFechaInicio] = useState<string>(initialFecha);
   const [notas, setNotas] = useState<string>("");
 
-  // Reset al abrir/cerrar y pre-llena la fecha desde el click
-  useEffect(() => {
-    if (open && defaultStart) {
-      setFechaInicio(toLocalDateTimeInput(defaultStart));
-    } else if (!open) {
-      setPatient(null);
-      setProcedureId("");
-      setEsteticistId("");
-      setFechaInicio("");
-      setNotas("");
-    }
-  }, [open, defaultStart]);
+  const createDirty =
+    !!patient ||
+    !!procedureId ||
+    !!notas ||
+    fechaInicio !== initialFecha ||
+    (!lockedToSelf && !!esteticistId);
 
   const procedure: ProcedureDto | undefined = procedures?.find(
     (p) => p.id === procedureId,
@@ -328,16 +325,19 @@ function CreateAppointmentSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="sm:max-w-md flex flex-col">
-        <SheetHeader>
-          <SheetTitle>Nueva cita</SheetTitle>
-          <SheetDescription>
-            Completa los datos. La hora de fin se calcula desde la duración del procedimiento.
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto px-4 space-y-4">
+    <FormDialog
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title={<>Nueva cita</>}
+      description={<>Completa los datos. La hora de fin se calcula desde la duración del procedimiento.</>}
+      dirty={createDirty}
+      actions={
+        <Button onClick={handleSubmit} disabled={!canSubmit || create.isPending}>
+            {create.isPending ? "Creando..." : "Crear cita"}
+          </Button>
+      }
+    >
+        <div className="pt-1 space-y-4">
           <PatientCombobox value={patient} onChange={setPatient} />
 
           <div className="space-y-1.5">
@@ -358,7 +358,7 @@ function CreateAppointmentSheet({
 
           <div className="space-y-1.5">
             <Label>Esteticista</Label>
-            <Select value={esteticistId} onValueChange={setEsteticistId}>
+            <Select value={esteticistId} onValueChange={setEsteticistId} disabled={lockedToSelf}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona..." />
               </SelectTrigger>
@@ -406,16 +406,7 @@ function CreateAppointmentSheet({
           </div>
         </div>
 
-        <SheetFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit || create.isPending}>
-            {create.isPending ? "Creando..." : "Crear cita"}
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </FormDialog>
   );
 }
 
@@ -513,6 +504,12 @@ function AppointmentDetailSheet({
   const open = !!id;
   const { data, isLoading } = useAppointment(id);
   const updateStatus = useUpdateAppointmentStatus();
+  const { can, role, userId } = usePermissions();
+  // El backend deja cambiar estado a Admin/SuperAdmin sobre cualquier cita y
+  // a Esteticista solo sobre las propias (403 en caso contrario).
+  const canAct =
+    can("appointments.updateStatus") &&
+    (role !== "Esteticista" || (!!data && data.esteticistId === userId));
 
   const handleStatus = async (estado: AppointmentStatusValue) => {
     if (!id) return;
@@ -547,13 +544,26 @@ function AppointmentDetailSheet({
   })();
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="sm:max-w-md flex flex-col">
-        <SheetHeader>
-          <SheetTitle>Detalle de la cita</SheetTitle>
-        </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto px-4 space-y-3">
+    <FormDialog
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title="Detalle de la cita"
+      cancelLabel="Cerrar"
+      actions={
+        canAct &&
+        actions.map((a) => (
+          <Button
+            key={a.next}
+            variant={a.variant ?? "default"}
+            onClick={() => handleStatus(a.next)}
+            disabled={updateStatus.isPending}
+          >
+            {a.label}
+          </Button>
+        ))
+      }
+    >
+        <div className="space-y-3 pt-1">
           {isLoading && <Skeleton className="h-40 w-full" />}
           {data && (
             <>
@@ -584,29 +594,15 @@ function AppointmentDetailSheet({
                 })}
               />
               {data.notas && <DetailRow label="Notas" value={data.notas} />}
+              {!canAct && actions.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Solo la esteticista asignada puede cambiar el estado de esta cita.
+                </p>
+              )}
             </>
           )}
         </div>
-
-        <SheetFooter>
-          <div className="flex w-full justify-end gap-2 flex-wrap">
-            {actions.map((a) => (
-              <Button
-                key={a.next}
-                variant={a.variant ?? "default"}
-                onClick={() => handleStatus(a.next)}
-                disabled={updateStatus.isPending}
-              >
-                {a.label}
-              </Button>
-            ))}
-            <Button variant="outline" onClick={onClose}>
-              Cerrar
-            </Button>
-          </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+    </FormDialog>
   );
 }
 

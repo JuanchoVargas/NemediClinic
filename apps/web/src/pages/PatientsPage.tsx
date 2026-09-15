@@ -11,7 +11,7 @@
 // EQUIVALENTE A: pages/oap/index.vue de SINERGIA
 // ============================================================
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Plus, Search, Eye, Trash2 } from "lucide-react";
 
@@ -39,6 +39,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { useDebounce } from "@/hooks/use-debounce";
+import { usePermissions } from "@/hooks/use-permissions";
+import { usePageReset } from "@/hooks/use-page-reset";
 import { useDeletePatient, usePatients } from "@/api/patients.api";
 import { useToastStore } from "@/stores/toast.store";
 import type { PatientSummary } from "@/types/patient";
@@ -47,14 +49,10 @@ const PAGE_SIZE = 20;
 
 export function PatientsPage() {
   const navigate = useNavigate();
+  const { can } = usePermissions();
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounce(searchInput, 300);
-  const [page, setPage] = useState(1);
-
-  // Reset a página 1 cuando cambia el término de búsqueda
-  useEffect(() => {
-    setPage(1);
-  }, [search]);
+  const [page, setPage] = usePageReset(search);
 
   const { data, isLoading } = usePatients(page, PAGE_SIZE, search);
 
@@ -70,12 +68,14 @@ export function PatientsPage() {
             Gestión de la base de pacientes de la clínica.
           </p>
         </div>
-        <Button asChild>
-          <Link to="/patients/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo paciente
-          </Link>
-        </Button>
+        {can("patients.create") && (
+          <Button asChild>
+            <Link to="/patients/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo paciente
+            </Link>
+          </Button>
+        )}
       </div>
 
       <div className="mb-4 relative max-w-md">
@@ -142,7 +142,7 @@ export function PatientsPage() {
                       <Eye className="mr-1 h-4 w-4" />
                       Ver
                     </Button>
-                    <DeletePatientButton patient={p} />
+                    {can("patients.delete") && <DeletePatientButton patient={p} />}
                   </div>
                 </TableCell>
               </TableRow>

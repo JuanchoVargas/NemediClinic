@@ -6,7 +6,7 @@
 // porque el form es más extenso (incluye procedures).
 // ============================================================
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Eye, Plus, Search, Trash2 } from "lucide-react";
 
@@ -37,6 +37,8 @@ import { PageContainer } from "@/components/shared/PageContainer";
 
 import { useDeletePackage, usePackages } from "@/api/packages.api";
 import { useDebounce } from "@/hooks/use-debounce";
+import { usePermissions } from "@/hooks/use-permissions";
+import { usePageReset } from "@/hooks/use-page-reset";
 import { useToastStore } from "@/stores/toast.store";
 import type { Package } from "@/types/package";
 
@@ -44,10 +46,10 @@ const PAGE_SIZE = 20;
 
 export function PackagesPage() {
   const navigate = useNavigate();
+  const { can } = usePermissions();
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounce(searchInput, 300);
-  const [page, setPage] = useState(1);
-  useEffect(() => setPage(1), [search]);
+  const [page, setPage] = usePageReset(search);
 
   const { data, isLoading } = usePackages(page, PAGE_SIZE, search);
 
@@ -63,12 +65,14 @@ export function PackagesPage() {
             Catálogo de paquetes comerciales (combos de procedimientos).
           </p>
         </div>
-        <Button asChild>
-          <Link to="/packages/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo paquete
-          </Link>
-        </Button>
+        {can("packages.create") && (
+          <Button asChild>
+            <Link to="/packages/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo paquete
+            </Link>
+          </Button>
+        )}
       </div>
 
       <div className="mb-4 relative max-w-md">
@@ -144,7 +148,7 @@ export function PackagesPage() {
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <DeletePackageButton pkg={pkg} />
+                    {can("packages.delete") && <DeletePackageButton pkg={pkg} />}
                   </div>
                 </TableCell>
               </TableRow>

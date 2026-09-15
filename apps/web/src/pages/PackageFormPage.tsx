@@ -16,7 +16,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Check, ChevronsUpDown, Plus, Trash2 } from "lucide-react";
@@ -120,6 +120,22 @@ export function PackageFormPage() {
     defaultValues: EMPTY_FORM,
   });
 
+  // Sincroniza el estado local con el paquete cargado UNA vez por id (patrón
+  // "ajustar estado durante el render", sin setState dentro de useEffect).
+  const [loadedId, setLoadedId] = useState<string | null>(null);
+  if (existing && existing.id !== loadedId) {
+    setLoadedId(existing.id);
+    setDrafts(
+      (existing.procedimientos ?? []).map((p) => ({
+        saved: true,
+        procedureId: p.procedureId,
+        procedureNombre: p.procedureNombre,
+        cantidadSesiones: p.cantidadSesiones,
+      })),
+    );
+    setManualPrecio(true);
+  }
+
   useEffect(() => {
     if (existing) {
       form.reset({
@@ -130,15 +146,6 @@ export function PackageFormPage() {
         vigenciaDias: existing.vigenciaDias,
         diasAlertaVencimiento: existing.diasAlertaVencimiento,
       });
-      setDrafts(
-        (existing.procedimientos ?? []).map((p) => ({
-          saved: true,
-          procedureId: p.procedureId,
-          procedureNombre: p.procedureNombre,
-          cantidadSesiones: p.cantidadSesiones,
-        })),
-      );
-      setManualPrecio(true);
     }
   }, [existing, form]);
 
@@ -167,7 +174,8 @@ export function PackageFormPage() {
     form.setValue("sesionesTotales", sumaSesionesProcedimientos);
   }, [sumaSesionesProcedimientos, form]);
 
-  const precioForm = form.watch("precioTotal");
+  // useWatch (no form.watch): compatible con el compilador de React
+  const precioForm = useWatch({ control: form.control, name: "precioTotal" });
   const descuento = precioSugerido - precioForm;
   const descuentoPct =
     precioSugerido > 0 ? Math.round((descuento / precioSugerido) * 100) : 0;

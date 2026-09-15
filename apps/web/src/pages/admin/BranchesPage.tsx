@@ -32,14 +32,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { FormDialog } from "@/components/shared/FormDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -58,6 +51,8 @@ import {
   useUpdateBranch,
 } from "@/api/branches.api";
 import { useDebounce } from "@/hooks/use-debounce";
+import { usePermissions } from "@/hooks/use-permissions";
+import { usePageReset } from "@/hooks/use-page-reset";
 import { useToastStore } from "@/stores/toast.store";
 import type { Branch } from "@/types/branch";
 
@@ -74,10 +69,10 @@ type BranchFormValues = z.infer<typeof branchSchema>;
 const EMPTY: BranchFormValues = { nombre: "", direccion: "", telefono: "" };
 
 export function BranchesPage() {
+  const { can } = usePermissions();
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounce(searchInput, 300);
-  const [page, setPage] = useState(1);
-  useEffect(() => setPage(1), [search]);
+  const [page, setPage] = usePageReset(search);
 
   const { data, isLoading } = useBranchesPaged(page, PAGE_SIZE, search);
 
@@ -97,10 +92,12 @@ export function BranchesPage() {
             Sedes (sucursales) de la clínica.
           </p>
         </div>
-        <Button onClick={() => setSheetState({ open: true })}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nueva sede
-        </Button>
+        {can("branches.create") && (
+          <Button onClick={() => setSheetState({ open: true })}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva sede
+          </Button>
+        )}
       </div>
 
       <div className="mb-4 relative max-w-md">
@@ -149,15 +146,17 @@ export function BranchesPage() {
                 <TableCell className="text-muted-foreground">{b.telefono || "—"}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSheetState({ open: true, editing: b })}
-                      aria-label={`Editar ${b.nombre}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <DeleteBranchButton branch={b} />
+                    {can("branches.update") && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSheetState({ open: true, editing: b })}
+                        aria-label={`Editar ${b.nombre}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {can("branches.delete") && <DeleteBranchButton branch={b} />}
                   </div>
                 </TableCell>
               </TableRow>
@@ -243,16 +242,19 @@ function BranchSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="sm:max-w-md flex flex-col">
-        <SheetHeader>
-          <SheetTitle>{isEdit ? "Editar sede" : "Nueva sede"}</SheetTitle>
-          <SheetDescription>
-            {isEdit ? "Modifica los datos de la sede." : "Da de alta una sede nueva."}
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto px-4">
+    <FormDialog
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title={<>{isEdit ? "Editar sede" : "Nueva sede"}</>}
+      description={<>{isEdit ? "Modifica los datos de la sede." : "Da de alta una sede nueva."}</>}
+      dirty={form.formState.isDirty}
+      actions={
+        <Button form="branch-form" type="submit" disabled={isPending}>
+            {isPending ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear"}
+          </Button>
+      }
+    >
+        <div className="pt-1">
           <Form {...form}>
             <form id="branch-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -292,14 +294,7 @@ function BranchSheet({
           </Form>
         </div>
 
-        <SheetFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button form="branch-form" type="submit" disabled={isPending}>
-            {isPending ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear"}
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </FormDialog>
   );
 }
 

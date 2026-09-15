@@ -5,7 +5,7 @@
 // Sheet lateral para asignar el paquete a un paciente (POST /patient-packages).
 // ============================================================
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { ArrowLeft, Pencil, UserPlus } from "lucide-react";
 
@@ -21,16 +21,10 @@ import {
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { FormDialog } from "@/components/shared/FormDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { usePermissions } from "@/hooks/use-permissions";
 import { PatientCombobox } from "@/components/shared/PatientCombobox";
 
 import { usePackage } from "@/api/packages.api";
@@ -46,7 +40,9 @@ export function PackageDetailPage() {
   const params = useParams({ strict: false }) as { id?: string };
   const id = params.id;
   const { data: pkg, isLoading } = usePackage(id);
-  const [assignOpen, setAssignOpen] = useState(false);
+  const { can } = usePermissions();
+  // `seq` remonta el formulario de asignación en cada apertura
+  const [assign, setAssign] = useState({ open: false, seq: 0 });
 
   if (isLoading) {
     return (
@@ -100,16 +96,23 @@ export function PackageDetailPage() {
           <Button asChild variant="outline">
             <Link to="/packages"><ArrowLeft className="mr-2 h-4 w-4" />Volver</Link>
           </Button>
-          <Button asChild variant="outline">
-            <Link to="/packages/$id/edit" params={{ id: pkg.id }}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </Link>
-          </Button>
-          <Button onClick={() => setAssignOpen(true)} disabled={!pkg.activo}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Asignar a paciente
-          </Button>
+          {can("packages.update") && (
+            <Button asChild variant="outline">
+              <Link to="/packages/$id/edit" params={{ id: pkg.id }}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </Link>
+            </Button>
+          )}
+          {can("patientPackages.assign") && (
+            <Button
+              onClick={() => setAssign((s) => ({ open: true, seq: s.seq + 1 }))}
+              disabled={!pkg.activo}
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Asignar a paciente
+            </Button>
+          )}
         </div>
       </div>
 
@@ -164,10 +167,11 @@ export function PackageDetailPage() {
       </div>
 
       <AssignPackageSheet
-        open={assignOpen}
+        key={assign.seq}
+        open={assign.open}
         packageId={pkg.id}
         defaultPrice={pkg.precioTotal}
-        onClose={() => setAssignOpen(false)}
+        onClose={() => setAssign((s) => ({ ...s, open: false }))}
       />
     </PageContainer>
   );
@@ -199,18 +203,12 @@ function AssignPackageSheet({
   const navigate = useNavigate();
   const assign = useAssignPackage();
 
+  // Estado inicial por render: el padre remonta este componente (key) en cada apertura.
   const [patient, setPatient] = useState<PatientSummary | null>(null);
   const [precio, setPrecio] = useState<number>(defaultPrice);
-  const [fechaInicio, setFechaInicio] = useState<string>(todayISO());
+  const [fechaInicio, setFechaInicio] = useState<string>(todayISO);
 
-  // Reset al abrir
-  useEffect(() => {
-    if (open) {
-      setPatient(null);
-      setPrecio(defaultPrice);
-      setFechaInicio(todayISO());
-    }
-  }, [open, defaultPrice]);
+  const assignDirty = !!patient || precio !== defaultPrice || fechaInicio !== todayISO();
 
   const canSubmit = !!patient && precio >= 0 && !!fechaInicio;
 
@@ -232,16 +230,22 @@ function AssignPackageSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="sm:max-w-md flex flex-col">
-        <SheetHeader>
-          <SheetTitle>Asignar paquete a paciente</SheetTitle>
-          <SheetDescription>
-            Las sesiones del paquete se generan automáticamente al asignar.
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto px-4 space-y-4">
+    <FormDialog
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title={<>Asignar paquete a paciente</>}
+      description={<>Las sesiones del paquete se generan automáticamente al asignar.</>}
+      dirty={assignDirty}
+      actions={
+        <Button
+            onClick={handleSubmit}
+            disabled={!canSubmit || assign.isPending}
+          >
+            {assign.isPending ? "Asignando..." : "Asignar"}
+          </Button>
+      }
+    >
+        <div className="pt-1 space-y-4">
           <PatientCombobox value={patient} onChange={setPatient} />
 
           <div className="space-y-1.5">
@@ -267,16 +271,6 @@ function AssignPackageSheet({
           </div>
         </div>
 
-        <SheetFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!canSubmit || assign.isPending}
-          >
-            {assign.isPending ? "Asignando..." : "Asignar"}
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </FormDialog>
   );
 }

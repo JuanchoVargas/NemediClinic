@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/stores/auth.store";
 import { useToastStore } from "@/stores/toast.store";
+import { usePermissions } from "@/hooks/use-permissions";
 import {
   Building2,
   Calendar,
@@ -39,9 +40,13 @@ export function Header() {
 
   const appName = import.meta.env.VITE_APP_NAME || "React Startup Base";
 
-  const role = user?.role;
-  const isSuperAdmin = role === "SuperAdmin";
-  const isAdmin = role === "Admin" || isSuperAdmin;
+  // Visibilidad de menú según la matriz de permisos (src/lib/permissions.ts)
+  const { can } = usePermissions();
+  const showPackages = can("packages.read");
+  const showUsers = can("users.update"); // página de administración: Admin y SuperAdmin
+  const showBranches = can("branches.read");
+  const showTenants = can("tenants.read");
+  const isAdmin = showUsers || showBranches || showTenants;
 
   const handleLogout = () => {
     clearSession();
@@ -84,14 +89,16 @@ export function Header() {
                 <Stethoscope className="h-4 w-4" />
                 Procedimientos
               </Link>
-              <Link
-                to="/packages"
-                className={linkClass}
-                activeProps={{ className: "text-foreground font-medium" }}
-              >
-                <Package className="h-4 w-4" />
-                Paquetes
-              </Link>
+              {showPackages && (
+                <Link
+                  to="/packages"
+                  className={linkClass}
+                  activeProps={{ className: "text-foreground font-medium" }}
+                >
+                  <Package className="h-4 w-4" />
+                  Paquetes
+                </Link>
+              )}
               <Link
                 to="/inventory"
                 className={linkClass}
@@ -143,13 +150,15 @@ export function Header() {
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
-                    <DropdownMenuItem asChild>
-                      <Link to="/admin/users" className="flex items-center gap-2">
-                        <Users className="h-4 w-4" />
-                        Usuarios
-                      </Link>
-                    </DropdownMenuItem>
-                    {isSuperAdmin && (
+                    {showUsers && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/users" className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          Usuarios
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    {showBranches && (
                       <DropdownMenuItem asChild>
                         <Link to="/admin/branches" className="flex items-center gap-2">
                           <Building2 className="h-4 w-4" />
@@ -157,7 +166,7 @@ export function Header() {
                         </Link>
                       </DropdownMenuItem>
                     )}
-                    {isSuperAdmin && (
+                    {showTenants && (
                       <DropdownMenuItem asChild>
                         <Link to="/super/tenants" className="flex items-center gap-2">
                           <Package className="h-4 w-4" />

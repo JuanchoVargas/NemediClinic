@@ -33,14 +33,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { FormDialog } from "@/components/shared/FormDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -59,6 +52,8 @@ import {
   useUpdateTenant,
 } from "@/api/tenants.api";
 import { useDebounce } from "@/hooks/use-debounce";
+import { usePermissions } from "@/hooks/use-permissions";
+import { usePageReset } from "@/hooks/use-page-reset";
 import { useToastStore } from "@/stores/toast.store";
 import type { Tenant } from "@/types/tenant";
 
@@ -76,10 +71,10 @@ type TenantFormValues = z.infer<typeof tenantSchema>;
 const EMPTY: TenantFormValues = { nombre: "", nit: "", email: "", telefono: "" };
 
 export function TenantsPage() {
+  const { can } = usePermissions();
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounce(searchInput, 300);
-  const [page, setPage] = useState(1);
-  useEffect(() => setPage(1), [search]);
+  const [page, setPage] = usePageReset(search);
 
   const { data, isLoading } = useTenantsPaged(page, PAGE_SIZE, search);
 
@@ -99,10 +94,12 @@ export function TenantsPage() {
             Clínicas registradas en la plataforma.
           </p>
         </div>
-        <Button onClick={() => setSheetState({ open: true })}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo tenant
-        </Button>
+        {can("tenants.create") && (
+          <Button onClick={() => setSheetState({ open: true })}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo tenant
+          </Button>
+        )}
       </div>
 
       <div className="mb-4 relative max-w-md">
@@ -159,15 +156,17 @@ export function TenantsPage() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSheetState({ open: true, editing: t })}
-                      aria-label={`Editar ${t.nombre}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <DeleteTenantButton tenant={t} />
+                    {can("tenants.update") && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSheetState({ open: true, editing: t })}
+                        aria-label={`Editar ${t.nombre}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {can("tenants.delete") && <DeleteTenantButton tenant={t} />}
                   </div>
                 </TableCell>
               </TableRow>
@@ -260,16 +259,19 @@ function TenantSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="sm:max-w-md flex flex-col">
-        <SheetHeader>
-          <SheetTitle>{isEdit ? "Editar tenant" : "Nuevo tenant"}</SheetTitle>
-          <SheetDescription>
-            {isEdit ? "Modifica los datos de la clínica." : "Da de alta una clínica nueva."}
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto px-4">
+    <FormDialog
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title={<>{isEdit ? "Editar tenant" : "Nuevo tenant"}</>}
+      description={<>{isEdit ? "Modifica los datos de la clínica." : "Da de alta una clínica nueva."}</>}
+      dirty={form.formState.isDirty}
+      actions={
+        <Button form="tenant-form" type="submit" disabled={isPending}>
+            {isPending ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear"}
+          </Button>
+      }
+    >
+        <div className="pt-1">
           <Form {...form}>
             <form id="tenant-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -320,14 +322,7 @@ function TenantSheet({
           </Form>
         </div>
 
-        <SheetFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button form="tenant-form" type="submit" disabled={isPending}>
-            {isPending ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear"}
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </FormDialog>
   );
 }
 

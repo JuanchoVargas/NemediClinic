@@ -49,3 +49,6 @@ playwright-report/
 
 # Resultados del recorrido de UI (se regeneran en cada corrida)
 tests/e2e/ui/.results/
+
+# HTML intermedio de la guía (el PDF sí se versiona)
+docs/manual/Guia_de_uso_NemediClinic.html

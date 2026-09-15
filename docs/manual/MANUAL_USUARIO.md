@@ -1,10 +1,13 @@
-# Nemedi Clinic — Manual de usuario (borrador)
+---
+title: "NemediClinic — Guía de uso"
+subtitle: "Versión 1.0 · Recorrido guiado por rol con pantallas reales"
+date: "15 de septiembre de 2026"
+lang: es
+---
 
-Este manual se generó recorriendo la aplicación real con los datos de demostración, paso a paso y por rol. Cada paso tiene su pantalla capturada tal como la ve el usuario. Los pasos que hoy no funcionan o no existen están al final, en **Pendientes**.
+> **Cómo usar esta guía.** Cada paso tiene un número, una instrucción y la pantalla tal como la verás. En la imagen, el recuadro rojo con el número señala exactamente dónde hacer clic. Los pasos marcados como **Pendiente** corresponden a funciones que todavía están en desarrollo; están reunidos al final en "Funciones en desarrollo".
 
-Fecha del recorrido: 15 de septiembre de 2026. Resolución de las capturas: 1440 × 900.
-
-**Cuentas usadas en el recorrido**
+**Cuentas de ejemplo usadas en las pantallas**
 
 | Rol | Usuario | Contraseña |
 |---|---|---|
@@ -12,513 +15,807 @@ Fecha del recorrido: 15 de septiembre de 2026. Resolución de las capturas: 1440
 | Recepción | recepcion@nemedi.demo | Demo2026! |
 | Esteticista | laura.perez@nemedi.demo | Demo2026! |
 
-**Cómo se lee.** ✅ el paso funcionó como se describe. ❌ el paso no se pudo completar; está explicado en Pendientes.
+# Parte 1 · Dueño / administrador general {.parte}
 
----
+El dueño tiene acceso a todo: configura la clínica, sus sedes y usuarios; mantiene el catálogo de procedimientos, paquetes y productos; y supervisa la agenda completa.
 
-# Parte 1 · Dueño / administrador general
+## Capítulo 1 · Entrar y salir {.capitulo}
 
-El dueño ve y puede hacer todo: configurar la clínica, sus sedes y usuarios, mantener el catálogo de procedimientos, paquetes y productos, y supervisar la agenda completa.
+**Qué vas a lograr:** ingresar al sistema con tu cuenta y salir de forma segura.
 
-## Capítulo 1 · Entrar y salir
+### 1. Abre la pantalla de inicio de sesión
 
-**1.1 · Pantalla de inicio de sesión** ✅
-Abre la aplicación. Verás el formulario con Email y Contraseña.
+Escribe la dirección de NemediClinic en tu navegador. **Después verás** el formulario con los campos Email y Contraseña.
 
-![](img/superadmin/cap1-01-pantalla-de-inicio-de-sesion.png)
+![](img/superadmin/cap1-01-abre-la-pantalla-de-inicio-de-sesion.png)
 
-**1.2 · Ingresar como dueño** ✅
-Escribe tu correo y contraseña y pulsa **Ingresar**. Entras al Dashboard. Arriba a la derecha aparece tu correo y, en el menú, la opción **Administración** que solo ven el dueño y recepción.
+### 2. Escribe tu correo y contraseña y presiona Ingresar
 
-![](img/superadmin/cap1-02-ingresar-como-dueno-superadmin.png)
+**Después verás** el Dashboard. Arriba a la derecha aparece tu correo y, en el menú, la opción Administración, que solo ven el dueño y recepción.
 
-**1.3 · Cerrar sesión** ✅
-Pulsa **Cerrar sesión** en la esquina superior derecha. Vuelves a la pantalla de ingreso.
+![](img/superadmin/cap1-02-escribe-tu-correo-y-contrasena-y-presiona-ingres.png)
 
-![](img/superadmin/cap1-03-cerrar-sesion.png)
+### 3. Presiona Cerrar sesión
 
-**1.4 · Sin sesión no se puede entrar** ✅
-Si alguien escribe una dirección interna (por ejemplo la lista de pacientes) sin haber ingresado, el sistema lo devuelve a la pantalla de ingreso.
+Está en la esquina superior derecha. **Después verás** de nuevo la pantalla de ingreso.
 
-![](img/superadmin/cap1-04-ruta-protegida-sin-sesion-redirige-al-login.png)
+![](img/superadmin/cap1-03-presiona-cerrar-sesion.png)
 
-## Capítulo 2 · Configurar la clínica
+### 4. Sin sesión no se puede entrar
 
-**2.1 · Sedes** ✅
-Menú **Administración → Sedes**. Aquí están las sucursales de la clínica. La demo arranca con "Sede Principal".
+Si alguien escribe una dirección interna del sistema sin haber ingresado, el sistema lo devuelve a la pantalla de ingreso.
 
-![](img/superadmin/cap2-01-sedes-lista-de-sedes-de-la-clinica.png)
+![](img/superadmin/cap1-04-sin-sesion-cualquier-direccion-interna-vuelve-al.png)
 
-**2.2 · Crear una sede** ✅
-Pulsa **Nueva sede**, completa nombre, dirección y teléfono y guarda con **Crear**. La sede aparece de inmediato en la lista.
+## Capítulo 2 · Configurar la clínica {.capitulo}
 
-![](img/superadmin/cap2-02-crear-sede-sede-chapinero.png)
+**Qué vas a lograr:** crear una sede, dar de alta al personal con su rol y su sede, y revisar la ficha de tu clínica.
 
-**2.3 · Usuarios** ✅
-Menú **Administración → Usuarios**. Verás a cada persona con su rol (SuperAdmin, Admin o Esteticista) y su sede.
+### 1. Haz clic en Administración
 
-![](img/superadmin/cap2-03-usuarios-lista-de-usuarios-y-roles.png)
+**Después verás** el menú desplegable con Usuarios, Sedes y Tenants.
 
-**2.4 · Crear un usuario de recepción (Admin)** ✅
-Pulsa **Nuevo usuario**, escribe nombre, apellido, correo y contraseña, elige el rol **Admin** y la sede, y pulsa **Crear**.
+![](img/superadmin/cap2-01-haz-clic-en-administracion.png)
 
-![](img/superadmin/cap2-04-crear-usuario-admin-monica-herrera.png)
+### 2. Elige Sedes
 
-**2.5 · Crear una esteticista con sede** ✅
-Igual que el anterior, pero con rol **Esteticista** y la sede donde atiende.
+**Después verás** la lista de sucursales. La demostración arranca con "Sede Principal".
 
-![](img/superadmin/cap2-05-crear-usuario-esteticista-daniela-ospina-en-sede.png)
+![](img/superadmin/cap2-02-elige-sedes.png)
 
-**2.6 · Editar un usuario** ✅
-Pulsa el lápiz de la fila, cambia lo que necesites y pulsa **Guardar cambios**.
+### 3. Haz clic en Nueva sede
 
-![](img/superadmin/cap2-06-editar-usuario-apellido-ospina-rios.png)
+**Después verás** el formulario centrado de la sede nueva.
 
-**2.7 · Desactivar un usuario** ❌
-Hoy el formulario no tiene la opción de desactivar. Ver Pendientes.
+![](img/superadmin/cap2-03-haz-clic-en-nueva-sede.png)
 
-![](img/superadmin/cap2-07-desactivar-usuario-desde-el-formulario.png)
+### 4. Escribe nombre, dirección y teléfono y presiona Crear
 
-**2.8 · Tenants (tu clínica)** ✅
-Menú **Administración → Tenants** muestra la ficha de tu clínica. Solo el dueño ve esta pantalla.
+**Después verás** la sede nueva en la lista.
 
-![](img/superadmin/cap2-08-tenants-lectura-del-propio-clinica.png)
+![](img/superadmin/cap2-04-escribe-los-datos-de-la-sede-y-presiona-crear.png)
 
-## Capítulo 3 · Catálogo: procedimientos y paquetes
+### 5. Abre Administración y elige Usuarios
 
-**3.1 · Procedimientos** ✅
-Menú **Procedimientos**. Es la lista de servicios que ofrece la clínica con precio, duración y área corporal.
+**Después verás** a cada persona con su rol (SuperAdmin, Admin o Esteticista) y su sede.
 
-![](img/superadmin/cap3-01-procedimientos-catalogo-actual.png)
+![](img/superadmin/cap2-05-abre-administracion-y-elige-usuarios.png)
 
-**3.2 · Crear un procedimiento** ✅
-Pulsa **Nuevo procedimiento**. Escribe el precio sin puntos (150000) y el sistema lo muestra como **$150.000** en la lista.
+### 6. Haz clic en Nuevo usuario
 
-![](img/superadmin/cap3-02-crear-procedimiento-limpieza-facial-express-con-.png)
+**Después verás** el formulario de usuario.
 
-**3.3 · Editar un procedimiento** ✅
-Con el lápiz de la fila cambias, por ejemplo, la duración.
+![](img/superadmin/cap2-06-haz-clic-en-nuevo-usuario.png)
 
-![](img/superadmin/cap3-03-editar-procedimiento-duracion-45-min.png)
+### 7. Completa los datos, elige el rol Admin y la sede, y presiona Crear
 
-**3.4 · Desactivar un procedimiento** ✅
-En el formulario de edición apaga el interruptor **Activo**. La fila queda marcada como "Inactivo".
+Así se crea una persona de recepción. **Después verás** su correo en la lista.
 
-![](img/superadmin/cap3-04-desactivar-procedimiento.png)
+![](img/superadmin/cap2-07-completa-los-datos-de-monica-con-rol-admin-y-sed.png)
 
-**3.5 · Un procedimiento inactivo no debería ofrecerse al agendar** ❌
-Hoy sigue apareciendo en la lista al crear una cita. Ver Pendientes.
+### 8. Crea una esteticista con rol Esteticista y su sede, y presiona Crear
 
-![](img/superadmin/cap3-05-el-procedimiento-inactivo-no-aparece-al-crear-un.png)
+**Después verás** a la esteticista en la lista con la sede donde atiende.
 
-**3.6 · Crear un paquete con dos procedimientos** ✅
-Menú **Paquetes → Nuevo paquete**. Busca cada procedimiento, indica cuántas sesiones incluye y pulsa **Agregar**. El total de sesiones y el **precio de referencia** (la suma de las sesiones sueltas) se calculan solos.
+![](img/superadmin/cap2-08-crea-a-daniela-con-rol-esteticista-en-sede-chapi.png)
 
-![](img/superadmin/cap3-06-crear-paquete-duo-facial-express-con-2-procedimi.png)
+### 9. Haz clic en el lápiz de la fila para editar
 
-**3.7 · Precio con descuento** ✅
-Si escribes un precio menor al de referencia, aparece un aviso amarillo con el descuento en pesos y en porcentaje.
+**Después verás** el formulario con los datos actuales.
 
-![](img/superadmin/cap3-07-precio-con-descuento-muestra-el-aviso.png)
+![](img/superadmin/cap2-09-haz-clic-en-el-lapiz-de-daniela-para-editarla.png)
 
-**3.8 · Guardar el paquete** ✅
-Pulsa **Crear paquete**.
+### 10. Cambia lo que necesites y presiona Guardar cambios
 
-![](img/superadmin/cap3-08-guardar-el-paquete.png)
+**Después verás** la lista actualizada y un aviso de confirmación.
 
-**3.9 · Detalle del paquete** ✅
-Muestra precio, vigencia, alerta de vencimiento y los procedimientos incluidos con sus sesiones.
+![](img/superadmin/cap2-10-cambia-el-apellido-y-presiona-guardar-cambios.png)
 
-![](img/superadmin/cap3-09-detalle-del-paquete.png)
+### 11. Desactivar un usuario — Pendiente {.pendiente}
 
-**3.10 · Eliminar un paquete** ✅
-En la lista, pulsa la papelera y confirma. El paquete desaparece del catálogo.
+Hoy el formulario no tiene un interruptor para desactivar sin borrar. Si una persona deja de trabajar en la clínica, usa la papelera de su fila. Ver "Funciones en desarrollo".
 
-![](img/superadmin/cap3-10-eliminar-el-paquete.png)
+![](img/superadmin/cap2-11-vuelve-a-editar-y-apaga-el-interruptor-activo-pa.png)
 
-## Capítulo 4 · Inventario
+### 12. Abre Administración y elige Tenants para ver la ficha de tu clínica
 
-**4.1 · Productos con semáforo** ✅
-Menú **Inventario**. Cada producto tiene un semáforo según su stock frente al mínimo: **Verde** (bien), **Amarillo** (bajo), **Rojo** (crítico).
+**Después verás** los datos de tu clínica. Esta pantalla es exclusiva del dueño.
 
-![](img/superadmin/cap4-01-inventario-productos-con-semaforo.png)
+![](img/superadmin/cap2-12-abre-administracion-y-elige-tenants-para-ver-la-.png)
 
-**4.2 · Crear un producto** ✅
-Pulsa **Nuevo producto**. Un producto nuevo arranca con stock 0; con mínimo 100 queda en **Rojo** hasta que registres una entrada.
+## Capítulo 3 · Catálogo: procedimientos y paquetes {.capitulo}
 
-![](img/superadmin/cap4-02-crear-producto-serum-vitamina-c-30-ml-con-stock-.png)
+**Qué vas a lograr:** mantener la lista de servicios con su precio y duración, y armar paquetes con descuento.
 
-**4.3 · Editar un producto** ✅
-Con el lápiz cambias, por ejemplo, el stock mínimo.
+### 1. Haz clic en Procedimientos
 
-![](img/superadmin/cap4-03-editar-producto-stock-minimo-80.png)
+**Después verás** el catálogo con precio, duración y área corporal de cada servicio.
 
-**4.4 · Eliminar un producto** ✅
-Papelera y confirmación.
+![](img/superadmin/cap3-01-haz-clic-en-procedimientos.png)
 
-![](img/superadmin/cap4-04-eliminar-producto.png)
+### 2. Haz clic en Nuevo procedimiento
 
-## Capítulo 5 · Vista general de la agenda
+![](img/superadmin/cap3-02-haz-clic-en-nuevo-procedimiento.png)
 
-**5.1 · Calendario con todas las esteticistas** ✅
-Menú **Calendario**. El dueño ve las citas de toda la clínica, con colores por estado.
+### 3. Completa el formulario y presiona Crear
 
-![](img/superadmin/cap5-01-calendario-con-las-citas-de-todas-las-esteticist.png)
+Escribe el precio sin puntos (por ejemplo 150000). **Después verás** el servicio en la lista con el precio formateado: $150.000.
 
-**5.2 · Filtrar por esteticista** ✅
-Con el selector **Todos los esteticistas** puedes ver solo la agenda de una persona.
+![](img/superadmin/cap3-03-completa-el-formulario-con-precio-150000-y-presi.png)
 
-![](img/superadmin/cap5-02-filtrar-el-calendario-por-esteticista-camila-rui.png)
+### 4. Haz clic en el lápiz del procedimiento para editarlo
 
-**5.3 · Hoja del día** ✅
-**Calendario → Hoja del día** lista las citas del día en orden, con paciente, procedimiento, esteticista y estado.
+![](img/superadmin/cap3-04-haz-clic-en-el-lapiz-del-procedimiento-para-edit.png)
 
-![](img/superadmin/cap5-03-hoja-del-dia-de-toda-la-clinica.png)
+### 5. Cambia la duración y presiona Guardar cambios
 
----
+**Después verás** la nueva duración en la lista.
 
-# Parte 2 · Recepción
+![](img/superadmin/cap3-05-cambia-la-duracion-a-45-y-presiona-guardar-cambi.png)
+
+### 6. Vuelve a editar y apaga el interruptor Activo
+
+Un servicio inactivo deja de ofrecerse sin perder su historial.
+
+![](img/superadmin/cap3-06-vuelve-a-editar-y-apaga-el-interruptor-activo.png)
+
+### 7. Presiona Guardar cambios
+
+**Después verás** la etiqueta "Inactivo" en la fila.
+
+![](img/superadmin/cap3-07-presiona-guardar-cambios-el-procedimiento-queda-.png)
+
+### 8. El servicio inactivo no debería ofrecerse al agendar — Pendiente {.pendiente}
+
+Hoy, al crear una cita, la lista de procedimientos todavía incluye los inactivos. Ver "Funciones en desarrollo".
+
+![](img/superadmin/cap3-08-en-el-calendario-haz-clic-en-un-espacio-libre-y-.png)
+
+### 9. Haz clic en Paquetes y luego en Nuevo paquete
+
+**Después verás** el formulario del paquete en tres bloques: datos, procedimientos incluidos y precio.
+
+![](img/superadmin/cap3-09-haz-clic-en-paquetes-y-luego-en-nuevo-paquete.png)
+
+### 10. Escribe el nombre, busca el primer procedimiento, indica las sesiones y presiona Agregar
+
+**Después verás** el procedimiento en la lista con su subtotal.
+
+![](img/superadmin/cap3-10-escribe-el-nombre-busca-limpieza-facial-profunda.png)
+
+### 11. Agrega el segundo procedimiento
+
+**Después verás** el total de sesiones y el **precio de referencia**, que es la suma de las sesiones sueltas. Ambos se calculan solos.
+
+![](img/superadmin/cap3-11-agrega-tambien-peeling-quimico-con-1-sesion.png)
+
+### 12. Escribe un precio menor al de referencia
+
+**Después verás** un aviso amarillo con el descuento en pesos y en porcentaje.
+
+![](img/superadmin/cap3-12-escribe-un-precio-menor-al-de-referencia-aparece.png)
+
+### 13. Presiona Crear paquete
+
+![](img/superadmin/cap3-13-presiona-crear-paquete.png)
+
+### 14. Revisa el detalle del paquete
+
+**Después verás** precio, vigencia, alerta de vencimiento y los procedimientos incluidos con sus sesiones.
+
+![](img/superadmin/cap3-14-revisa-el-detalle-del-paquete.png)
+
+### 15. En la lista de paquetes, haz clic en la papelera del paquete
+
+![](img/superadmin/cap3-15-en-la-lista-de-paquetes-haz-clic-en-la-papelera-.png)
+
+### 16. Confirma con Eliminar
+
+**Después verás** que el paquete desaparece del catálogo.
+
+![](img/superadmin/cap3-16-confirma-con-eliminar.png)
+
+## Capítulo 4 · Inventario {.capitulo}
+
+**Qué vas a lograr:** dar de alta productos con su stock mínimo y entender el semáforo.
+
+### 1. Haz clic en Inventario
+
+**Después verás** los productos con su semáforo: **Verde** (bien), **Amarillo** (bajo) o **Rojo** (crítico), según el stock frente al mínimo.
+
+![](img/superadmin/cap4-01-haz-clic-en-inventario.png)
+
+### 2. Haz clic en Nuevo producto
+
+![](img/superadmin/cap4-02-haz-clic-en-nuevo-producto.png)
+
+### 3. Completa el producto con su stock mínimo y presiona Crear
+
+Un producto nuevo arranca con stock 0. **Después verás** que queda en Rojo hasta que registres una entrada.
+
+![](img/superadmin/cap4-03-completa-el-producto-con-stock-minimo-100-y-pres.png)
+
+### 4. Haz clic en el lápiz del producto para editarlo
+
+![](img/superadmin/cap4-04-haz-clic-en-el-lapiz-del-producto-para-editarlo.png)
+
+### 5. Cambia el stock mínimo y presiona Guardar cambios
+
+**Después verás** el nuevo mínimo en la columna de stock.
+
+![](img/superadmin/cap4-05-cambia-el-stock-minimo-a-80-y-presiona-guardar-c.png)
+
+### 6. Haz clic en la papelera del producto
+
+![](img/superadmin/cap4-06-haz-clic-en-la-papelera-del-producto.png)
+
+### 7. Confirma con Eliminar
+
+![](img/superadmin/cap4-07-confirma-con-eliminar.png)
+
+## Capítulo 5 · Vista general de la agenda {.capitulo}
+
+**Qué vas a lograr:** ver la agenda de toda la clínica y de cada esteticista.
+
+### 1. Haz clic en Calendario y elige Vista calendario
+
+**Después verás** las citas de todas las esteticistas, con un color por estado.
+
+![](img/superadmin/cap5-01-haz-clic-en-calendario-y-elige-vista-calendario.png)
+
+### 2. Abre el selector "Todos los esteticistas"
+
+![](img/superadmin/cap5-02-abre-el-selector-todos-los-esteticistas.png)
+
+### 3. Elige una esteticista
+
+**Después verás** solo su agenda.
+
+![](img/superadmin/cap5-03-elige-camila-ruiz-el-calendario-muestra-solo-sus.png)
+
+### 4. Haz clic en Hoja del día
+
+**Después verás** las citas del día en orden, con paciente, procedimiento, esteticista y estado.
+
+![](img/superadmin/cap5-04-haz-clic-en-hoja-del-dia.png)
+
+## Guía rápida · Dueño {.capitulo}
+
+| Acción | Dónde |
+|---|---|
+| Crear una sede | Administración → Sedes → Nueva sede |
+| Dar de alta a alguien del equipo | Administración → Usuarios → Nuevo usuario (elige el rol y la sede) |
+| Editar o eliminar un usuario | Administración → Usuarios → lápiz / papelera de la fila |
+| Crear o editar un servicio | Procedimientos → Nuevo procedimiento / lápiz |
+| Retirar un servicio del catálogo | Procedimientos → lápiz → interruptor Activo |
+| Armar un paquete con descuento | Paquetes → Nuevo paquete → agrega procedimientos → escribe el precio |
+| Crear un producto | Inventario → Nuevo producto (define el stock mínimo) |
+| Ver la agenda de una esteticista | Calendario → Vista calendario → selector "Todos los esteticistas" |
+| Ver el día completo de la clínica | Calendario → Hoja del día |
+| Consultar los datos de la clínica | Administración → Tenants |
+
+# Parte 2 · Recepción {.parte}
 
 Recepción administra pacientes, agenda, paquetes, pagos e inventario. No crea sedes ni usuarios (eso lo hace el dueño) ni ve la ficha de la clínica.
 
-## Capítulo 1 · Entrar y qué puedes hacer
+## Capítulo 1 · Entrar y qué puedes hacer {.capitulo}
 
-**1.1 · Ingresar como Recepción** ✅
+**Qué vas a lograr:** ingresar y reconocer qué opciones tienes y cuáles son solo del dueño.
 
-![](img/admin/cap1-01-ingresar-como-recepcion-admin.png)
+### 1. Escribe tu correo y contraseña y presiona Ingresar
 
-**1.2 · Menú Administración** ✅
-Muestra **Usuarios** y **Sedes**. La opción Tenants no aparece porque es solo del dueño.
+![](img/admin/cap1-01-escribe-tu-correo-y-contrasena-y-presiona-ingres.png)
 
-![](img/admin/cap1-02-el-menu-administracion-muestra-usuarios-y-sedes-.png)
+### 2. Haz clic en Administración
 
-**1.3 · Sedes: ver y editar, no crear** ✅
-Puedes corregir datos de una sede, pero el botón **Nueva sede** no está disponible para recepción.
+**Después verás** Usuarios y Sedes. Tenants no aparece porque es solo del dueño.
 
-![](img/admin/cap1-03-sedes-puede-ver-y-editar-pero-no-crear.png)
+![](img/admin/cap1-02-haz-clic-en-administracion-veras-usuarios-y-sede.png)
 
-**1.4 · Usuarios: editar, no crear** ✅
-Puedes editar usuarios existentes; crear usuarios nuevos es tarea del dueño.
+### 3. Elige Sedes
 
-![](img/admin/cap1-04-usuarios-sin-nuevo-usuario-pero-con-editar.png)
+**Después verás** las sedes con su lápiz para editar. No hay botón Nueva sede: crear sedes es tarea del dueño.
 
-**1.5 · Si intentas entrar a Tenants** ✅
-El sistema te devuelve al inicio.
+![](img/admin/cap1-03-elige-sedes-puedes-editar-pero-no-hay-boton-nuev.png)
 
-![](img/admin/cap1-05-escribir-la-direccion-de-tenants-super-tenants-v.png)
+### 4. Abre Administración y elige Usuarios
 
-**1.6 · Aviso de permisos** ❌
-Al escribir la dirección directamente en el navegador, el aviso "No tienes permisos" no alcanza a mostrarse. Ver Pendientes.
+**Después verás** la lista con lápiz para editar. No hay botón Nuevo usuario.
 
-![](img/admin/cap1-06-y-muestra-el-aviso-no-tienes-permisos.png)
+![](img/admin/cap1-04-abre-administracion-y-elige-usuarios-puedes-edit.png)
 
-## Capítulo 2 · Pacientes
+### 5. Si escribes una dirección que no te corresponde, vuelves al inicio
 
-**2.1 · Crear un paciente** ✅
-Menú **Pacientes → Nuevo paciente**. Nombre, apellido, cédula y teléfono son obligatorios. Al guardar, el sistema crea también su historia clínica vacía.
+![](img/admin/cap1-05-si-escribes-la-direccion-de-tenants-en-el-navega.png)
 
-![](img/admin/cap2-01-crear-paciente-laura-restrepo-mejia.png)
+### 6. Aviso de permisos — Pendiente {.pendiente}
 
-**2.2 · Cédula repetida** ✅
-Si la cédula ya existe, el sistema no guarda y muestra el aviso "Ya existe un paciente con esa cédula".
+Al escribir la dirección directamente en el navegador, el sistema te devuelve al inicio pero todavía no muestra el aviso "No tienes permisos". Ver "Funciones en desarrollo".
 
-![](img/admin/cap2-02-cedula-duplicada-el-sistema-lo-rechaza-con-un-av.png)
+![](img/admin/cap1-06-y-deberia-mostrarse-el-aviso-no-tienes-permisos.png)
 
-**2.3 · Buscar por nombre** ✅
-Escribe en el buscador; la lista se filtra mientras escribes.
+## Capítulo 2 · Pacientes {.capitulo}
 
-![](img/admin/cap2-03-buscar-por-nombre-valentina.png)
+**Qué vas a lograr:** registrar un paciente, encontrarlo, revisar su ficha completa, corregir sus datos y eliminarlo.
 
-**2.4 · Buscar por cédula** ✅
+### 1. Haz clic en Inicio y luego en Ver pacientes
 
-![](img/admin/cap2-04-buscar-por-cedula-1000000003.png)
+**Después verás** la lista de pacientes con su buscador.
 
-**2.5 · Ficha del paciente: Información** ✅
-Pulsa **Ver** en la fila. La ficha tiene cuatro pestañas.
+![](img/admin/cap2-01-haz-clic-en-inicio-y-luego-en-la-tarjeta-pacient.png)
 
-![](img/admin/cap2-05-ficha-de-valentina-tab-informacion.png)
+### 2. Haz clic en Nuevo paciente
 
-**2.6 · Historia clínica** ✅
-Antecedentes, alergias, medicamentos y las notas de cada sesión.
+![](img/admin/cap2-02-haz-clic-en-nuevo-paciente.png)
 
-![](img/admin/cap2-06-ficha-de-valentina-tab-historia-clinica.png)
+### 3. Completa nombre, apellido, cédula y teléfono y presiona Crear paciente
 
-**2.7 · Paquetes** ✅
-Los paquetes contratados por el paciente con su avance de sesiones.
+Esos cuatro datos son obligatorios. **Después verás** la ficha del paciente; el sistema crea también su historia clínica vacía.
 
-![](img/admin/cap2-07-ficha-de-valentina-tab-paquetes.png)
+![](img/admin/cap2-03-completa-nombre-apellido-cedula-y-telefono-y-pre.png)
 
-**2.8 · Pagos** ✅
-Lo acordado, lo pagado y el saldo de cada paquete.
+### 4. Si la cédula ya existe, el sistema no guarda
 
-![](img/admin/cap2-08-ficha-de-valentina-tab-pagos.png)
+**Después verás** el aviso "Ya existe un paciente con esa cédula".
 
-**2.9 · Editar un paciente** ✅
-Botón **Editar** en la ficha, cambia el dato y pulsa **Guardar cambios**.
+![](img/admin/cap2-04-intenta-crear-otro-paciente-con-la-misma-cedula-.png)
 
-![](img/admin/cap2-09-editar-telefono-del-paciente-nuevo.png)
+### 5. Escribe un nombre en el buscador
 
-**2.10 · Eliminar un paciente** ✅
-En la lista, papelera y confirmación. El paciente deja de aparecer en búsquedas.
+**Después verás** la lista filtrada mientras escribes.
 
-![](img/admin/cap2-10-eliminar-el-paciente-nuevo.png)
+![](img/admin/cap2-05-en-pacientes-escribe-valentina-en-el-buscador.png)
 
-## Capítulo 3 · Vender un paquete y registrar pagos
+### 6. Escribe una cédula en el buscador
 
-**3.1 · Asignar un paquete a un paciente** ✅
-Menú **Paquetes**, abre el paquete con **Ver** y pulsa **Asignar a paciente**. Busca al paciente, ajusta el precio acordado si negociaste algo distinto y pulsa **Asignar**. El sistema te lleva a la ficha del paciente.
+También puedes buscar por cédula completa.
 
-![](img/admin/cap3-01-asignar-plan-mantenimiento-facial-a-sara-hernand.png)
+![](img/admin/cap2-06-escribe-una-cedula-en-el-buscador-1000000003.png)
 
-**3.2 · Avance de sesiones** ✅
-En la pestaña **Paquetes** el paquete nuevo aparece con **0 / N** sesiones.
+### 7. Haz clic en Ver en la fila del paciente
 
-![](img/admin/cap3-02-ficha-de-sara-el-paquete-aparece-con-0-2-sesione.png)
+**Después verás** la ficha con cuatro pestañas: Información, Historia clínica, Paquetes y Pagos.
 
-**3.3 · Pago parcial** ✅
-En la pestaña **Pagos**, pulsa **Registrar pago**, escribe el monto y el método. Mientras quede saldo, el resumen se muestra en **amarillo**.
+![](img/admin/cap2-07-busca-a-valentina-y-haz-clic-en-ver.png)
 
-![](img/admin/cap3-03-pago-parcial-de-80-000-saldo-pendiente-en-amaril.png)
+### 8. Haz clic en la pestaña Historia clínica
 
-**3.4 · Pago del saldo** ✅
-El formulario propone el saldo restante. Al quedar en $0 el resumen pasa a **verde**.
+**Después verás** antecedentes, alergias, medicamentos y las notas de cada sesión.
 
-![](img/admin/cap3-04-pago-del-resto-saldo-0-en-verde.png)
+![](img/admin/cap2-08-haz-clic-en-la-pestana-historia-clinica.png)
 
-## Capítulo 4 · Agenda
+### 9. Haz clic en la pestaña Paquetes
 
-**4.1 · Vista de mes** ✅
+**Después verás** los paquetes contratados y cuántas sesiones lleva de cada uno.
 
-![](img/admin/cap4-01-vista-de-mes.png)
+![](img/admin/cap2-09-haz-clic-en-la-pestana-paquetes.png)
 
-**4.2 · Vista de semana** ✅
+### 10. Haz clic en la pestaña Pagos
 
-![](img/admin/cap4-02-vista-de-semana.png)
+**Después verás** lo acordado, lo pagado y el saldo de cada paquete.
 
-**4.3 · Vista de día** ✅
+![](img/admin/cap2-10-haz-clic-en-la-pestana-pagos.png)
 
-![](img/admin/cap4-03-vista-de-dia.png)
+### 11. En la ficha, presiona Editar
 
-**4.4 · Crear una cita** ✅
-En la vista de semana, haz clic en el espacio libre del día y la hora. Se abre el formulario con esa hora ya puesta. Elige paciente, procedimiento y esteticista; la hora de fin se calcula con la duración del procedimiento. Pulsa **Crear cita**.
+![](img/admin/cap2-11-abre-la-ficha-del-paciente-nuevo-y-presiona-edit.png)
 
-![](img/admin/cap4-04-crear-cita-para-manana-10-00-con-laura-perez-san.png)
+### 12. Cambia el dato y presiona Guardar cambios
 
-**4.5 · Otra cita para otra esteticista** ✅
+**Después verás** la ficha con el dato corregido.
 
-![](img/admin/cap4-05-crear-cita-para-manana-13-00-con-camila-ruiz-sar.png)
+![](img/admin/cap2-12-cambia-el-telefono-y-presiona-guardar-cambios.png)
 
-**4.6 · Choque de horario** ✅
-Si la esteticista ya tiene una cita a esa hora, el sistema no la agenda y avisa "El esteticista ya tiene una cita en ese horario".
+### 13. En la lista, busca al paciente y haz clic en la papelera
 
-![](img/admin/cap4-06-conflicto-de-horario-laura-ya-tiene-cita-a-las-0.png)
+![](img/admin/cap2-13-en-la-lista-busca-al-paciente-y-haz-clic-en-la-p.png)
 
-**4.7 · Confirmar una cita** ✅
-Haz clic en la cita para abrir su detalle y pulsa **Confirmar** (por ejemplo cuando el paciente confirma por WhatsApp).
+### 14. Confirma con Eliminar
 
-![](img/admin/cap4-07-confirmar-la-cita-de-laura-manana-10-00.png)
+**Después verás** que el paciente ya no aparece en las búsquedas.
 
-**4.8 · Cancelar una cita** ✅
-En el detalle, pulsa **Cancelar**. La cita queda en rojo en el calendario.
+![](img/admin/cap2-14-confirma-con-eliminar.png)
 
-![](img/admin/cap4-08-cancelar-la-cita-de-camila-manana-13-00.png)
+## Capítulo 3 · Vender un paquete y registrar pagos {.capitulo}
 
-**4.9 · Hoja del día: hoy** ✅
-**Calendario → Hoja del día**. Con el campo de fecha y las flechas te mueves entre días.
+**Qué vas a lograr:** asignar un paquete a un paciente y llevar el control de lo que ha pagado.
 
-![](img/admin/cap4-09-hoja-del-dia-hoy.png)
+### 1. Haz clic en Paquetes y abre el paquete con el botón Ver
 
-**4.10 · Hoja del día: ayer** ✅
+**Después verás** el detalle del paquete.
 
-![](img/admin/cap4-10-hoja-del-dia-ayer.png)
+![](img/admin/cap3-01-haz-clic-en-paquetes-y-abre-el-plan-con-el-boton.png)
 
-**4.11 · Hoja del día: mañana** ✅
+### 2. Presiona Asignar a paciente
 
-![](img/admin/cap4-11-hoja-del-dia-manana.png)
+![](img/admin/cap3-02-presiona-asignar-a-paciente.png)
 
-**4.12 · La sesión atendida se descuenta del paquete** ✅
-Cuando la esteticista completa una cita que pertenece a un paquete (ver Parte 3), en la ficha del paciente el avance sube (aquí, **1 / 2**).
+### 3. Busca al paciente, revisa el precio acordado y presiona Asignar
 
-![](img/admin/cap4-12-tras-completar-laura-su-sesion-la-ficha-de-julia.png)
+El precio viene con el valor del paquete; ajústalo si negociaste algo distinto. **Después verás** la ficha del paciente.
 
-## Capítulo 5 · Inventario
+![](img/admin/cap3-03-busca-a-sara-hernandez-revisa-el-precio-acordado.png)
 
-**5.1 · Alertas de stock** ✅
-**Inventario → Alertas** muestra los productos por debajo del mínimo: **Crítico** (rojo) o **Bajo** (amarillo).
+### 4. Haz clic en la pestaña Paquetes
 
-![](img/admin/cap5-01-alertas-de-stock-bajo.png)
+**Después verás** el paquete nuevo con 0 sesiones usadas de las que incluye.
 
-**5.2 · Reponer desde la alerta** ✅
-El botón **Registrar entrada** de la tarjeta abre el formulario con el producto ya elegido.
+![](img/admin/cap3-04-en-la-ficha-de-sara-haz-clic-en-la-pestana-paque.png)
 
-![](img/admin/cap5-02-registrar-entrada-desde-la-alerta-el-producto-ll.png)
+### 5. Haz clic en la pestaña Pagos y presiona Registrar pago
 
-**5.3 · Registrar la entrada** ✅
-Escribe la cantidad y pulsa **Registrar**. El producto sale de Alertas.
+![](img/admin/cap3-05-haz-clic-en-la-pestana-pagos-y-presiona-registra.png)
 
-![](img/admin/cap5-03-entrada-de-200-unidades-el-semaforo-cambia-y-sal.png)
+### 6. Escribe el monto y presiona Registrar pago
 
-**5.4 · Historial de entradas** ✅
-La pestaña **Entradas** lista cada reposición con fecha, cantidad, motivo y quién la registró.
+Mientras quede saldo, **verás** el resumen en amarillo con el saldo pendiente.
 
-![](img/admin/cap5-04-historial-en-el-tab-entradas.png)
+![](img/admin/cap3-06-escribe-80000-como-monto-y-presiona-registrar-pa.png)
 
-**5.5 · Semáforo actualizado** ✅
-En **Productos** el semáforo del producto repuesto ya está en **Verde**.
+### 7. Presiona Registrar pago otra vez
 
-![](img/admin/cap5-05-productos-el-semaforo-del-producto-quedo-en-verd.png)
+**Después verás** que el formulario propone el saldo restante.
 
-**5.6 · Movimientos por producto** ❌
-No existe todavía una pantalla con el historial de movimientos (entradas y salidas) de un producto. Ver Pendientes.
+![](img/admin/cap3-07-presiona-registrar-pago-otra-vez-el-formulario-p.png)
+
+### 8. Presiona Registrar pago para saldar
+
+**Después verás** el resumen en verde con saldo $0.
+
+![](img/admin/cap3-08-presiona-registrar-pago-para-saldar-el-resumen-p.png)
+
+## Capítulo 4 · Agenda {.capitulo}
+
+**Qué vas a lograr:** moverte por el calendario, agendar citas sin choques, confirmarlas o cancelarlas, y usar la hoja del día.
+
+### 1. Haz clic en Calendario y elige Vista calendario
+
+![](img/admin/cap4-01-haz-clic-en-calendario-y-elige-vista-calendario.png)
+
+### 2. Presiona Mes para ver el mes completo
+
+![](img/admin/cap4-02-presiona-mes-para-ver-el-mes-completo.png)
+
+### 3. Presiona Día para ver un solo día
+
+![](img/admin/cap4-03-presiona-dia-para-ver-un-solo-dia.png)
+
+### 4. Presiona Semana para volver a la vista semanal
+
+Es la vista más cómoda para agendar.
+
+![](img/admin/cap4-04-presiona-semana-para-volver-a-la-vista-semanal.png)
+
+### 5. Haz clic en el espacio libre del día y la hora de la cita
+
+**Después verás** el formulario Nueva cita con esa fecha y hora ya puestas.
+
+![](img/admin/cap4-05-haz-clic-en-el-espacio-libre-de-manana-a-las-10-.png)
+
+### 6. Haz clic en Buscar paciente y elige al paciente
+
+Puedes escribir nombre, apellido o cédula.
+
+![](img/admin/cap4-06-haz-clic-en-buscar-paciente-y-elige-a-santiago-c.png)
+
+### 7. Abre Procedimiento y elige el servicio
+
+La hora de fin se calcula con la duración del servicio.
+
+![](img/admin/cap4-07-abre-procedimiento-y-elige-limpieza-facial-profu.png)
+
+### 8. Abre Esteticista y elige quién atiende
+
+![](img/admin/cap4-08-abre-esteticista-y-elige-laura-perez.png)
+
+### 9. Presiona Crear cita
+
+**Después verás** la cita en el calendario a la hora indicada.
+
+![](img/admin/cap4-09-presiona-crear-cita-la-cita-aparece-a-las-10-00.png)
+
+### 10. Repite para otra esteticista
+
+![](img/admin/cap4-10-crea-otra-cita-manana-13-00-con-camila-ruiz-para.png)
+
+### 11. Si la esteticista ya tiene cita a esa hora, el sistema no la agenda
+
+**Verás** el aviso "El esteticista ya tiene una cita en ese horario". Cambia la hora o la esteticista.
+
+![](img/admin/cap4-11-intenta-agendar-a-laura-a-las-09-30-cuando-ya-ti.png)
+
+### 12. Haz clic en la cita y presiona Confirmar
+
+Úsalo cuando el paciente confirma su asistencia. **Después verás** la cita en verde.
+
+![](img/admin/cap4-12-haz-clic-en-la-cita-de-las-10-00-y-presiona-conf.png)
+
+### 13. Haz clic en una cita y presiona Cancelar
+
+**Después verás** la cita en rojo.
+
+![](img/admin/cap4-13-haz-clic-en-la-cita-de-camila-13-00-y-presiona-c.png)
+
+### 14. Haz clic en Hoja del día
+
+**Después verás** las citas de hoy en orden, con su estado.
+
+![](img/admin/cap4-14-haz-clic-en-hoja-del-dia.png)
+
+### 15. Cambia la fecha con el campo de fecha o las flechas
+
+Aquí, el día anterior.
+
+![](img/admin/cap4-15-cambia-la-fecha-a-ayer-con-el-campo-de-fecha.png)
+
+### 16. Y el día siguiente
+
+![](img/admin/cap4-16-cambia-la-fecha-a-manana.png)
+
+### 17. Cuando la esteticista completa una cita de un paquete, la sesión se descuenta sola
+
+Abre la ficha del paciente y haz clic en Paquetes. **Después verás** el avance actualizado (aquí, 1 de 2 sesiones).
+
+![](img/admin/cap4-17-abre-la-ficha-de-juliana-y-haz-clic-en-paquetes-.png)
+
+## Capítulo 5 · Inventario {.capitulo}
+
+**Qué vas a lograr:** reponer los productos que están por debajo del mínimo y revisar el historial de entradas.
+
+### 1. Haz clic en Inventario y abre la pestaña Alertas
+
+**Después verás** una tarjeta por cada producto bajo mínimo: Crítico (rojo) o Bajo (amarillo).
+
+![](img/admin/cap5-01-haz-clic-en-inventario-y-abre-la-pestana-alertas.png)
+
+### 2. Presiona Registrar entrada en la tarjeta del producto
+
+**Después verás** el formulario con el producto ya elegido.
+
+![](img/admin/cap5-02-presiona-registrar-entrada-en-la-tarjeta-del-pro.png)
+
+### 3. Escribe la cantidad y presiona Registrar
+
+**Después verás** que el producto sale de Alertas.
+
+![](img/admin/cap5-03-escribe-200-como-cantidad-y-presiona-registrar-e.png)
+
+### 4. Abre la pestaña Entradas
+
+**Después verás** cada reposición con fecha, cantidad, motivo y quién la registró.
+
+![](img/admin/cap5-04-abre-la-pestana-entradas-para-ver-el-historial.png)
+
+### 5. Abre la pestaña Productos
+
+**Después verás** el semáforo del producto repuesto en Verde.
+
+![](img/admin/cap5-05-abre-la-pestana-productos-el-semaforo-quedo-en-v.png)
+
+### 6. Movimientos por producto — Pendiente {.pendiente}
+
+Todavía no existe una pantalla con el historial de movimientos (entradas y salidas) de un producto. Ver "Funciones en desarrollo".
 
 ![](img/admin/cap5-06-movimientos-de-inventario-por-producto.png)
 
----
+## Guía rápida · Recepción {.capitulo}
 
-# Parte 3 · Esteticista
+| Acción | Dónde |
+|---|---|
+| Registrar un paciente | Inicio → Ver pacientes → Nuevo paciente |
+| Buscar un paciente | Pacientes → escribe nombre, apellido o cédula en el buscador |
+| Ver historia, paquetes y pagos | Pacientes → Ver → pestañas de la ficha |
+| Corregir datos de un paciente | Pacientes → Ver → Editar |
+| Agendar una cita | Calendario → Vista calendario → clic en el espacio libre |
+| Confirmar o cancelar una cita | Calendario → clic en la cita → Confirmar / Cancelar |
+| Ver el día de la clínica | Calendario → Hoja del día (cambia la fecha con las flechas) |
+| Vender un paquete | Paquetes → Ver → Asignar a paciente |
+| Registrar un pago | Pacientes → Ver → Pagos → Registrar pago |
+| Reponer stock | Inventario → Alertas → Registrar entrada |
 
-La esteticista trabaja sobre su propia agenda: ve solo sus citas, las atiende cambiándolas de estado, consulta la ficha y la historia de sus pacientes y puede registrar entradas de inventario. No ve precios de paquetes, pagos ni la administración.
+# Parte 3 · Esteticista {.parte}
 
-## Capítulo 1 · Entrar y qué puedes hacer
+La esteticista trabaja sobre su propia agenda: ve solo sus citas, las atiende cambiándolas de estado, consulta la ficha y la historia de sus pacientes y registra entradas de inventario. No ve precios de paquetes, pagos ni la administración.
 
-**1.1 · Ingresar** ✅
+## Capítulo 1 · Entrar y qué puedes hacer {.capitulo}
 
-![](img/esteticista/cap1-01-ingresar-como-laura-perez-esteticista.png)
+**Qué vas a lograr:** ingresar y reconocer tu menú.
 
-**1.2 · Menú reducido** ✅
-No aparecen **Paquetes** ni **Administración**.
+### 1. Escribe tu correo y contraseña y presiona Ingresar
 
-![](img/esteticista/cap1-02-el-menu-no-muestra-administracion-ni-paquetes.png)
+![](img/esteticista/cap1-01-escribe-tu-correo-y-contrasena-y-presiona-ingres.png)
 
-**1.3 · Procedimientos: solo consulta** ✅
-Puedes ver el catálogo, sin botones de crear, editar ni eliminar.
+### 2. Revisa el menú
 
-![](img/esteticista/cap1-03-procedimientos-solo-lectura-sin-crear-editar-ni-.png)
+**Verás** Inicio, Dashboard, Procedimientos, Inventario y Calendario. No aparecen Paquetes ni Administración.
 
-**1.4 · Productos: solo consulta** ✅
+![](img/esteticista/cap1-02-revisa-el-menu-no-aparecen-administracion-ni-paq.png)
 
-![](img/esteticista/cap1-04-productos-solo-lectura-sin-crear-editar-ni-elimi.png)
+### 3. Haz clic en Procedimientos
 
-**1.5 · Si escribes la dirección de Usuarios** ✅
-El sistema te devuelve al inicio.
+**Verás** el catálogo solo para consulta, sin botones de crear, editar ni eliminar.
 
-![](img/esteticista/cap1-05-escribir-la-direccion-de-usuarios-admin-users-vu.png)
+![](img/esteticista/cap1-03-haz-clic-en-procedimientos-puedes-consultar-no-c.png)
 
-**1.6 · Aviso de permisos** ❌
-El aviso "No tienes permisos" no se muestra al escribir la dirección. Ver Pendientes.
+### 4. Haz clic en Inventario
 
-![](img/esteticista/cap1-06-y-muestra-el-aviso-no-tienes-permisos.png)
+**Verás** los productos y su semáforo, también solo para consulta.
 
-**1.7 · Si escribes la dirección de Paquetes** ✅
+![](img/esteticista/cap1-04-haz-clic-en-inventario-puedes-consultar-los-prod.png)
 
-![](img/esteticista/cap1-07-escribir-la-direccion-de-paquetes-packages-vuelv.png)
+### 5. Si escribes una dirección que no te corresponde, vuelves al inicio
 
-**1.8 · Aviso de permisos** ❌
-Mismo caso que 1.6.
+![](img/esteticista/cap1-05-si-escribes-la-direccion-de-usuarios-en-el-naveg.png)
 
-![](img/esteticista/cap1-08-y-muestra-el-aviso-no-tienes-permisos.png)
+### 6. Aviso de permisos — Pendiente {.pendiente}
 
-## Capítulo 2 · Mi día
+El aviso "No tienes permisos" todavía no se muestra al escribir la dirección directamente. Ver "Funciones en desarrollo".
 
-**2.1 · Hoja del día: solo mis citas** ✅
+![](img/esteticista/cap1-06-y-deberia-mostrarse-el-aviso-no-tienes-permisos.png)
 
-![](img/esteticista/cap2-01-hoja-del-dia-solo-mis-citas.png)
+### 7. Lo mismo ocurre con la dirección de Paquetes
 
-**2.2 · Calendario: solo mis citas** ✅
-No hay selector de esteticista; el calendario ya está filtrado a tu agenda.
+![](img/esteticista/cap1-07-si-escribes-la-direccion-de-paquetes-vuelves-al-.png)
 
-![](img/esteticista/cap2-02-calendario-solo-mis-citas-y-sin-filtro-de-esteti.png)
+### 8. Aviso de permisos — Pendiente {.pendiente}
 
-**2.3 · Abrir una cita** ✅
-Haz clic en la cita para ver paciente, procedimiento, hora y estado.
+![](img/esteticista/cap1-08-y-deberia-mostrarse-el-aviso-no-tienes-permisos.png)
 
-![](img/esteticista/cap2-03-abrir-una-de-mis-citas-santiago-castro-hoy-8-00.png)
+## Capítulo 2 · Mi día {.capitulo}
 
-## Capítulo 3 · Atender una cita
+**Qué vas a lograr:** ver tus citas del día y de la semana, y abrir el detalle de una cita.
 
-**3.1 · Agendar una cita propia** ✅
-Al hacer clic en un espacio libre, el campo **Esteticista** viene fijo con tu nombre.
+### 1. Haz clic en Calendario y elige Hoja del día
 
-![](img/esteticista/cap3-01-crear-una-cita-la-esteticista-queda-fija-en-laur.png)
+**Después verás** solo tus citas de hoy, en orden.
 
-**3.2 · Guardar** ✅
+![](img/esteticista/cap2-01-haz-clic-en-calendario-y-elige-hoja-del-dia-solo.png)
 
-![](img/esteticista/cap3-02-guardar-la-cita-nueva.png)
+### 2. Haz clic en Calendario y elige Vista calendario
 
-**3.3 · Confirmar** ✅
-Abre la cita y pulsa **Confirmar**.
+**Después verás** tu semana. No hay selector de esteticista: el calendario ya está filtrado a tu agenda.
 
-![](img/esteticista/cap3-03-confirmar-la-cita-de-juliana-martinez-9-00-sesio.png)
+![](img/esteticista/cap2-02-haz-clic-en-calendario-y-elige-vista-calendario-.png)
 
-**3.4 · Iniciar** ✅
-Cuando la paciente entra a cabina, pulsa **Iniciar**. La cita pasa a "En curso".
+### 3. Haz clic en una de tus citas
 
-![](img/esteticista/cap3-04-iniciar-la-sesion-en-curso.png)
+**Después verás** paciente, procedimiento, hora y estado.
 
-**3.5 · Completar** ✅
-Al terminar, pulsa **Completar**. Si la cita pertenece a un paquete, la sesión queda descontada automáticamente.
+![](img/esteticista/cap2-03-haz-clic-en-una-de-tus-citas-para-ver-el-detalle.png)
 
-![](img/esteticista/cap3-05-completar-la-sesion.png)
+## Capítulo 3 · Atender una cita {.capitulo}
 
-**3.6 · Las citas de otras esteticistas no se ven** ✅
-Tu calendario solo muestra tus citas, así que no puedes cambiar el estado de una cita ajena.
+**Qué vas a lograr:** agendar una cita propia y llevarla de Agendada a Completada mientras atiendes.
 
-![](img/esteticista/cap3-06-las-citas-de-camila-no-aparecen-en-mi-calendario.png)
+### 1. Haz clic en un espacio libre del calendario
 
-## Capítulo 4 · Pacientes
+**Después verás** el formulario Nueva cita. El campo Esteticista viene fijo con tu nombre: solo puedes agendar citas propias.
 
-**4.1 · Crear un paciente** ✅
-También puedes registrar pacientes nuevos desde **Pacientes → Nuevo paciente**.
+![](img/esteticista/cap3-01-en-el-calendario-haz-clic-en-un-espacio-libre-vi.png)
 
-![](img/esteticista/cap4-01-crear-paciente-camilo-restrepo.png)
+### 2. Haz clic en Buscar paciente y elige al paciente
 
-**4.2 · Ficha: Información** ✅
+![](img/esteticista/cap3-02-haz-clic-en-buscar-paciente-y-elige-a-santiago-c.png)
 
-![](img/esteticista/cap4-02-abrir-la-ficha-tab-informacion.png)
+### 3. Abre Procedimiento y elige el servicio
 
-**4.3 · Historia clínica (consulta)** ✅
+![](img/esteticista/cap3-03-abre-procedimiento-y-elige-hidratacion-profunda.png)
 
-![](img/esteticista/cap4-03-tab-historia-clinica-lectura.png)
+### 4. Presiona Crear cita
 
-**4.4 · Sin pestañas de Paquetes ni Pagos** ✅
+**Después verás** la cita en tu calendario.
+
+![](img/esteticista/cap3-04-presiona-crear-cita.png)
+
+### 5. Haz clic en la cita que vas a atender
+
+Aquí, una cita que hace parte del paquete de la paciente.
+
+![](img/esteticista/cap3-05-ve-a-la-semana-siguiente-y-haz-clic-en-la-cita-d.png)
+
+### 6. Presiona Confirmar
+
+**Después verás** el aviso "Cita marcada como Confirmada" y la cita en verde.
+
+![](img/esteticista/cap3-06-presiona-confirmar.png)
+
+### 7. Cuando la paciente entra a cabina, abre la cita y presiona Iniciar
+
+**Después verás** la cita "En curso".
+
+![](img/esteticista/cap3-07-vuelve-a-abrir-la-cita-y-presiona-iniciar.png)
+
+### 8. Al terminar, abre la cita y presiona Completar
+
+**Después verás** la cita en gris. Si pertenece a un paquete, la sesión queda descontada automáticamente en la ficha de la paciente.
+
+![](img/esteticista/cap3-08-vuelve-a-abrir-la-cita-y-presiona-completar.png)
+
+### 9. Las citas de otras esteticistas no aparecen en tu calendario
+
+Por eso no puedes cambiar el estado de una cita ajena.
+
+![](img/esteticista/cap3-09-las-citas-de-otras-esteticistas-no-aparecen-en-t.png)
+
+## Capítulo 4 · Pacientes {.capitulo}
+
+**Qué vas a lograr:** registrar un paciente nuevo y consultar su ficha e historia clínica.
+
+### 1. Haz clic en Inicio y luego en Ver pacientes
+
+![](img/esteticista/cap4-01-haz-clic-en-inicio-y-luego-en-la-tarjeta-pacient.png)
+
+### 2. Haz clic en Nuevo paciente
+
+![](img/esteticista/cap4-02-haz-clic-en-nuevo-paciente.png)
+
+### 3. Completa nombre, apellido, cédula y teléfono y presiona Crear paciente
+
+![](img/esteticista/cap4-03-completa-nombre-apellido-cedula-y-telefono-y-pre.png)
+
+### 4. Abre la ficha del paciente
+
+**Verás** la pestaña Información con sus datos.
+
+![](img/esteticista/cap4-04-abre-la-ficha-del-paciente-pestana-informacion.png)
+
+### 5. Haz clic en la pestaña Historia clínica
+
+**Verás** antecedentes, alergias y notas de sesiones anteriores.
+
+![](img/esteticista/cap4-05-haz-clic-en-la-pestana-historia-clinica.png)
+
+### 6. No hay pestañas de Paquetes ni Pagos
+
 La información comercial no está disponible para la esteticista.
 
-![](img/esteticista/cap4-04-no-existen-los-tabs-paquetes-ni-pagos-para-la-es.png)
+![](img/esteticista/cap4-06-observa-que-no-existen-las-pestanas-paquetes-ni-.png)
 
-## Capítulo 5 · Inventario
+## Capítulo 5 · Inventario {.capitulo}
 
-**5.1 · Registrar una entrada** ✅
-**Inventario → Entradas → Registrar entrada**. Busca el producto, escribe la cantidad y pulsa **Registrar**.
+**Qué vas a lograr:** registrar una entrada de producto en cabina.
 
-![](img/esteticista/cap5-01-registrar-una-entrada-de-10-paquetes-de-toallas-.png)
+### 1. Haz clic en Inventario y abre la pestaña Entradas
 
-**5.2 · No puedes crear productos** ✅
+![](img/esteticista/cap5-01-haz-clic-en-inventario-y-abre-la-pestana-entrada.png)
 
-![](img/esteticista/cap5-02-no-puede-crear-productos.png)
+### 2. Haz clic en Registrar entrada
 
----
+![](img/esteticista/cap5-02-haz-clic-en-registrar-entrada.png)
 
-# Pendientes
+### 3. Busca el producto, escribe la cantidad y presiona Registrar
 
-Pasos del recorrido que hoy fallan o no existen. El número indica parte y paso.
+**Después verás** la entrada en el historial.
 
-| # | Paso | Qué pasa | Pista técnica |
-|---|---|---|---|
-| 1 | Dueño 2.7 · Desactivar un usuario | El formulario de usuario no tiene la opción "Activo". Solo se puede eliminar. | La API acepta `isActive` en `PUT /users/{id}`; falta el interruptor en `UsersPage`. |
-| 2 | Dueño 3.5 · Procedimiento inactivo al agendar | Un procedimiento desactivado sigue apareciendo en el selector de "Nueva cita". | `CalendarPage` no filtra `activo`; `GET /procedures` tampoco. |
-| 3 | Recepción 1.6 · Aviso de permisos | Al escribir a mano una dirección prohibida, el sistema sí devuelve al inicio pero no muestra "No tienes permisos". | El guard del router dispara el toast antes de que el `Toaster` esté montado en una carga directa de URL. |
-| 4 | Esteticista 1.6 · Aviso de permisos | Igual que el anterior. | Igual que el anterior. |
-| 5 | Esteticista 1.8 · Aviso de permisos | Igual que el anterior. | Igual que el anterior. |
-| 6 | Recepción 5.6 · Movimientos por producto | No hay pantalla de movimientos de inventario. | El endpoint `GET /inventory/movements/product/{id}` responde 500 (`MapToDto` sin `Include(Product)`), y no hay tab en `InventoryPage`. |
+![](img/esteticista/cap5-03-busca-el-producto-escribe-la-cantidad-10-y-presi.png)
 
-Además, dos limitaciones que el recorrido no pudo cubrir porque no existen en la interfaz: **editar la historia clínica y registrar notas de evolución** (la API lo permite; la esteticista hoy solo consulta) y **cambiar el estado de un paquete** (pausar, vencer).
+### 4. En la pestaña Productos no hay botón Nuevo producto
 
----
+Crear productos es tarea del dueño o de recepción.
 
-## Cómo se regenera este manual
+![](img/esteticista/cap5-04-abre-la-pestana-productos-no-hay-boton-nuevo-pro.png)
 
-```bash
-corepack pnpm test:ui
-```
+## Guía rápida · Esteticista {.capitulo}
 
-Ejecuta el recorrido completo (dueño → esteticista → recepción) contra `http://localhost:5173` con los datos de `POST /api/v1/dev/seed-demo`, levanta la API y Vite si hace falta, crea el usuario `recepcion@nemedi.demo` si no existe, guarda cada captura en `docs/manual/img/<rol>/` y los resultados en `tests/e2e/ui/.results/`. Todo lo que crea (sede, usuarios, procedimiento, paquetes, productos, pacientes y citas) se elimina al final para dejar los datos de demostración como estaban.
+| Acción | Dónde |
+|---|---|
+| Ver mis citas de hoy | Calendario → Hoja del día |
+| Ver mi semana | Calendario → Vista calendario |
+| Agendar una cita propia | Calendario → clic en el espacio libre → Crear cita |
+| Confirmar una cita | Clic en la cita → Confirmar |
+| Empezar a atender | Clic en la cita → Iniciar |
+| Terminar la sesión | Clic en la cita → Completar (descuenta la sesión del paquete) |
+| Registrar un paciente nuevo | Inicio → Ver pacientes → Nuevo paciente |
+| Consultar la historia clínica | Pacientes → Ver → Historia clínica |
+| Registrar una entrada de producto | Inventario → Entradas → Registrar entrada |
+
+# Funciones en desarrollo {.parte}
+
+Lo que el recorrido encontró pendiente. Está en el plan de trabajo.
+
+- **Desactivar un usuario sin borrarlo.** Pronto podrás apagar un interruptor "Activo" en el formulario de usuario para que alguien deje de ingresar sin perder su historial. (Dueño, capítulo 2, paso 11.)
+- **Servicios inactivos fuera del agendamiento.** Pronto, al crear una cita, la lista de procedimientos mostrará solo los activos. (Dueño, capítulo 3, paso 8.)
+- **Aviso claro al entrar donde no corresponde.** Pronto, si escribes una dirección que no es para tu rol, además de volver al inicio verás el aviso "No tienes permisos para acceder a esa sección". (Recepción, capítulo 1, paso 6; Esteticista, capítulo 1, pasos 6 y 8.)
+- **Historial de movimientos por producto.** Pronto podrás ver, producto por producto, todas sus entradas y salidas. (Recepción, capítulo 5, paso 6.)
+- **Editar la historia clínica y registrar notas de evolución desde la ficha.** Hoy la historia se consulta; pronto la esteticista podrá completar antecedentes y dejar la nota de cada sesión.
+- **Pausar o vencer un paquete.** Pronto podrás cambiar el estado de un paquete asignado desde la ficha del paciente.

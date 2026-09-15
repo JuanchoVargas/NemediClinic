@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
-import { Walk, uiLogin, pickCombobox, dialog, lastToast, tab, activePanel } from "../walk";
+import { startChapter, step, endChapter } from "../helpers/guide";
+import { uiLogin, chooseCombobox, dialog, lastToast, tab, activePanel, headerLink } from "../walk";
 import { apiLogin, CREDS, req, listAll, safeDelete } from "../api";
 
 test.describe.configure({ mode: "serial" });
 
-// Se usa un paquete propio del recorrido ("Plan Mantenimiento Facial") porque las
-// asignaciones y pagos no se pueden borrar por API; al final se elimina el paquete del
-// catálogo y con él deja de verse la asignación en la ficha de Sara.
+// Paquete propio del recorrido ("Plan Mantenimiento Facial"): las asignaciones y pagos no se
+// pueden borrar por API; al eliminar el paquete del catálogo dejan de verse en la ficha de Sara.
 const PKG = "Plan Mantenimiento Facial";
 let pkgId: string | undefined;
 
@@ -25,54 +25,65 @@ test.afterAll(async () => {
   await safeDelete(sa.token, `/api/v1/packages/${pkgId}`);
 });
 
-test("Cap3 · Paquetes y pagos (recepción)", async ({ page }) => {
-  const w = new Walk(page, "admin", 3);
+test("Cap3 · Vender un paquete y registrar pagos (recepción)", async ({ page }) => {
+  startChapter(page, "admin", 3);
   await uiLogin(page, CREDS.admin.email, CREDS.admin.password);
-
-  await w.step(`Asignar "${PKG}" a Sara Hernández desde el detalle del paquete`, async () => {
-    await page.goto("/packages");
-    await page.locator(`button[aria-label="Ver ${PKG}"]`).click();
-    await expect(page.locator("main h1")).toContainText(PKG);
-    await page.locator("main button", { hasText: "Asignar a paciente" }).click();
-    const d = dialog(page);
-    await pickCombobox(d.locator("button", { hasText: "Buscar paciente" }), "Sara", "Sara Hernández");
-    await expect(d.locator("input[inputmode=numeric]")).toHaveValue("200.000");
-    await d.locator("button", { hasText: /^Asignar$/ }).click();
-    await lastToast(page, /Paquete asignado/);
-    await page.waitForURL(/\/patients\/[0-9a-f-]+$/);
-  });
-
+  const d = () => dialog(page);
   const card = () => activePanel(page).locator("[data-slot=card], .rounded-xl", { hasText: PKG }).first();
+  const summary = () => card().locator("div.rounded-md.grid").first();
 
-  await w.step("Ficha de Sara: el paquete aparece con 0 / 2 sesiones", async () => {
-    await tab(page, "Paquetes").click();
-    await expect(card()).toContainText("0 / 2");
+  await step(page, "Haz clic en Paquetes y abre el plan con el botón Ver", page.locator(`button[aria-label="Ver ${PKG}"]`), {
+    before: async () => { await headerLink(page, "Paquetes").click(); await expect(page.locator("main table")).toContainText(PKG); },
+    after: async () => { await expect(page.locator("main h1")).toContainText(PKG); },
   });
 
-  await w.step("Pago parcial de $80.000 → saldo pendiente en amarillo", async () => {
-    await tab(page, "Pagos").click();
-    await card().locator("button", { hasText: "Registrar pago" }).click();
-    const d = dialog(page);
-    await d.locator("input[inputmode=numeric]").fill("80000");
-    await d.locator("button[form=payment-form]").click();
-    await lastToast(page, /Pago registrado/);
-    await expect(dialog(page)).toBeHidden();
-    const summary = card().locator("div.rounded-md.grid").first();
-    await expect(summary).toContainText("$120.000");
-    await expect(summary).toHaveClass(/bg-yellow-50/);
+  await step(page, "Presiona Asignar a paciente", page.locator("main button", { hasText: "Asignar a paciente" }), {
+    after: async () => { await expect(d()).toBeVisible(); },
   });
 
-  await w.step("Pago del resto → saldo $0 en verde", async () => {
-    await card().locator("button", { hasText: "Registrar pago" }).click();
-    const d = dialog(page);
-    await expect(d.locator("input[inputmode=numeric]")).toHaveValue("120.000");
-    await d.locator("button[form=payment-form]").click();
-    await lastToast(page, /Pago registrado/);
-    await expect(dialog(page)).toBeHidden();
-    const summary = card().locator("div.rounded-md.grid").first();
-    await expect(summary).toContainText("$0");
-    await expect(summary).toHaveClass(/bg-green-50/);
+  await step(page, "Busca a Sara Hernández, revisa el precio acordado y presiona Asignar", d().locator("button", { hasText: /^Asignar$/ }), {
+    before: async () => {
+      await d().locator("button", { hasText: "Buscar paciente" }).click();
+      await chooseCombobox(page, "Sara", "Sara Hernández");
+      await expect(d().locator("input[inputmode=numeric]")).toHaveValue("200.000");
+    },
+    after: async () => {
+      await lastToast(page, /Paquete asignado/);
+      await page.waitForURL(/\/patients\/[0-9a-f-]+$/);
+    },
   });
 
-  w.save();
+  await step(page, "En la ficha de Sara, haz clic en la pestaña Paquetes: el plan aparece con 0 / 2 sesiones", tab(page, "Paquetes"), {
+    after: async () => { await expect(card()).toContainText("0 / 2"); },
+  });
+
+  await step(page, "Haz clic en la pestaña Pagos y presiona Registrar pago del plan", card().locator("button", { hasText: "Registrar pago" }), {
+    before: async () => { await tab(page, "Pagos").click(); await expect(card()).toBeVisible(); },
+    after: async () => { await expect(d()).toBeVisible(); },
+  });
+
+  await step(page, "Escribe 80000 como monto y presiona Registrar pago: el saldo queda en amarillo", d().locator("button[form=payment-form]"), {
+    before: async () => { await d().locator("input[inputmode=numeric]").fill("80000"); },
+    after: async () => {
+      await lastToast(page, /Pago registrado/);
+      await expect(d()).toBeHidden();
+      await expect(summary()).toContainText("$120.000");
+      await expect(summary()).toHaveClass(/bg-yellow-50/);
+    },
+  });
+
+  await step(page, "Presiona Registrar pago otra vez: el formulario propone el saldo restante", card().locator("button", { hasText: "Registrar pago" }), {
+    after: async () => { await expect(d().locator("input[inputmode=numeric]")).toHaveValue("120.000"); },
+  });
+
+  await step(page, "Presiona Registrar pago para saldar: el resumen pasa a verde con $0", d().locator("button[form=payment-form]"), {
+    after: async () => {
+      await lastToast(page, /Pago registrado/);
+      await expect(d()).toBeHidden();
+      await expect(summary()).toContainText("$0");
+      await expect(summary()).toHaveClass(/bg-green-50/);
+    },
+  });
+
+  endChapter();
 });

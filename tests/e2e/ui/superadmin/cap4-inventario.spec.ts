@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { Walk, uiLogin, pickSelect, dialog, alertDialog } from "../walk";
+import { startChapter, step, endChapter } from "../helpers/guide";
+import { uiLogin, pickSelect, dialog, alertDialog, headerLink } from "../walk";
 import { apiLogin, CREDS, listAll, safeDelete } from "../api";
 
 test.describe.configure({ mode: "serial" });
@@ -13,41 +14,46 @@ test.afterAll(async () => {
 });
 
 test("Cap4 · Inventario (dueño)", async ({ page }) => {
-  const w = new Walk(page, "superadmin", 4);
+  startChapter(page, "superadmin", 4);
   await uiLogin(page, CREDS.superadmin.email, CREDS.superadmin.password);
+  const d = () => dialog(page);
+  const row = () => page.locator("main table tr", { hasText: PROD });
 
-  await w.step("Inventario: productos con semáforo", async () => {
-    await page.goto("/inventory");
-    await expect(page.locator("main table tbody tr")).toHaveCount(6);
+  await step(page, "Haz clic en Inventario", headerLink(page, "Inventario"), {
+    after: async () => { await expect(page.locator("main table tbody tr")).toHaveCount(6); },
   });
 
-  await w.step(`Crear producto "${PROD}" con stock mínimo 100 → semáforo Rojo`, async () => {
-    await page.locator("main button", { hasText: "Nuevo producto" }).click();
-    const d = dialog(page);
-    await d.locator("input[name=nombre]").fill(PROD);
-    await d.locator("input[name=referencia]").fill("SER-VC-30");
-    await pickSelect(d.locator("button[role=combobox]").first(), "Venta");
-    await d.locator("input[name=unidadMedida]").fill("unidad");
-    await d.getByLabel(/Stock mínimo/).fill("100");
-    await d.locator("button[form=product-form]").click();
-    const row = page.locator("main table tr", { hasText: PROD });
-    await expect(row).toContainText("0");
-    await expect(row).toContainText("Rojo");
+  await step(page, "Haz clic en Nuevo producto", page.locator("main button", { hasText: "Nuevo producto" }), {
+    after: async () => { await expect(d()).toBeVisible(); },
   });
 
-  await w.step("Editar producto (stock mínimo 80)", async () => {
-    await page.locator(`button[aria-label="Editar ${PROD}"]`).click();
-    const d = dialog(page);
-    await d.getByLabel(/Stock mínimo/).fill("80");
-    await d.locator("button[form=product-form]").click();
-    await expect(page.locator("main table tr", { hasText: PROD })).toContainText("mín 80");
+  await step(page, "Completa el producto con stock mínimo 100 y presiona Crear: queda en Rojo", d().locator("button[form=product-form]"), {
+    before: async () => {
+      await d().locator("input[name=nombre]").fill(PROD);
+      await d().locator("input[name=referencia]").fill("SER-VC-30");
+      await pickSelect(d().locator("button[role=combobox]").first(), "Venta");
+      await d().locator("input[name=unidadMedida]").fill("unidad");
+      await d().getByLabel(/Stock mínimo/).fill("100");
+    },
+    after: async () => { await expect(row()).toContainText("Rojo"); },
   });
 
-  await w.step("Eliminar producto", async () => {
-    await page.locator(`button[aria-label="Eliminar ${PROD}"]`).click();
-    await alertDialog(page).locator("button", { hasText: /^Eliminar/ }).click();
-    await expect(page.locator("main table")).not.toContainText(PROD);
+  await step(page, "Haz clic en el lápiz del producto para editarlo", page.locator(`button[aria-label="Editar ${PROD}"]`), {
+    after: async () => { await expect(d()).toBeVisible(); },
   });
 
-  w.save();
+  await step(page, "Cambia el stock mínimo a 80 y presiona Guardar cambios", d().locator("button[form=product-form]"), {
+    before: async () => { await d().getByLabel(/Stock mínimo/).fill("80"); },
+    after: async () => { await expect(row()).toContainText("mín 80"); },
+  });
+
+  await step(page, "Haz clic en la papelera del producto", page.locator(`button[aria-label="Eliminar ${PROD}"]`), {
+    after: async () => { await expect(alertDialog(page)).toBeVisible(); },
+  });
+
+  await step(page, "Confirma con Eliminar", alertDialog(page).locator("button", { hasText: /^Eliminar/ }), {
+    after: async () => { await expect(page.locator("main table")).not.toContainText(PROD); },
+  });
+
+  endChapter();
 });

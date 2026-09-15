@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { Walk, uiLogin, pickCombobox, dialog, lastToast, tab } from "../walk";
+import { startChapter, step, endChapter } from "../helpers/guide";
+import { uiLogin, pickCombobox, dialog, lastToast, tab, headerLink } from "../walk";
 import { apiLogin, CREDS, req, safeDelete } from "../api";
 
 test.describe.configure({ mode: "serial" });
@@ -21,27 +22,37 @@ test.afterAll(async () => {
 });
 
 test("Cap5 · Inventario (esteticista)", async ({ page }) => {
-  const w = new Walk(page, "esteticista", 5);
+  startChapter(page, "esteticista", 5);
   await uiLogin(page, CREDS.esteticista.email, CREDS.esteticista.password);
+  const d = () => dialog(page);
 
-  await w.step("Registrar una entrada de 10 paquetes de toallas desechables", async () => {
-    await page.goto("/inventory");
-    await tab(page, "Entradas").click();
-    await page.locator("main button", { hasText: "Registrar entrada" }).click();
-    const d = dialog(page);
-    await pickCombobox(d.locator("button[role=combobox]").first(), "Toallas", PROD);
-    await d.locator("input[type=number]").fill("10");
-    await d.locator("button", { hasText: /^Registrar$/ }).click();
-    await lastToast(page, /Entrada registrada/);
-    await expect(dialog(page)).toBeHidden();
-    await expect(page.locator("main table tbody tr", { hasText: PROD }).first()).toContainText("10");
+  await step(page, "Haz clic en Inventario y abre la pestaña Entradas", tab(page, "Entradas"), {
+    before: async () => { await headerLink(page, "Inventario").click(); await expect(page.locator("main table tbody tr").first()).toBeVisible(); },
+    after: async () => { await expect(page.locator("main button", { hasText: "Registrar entrada" })).toBeVisible(); },
   });
 
-  await w.step("No puede crear productos", async () => {
-    await tab(page, "Productos").click();
-    await expect(page.locator("main table tbody tr").first()).toBeVisible();
-    await expect(page.locator("main button", { hasText: "Nuevo producto" })).toHaveCount(0);
+  await step(page, "Haz clic en Registrar entrada", page.locator("main button", { hasText: "Registrar entrada" }), {
+    after: async () => { await expect(d()).toBeVisible(); },
   });
 
-  w.save();
+  await step(page, "Busca el producto, escribe la cantidad 10 y presiona Registrar", d().locator("button", { hasText: /^Registrar$/ }), {
+    before: async () => {
+      await pickCombobox(d().locator("button[role=combobox]").first(), "Toallas", PROD);
+      await d().locator("input[type=number]").fill("10");
+    },
+    after: async () => {
+      await lastToast(page, /Entrada registrada/);
+      await expect(d()).toBeHidden();
+      await expect(page.locator("main table tbody tr", { hasText: PROD }).first()).toContainText("10");
+    },
+  });
+
+  await step(page, "Abre la pestaña Productos: no hay botón Nuevo producto", tab(page, "Productos"), {
+    after: async () => {
+      await expect(page.locator("main table tbody tr").first()).toBeVisible();
+      await expect(page.locator("main button", { hasText: "Nuevo producto" })).toHaveCount(0);
+    },
+  });
+
+  endChapter();
 });

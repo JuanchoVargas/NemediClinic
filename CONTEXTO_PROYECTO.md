@@ -48,8 +48,14 @@ pnpm lint       # hoy falla: 14 errores
 - SuperAdmin: `juandiegov2002@gmail.com` / `Admin2026!` (el seed resetea esta contraseña en cada ejecución).
 - Esteticistas: `laura.perez@nemedi.demo` y `camila.ruiz@nemedi.demo` / `Demo2026!`.
 - Datos: 6 procedimientos, 3 paquetes, 8 pacientes (cédulas 1000000001..08, historia clínica con antecedentes en 3), 5 paquetes asignados (2 pagados, 2 parciales, 1 sin pagos), 12 citas entre ayer y +4 días, 6 productos (2 verde, 2 amarillo, 2 rojo) con entradas.
-- Las citas del seed se guardan en hora local de Bogotá porque la API no maneja zona horaria; las creadas desde la UI llegan en UTC y se muestran corridas 5 h. Bug pendiente.
+- Regla de fechas: todo en hora local de Bogotá, sin UTC, en ambas capas (`src/lib/dates.ts` en el frontend, `LocalDateTimeJsonConverter` en la API). Corregido el 2026-09-15.
 - JWT en Development dura 480 min (`Jwt:ExpirationMinutes` en `appsettings.Development.json`) porque el frontend descarta el refresh token.
+- Tras ejecutar `docs/FLUJOS.md` quedan tres diferencias con el seed: Sara tiene "Rostro Radiante" pagado (0/5), la cita de Mariana de hoy 10:00 está Completada (2/4) y Santiago tiene una cita Completada el 17/09 18:00.
+
+## Fixes del 2026-09-15 (ver `docs/FLUJOS.md`)
+- `dc64e2b` citas en hora local sin conversión UTC.
+- `bc4ead6` filtro global de tenant evaluado por request (antes quedaba fijado al tenant de la primera request del proceso: fuga de datos entre tenants).
+- `be5a5d1` la API acepta enums por nombre (antes 400 al cambiar estado de cita, registrar pago, crear producto y registrar entrada desde la UI).
 
 ## Git
 - Repo local en `main`, primer commit `8fcf8cb chore: snapshot septiembre 2026`. Sin remote.
@@ -65,6 +71,10 @@ pnpm lint       # hoy falla: 14 errores
 - Inventario (productos, entradas, alertas; no hay salidas ni consumo)
 
 ## Pendiente
+- Onboarding de un tenant nuevo: no hay forma de crear su SuperAdmin por API (`register` usa el tenant del JWT)
+- Borrar un paquete del catálogo deja inaccesibles sus asignaciones; completar la última sesión desde una cita no cierra el paquete
+- 401 en mitad de sesión no limpia ni redirige (interceptor de `axios.ts`)
+- `GET /inventory/movements/product/{id}` responde 500
 - Dashboard con KPIs reales (`GET /api/v1/dashboard` no existe)
 - Descuento de inventario al completar cita
 - Job de vencimiento de paquetes (`Vencido`)

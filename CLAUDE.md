@@ -110,7 +110,8 @@ Consequences when writing controllers and queries:
 - All controllers use `[Route("api/v1/[controller]")]` (or an explicit `api/v1/...` route) — every endpoint lives under `/api/v1/`, except `GET /api/health`.
 - Authorization policies in `Program.cs`: `SuperAdmin`, `Admin` (= SuperAdmin + Admin), `Esteticista` (= all three roles). Apply with `[Authorize(Policy = "...")]`.
 - Error responses are `{ error: "..." }` and success responses return DTOs directly. The universal StartUp contract (`codigoRespuesta` / `mensajeRespuesta` / `data`) is **not** used here; the Axios interceptor in the web app is adapted to `{ error }`.
-- Dates: the API has no timezone handling. `DateTime` values are stored and returned as-is (no `Z` suffix). The web app sends `toISOString()` (UTC) on create and parses responses as local time, so appointments created from the UI shift by the machine's UTC offset. The demo seed stores local wall-clock times to display correctly. Fix pending.
+- Dates: the whole system works in **local Bogotá time with no UTC conversion**. `LocalDateTimeJsonConverter` (registered in `Program.cs`) reads incoming `DateTime` as `Unspecified` (a `Z`/offset is converted to local and dropped) and always writes `yyyy-MM-ddTHH:mm:ss` without `Z`. Business timestamps use `DateTime.Now`; `CreatedAt`/`UpdatedAt` still use `UtcNow` but serialize as local. The web app must never call `toISOString()` for business dates: use `toLocalIso` / `toLocalDate` from `src/lib/dates.ts`.
+- Enums: `JsonStringEnumConverter` is registered, so request bodies accept either the name (`"Confirmada"`, `"Efectivo"`) or the integer. Response DTOs expose enums as strings via `ToString()`.
 
 ### Config gotcha
 

@@ -42,8 +42,14 @@ pnpm lint       # hoy falla: 14 errores
 
 ## Estado de la DB de desarrollo (2026-09-15)
 - 4 migraciones aplicadas: InitialClinicalEntities, AddClinicalEntities, AddAppointments, AddInventoryEntities.
-- Datos: 1 tenant, 1 sede, 1 usuario SuperAdmin (`juandiegov2002@gmail.com`). Cero pacientes, procedimientos, paquetes, productos o citas.
-- Las credenciales `admin@nemediclinic.com / Admin2026!` del contexto anterior NO existen en esta DB. Si se necesita un usuario de prueba, crearlo con `POST /api/v1/auth/register` autenticado como SuperAdmin.
+- 1 tenant y 1 sede ("Sede Principal"). Datos demo cargados con `POST /api/v1/dev/seed-demo` (solo Development, idempotente; ver `DevController.cs`).
+
+## Credenciales de desarrollo (tras el seed demo)
+- SuperAdmin: `juandiegov2002@gmail.com` / `Admin2026!` (el seed resetea esta contraseña en cada ejecución).
+- Esteticistas: `laura.perez@nemedi.demo` y `camila.ruiz@nemedi.demo` / `Demo2026!`.
+- Datos: 6 procedimientos, 3 paquetes, 8 pacientes (cédulas 1000000001..08, historia clínica con antecedentes en 3), 5 paquetes asignados (2 pagados, 2 parciales, 1 sin pagos), 12 citas entre ayer y +4 días, 6 productos (2 verde, 2 amarillo, 2 rojo) con entradas.
+- Las citas del seed se guardan en hora local de Bogotá porque la API no maneja zona horaria; las creadas desde la UI llegan en UTC y se muestran corridas 5 h. Bug pendiente.
+- JWT en Development dura 480 min (`Jwt:ExpirationMinutes` en `appsettings.Development.json`) porque el frontend descarta el refresh token.
 
 ## Git
 - Repo local en `main`, primer commit `8fcf8cb chore: snapshot septiembre 2026`. Sin remote.

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -103,6 +104,10 @@ builder.Services
     {
         // Hora local sin conversión UTC en toda la API (ver LocalDateTimeJsonConverter).
         options.JsonSerializerOptions.Converters.Add(new LocalDateTimeJsonConverter());
+        // Enums aceptan nombre ("Confirmada", "Efectivo") además de entero. El frontend
+        // envía nombres en estado de cita, método de pago, tipo de producto y motivo de entrada.
+        // Ningún DTO de respuesta expone enums crudos (todos van como string vía ToString()).
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
 var app = builder.Build();

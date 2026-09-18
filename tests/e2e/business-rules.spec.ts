@@ -213,8 +213,11 @@ test.describe("Consumo de cabina", () => {
   test.afterAll(async ({ request: api }) => {
     // El movimiento de inventario es un libro: no se borra por API. Como esto es la base de
     // desarrollo (y sus datos se usan en las demos), el test limpia lo suyo y devuelve el stock.
+    // Desde los lotes, devolver el stock es devolverlo AL LOTE: la columna del producto se
+    // recalcula desde ahí y volver a escribirla sola no serviría de nada.
     if (productId) {
       sql(`DELETE FROM InventoryMovements WHERE Referencia LIKE 'Consumo de cabina · Sesión%';`);
+      sql(`UPDATE ProductLots SET CantidadDisponible = CantidadInicial WHERE ProductId = '${productId}';`);
       sql(`UPDATE Products SET StockActual = ${stockInicial} WHERE Id = '${productId}';`);
     }
     if (appointmentId) {
@@ -262,8 +265,27 @@ test.describe("Consumo de cabina", () => {
       ...auth(token),
       data: { esteticistId, appointmentId, procedimiento: "Sesión imposible", observaciones: "x", productos: [{ productId, cantidad: 99_999 }] },
     });
-    expect(res.status()).toBe(400);
-    expect((await res.json()).error).toContain("No hay stock suficiente");
+    // Con lotes el rechazo es 422 y dice cuánto hay sin vencer; sin lotes sería 400
+    expect(res.status()).toBe(422);
+    expect((await res.json()).error).toContain("sin vencer");
+  });
+
+  test("un lote vencido no cuenta como existencia", async ({ request: api }) => {
+    // La mascarilla de colágeno del seed tiene su único lote vencido
+    const products = await get<{ items: { id: string; nombre: string }[] }>(api, token, "/api/v1/products?page=1&pageSize=50");
+    const vencido = products.items.find((p) => p.nombre.startsWith("Mascarilla"));
+    if (!vencido) return;
+
+    const lotes = await get<{ estado: string; cantidadDisponible: number }[]>(api, token, `/api/v1/products/${vencido.id}/lots`);
+    expect(lotes.some((l) => l.estado === "Vencido" && l.cantidadDisponible > 0), "el seed deja un lote vencido con existencia").toBe(true);
+
+    const res = await api.post(`/api/v1/patients/${patientId}/clinical-record/notes`, {
+      ...auth(token),
+      data: { esteticistId, appointmentId, procedimiento: "Sesión con vencido", observaciones: "x", productos: [{ productId: vencido.id, cantidad: 1 }] },
+    });
+    expect(res.status()).toBe(422);
+    const error = (await res.json()).error as string;
+    expect(error).toContain("lotes vencidos");
   });
 });
 

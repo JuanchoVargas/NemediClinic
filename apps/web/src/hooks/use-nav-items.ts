@@ -10,6 +10,7 @@ import {
   Building2,
   Calendar,
   CalendarDays,
+  ClipboardCheck,
   ClipboardList,
   Layers,
   LayoutDashboard,
@@ -54,6 +55,7 @@ export function useNavItems(): NavSection[] {
     const clinic: NavItem[] = [
       { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
       { label: "Pacientes", to: "/patients", icon: UsersRound },
+      { label: "Valoraciones", to: "/valoraciones", icon: ClipboardCheck },
       {
         label: "Calendario",
         icon: Calendar,
@@ -96,6 +98,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   procedures: "Procedimientos",
   packages: "Paquetes",
   inventory: "Inventario",
+  valoraciones: "Valoraciones",
   admin: "Administración",
   users: "Usuarios",
   branches: "Sedes",

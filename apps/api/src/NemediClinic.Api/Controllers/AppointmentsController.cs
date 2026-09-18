@@ -17,11 +17,13 @@ public class AppointmentsController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly PatientPackageService _packages;
+    private readonly ConsentService _consents;
 
-    public AppointmentsController(AppDbContext db, PatientPackageService packages)
+    public AppointmentsController(AppDbContext db, PatientPackageService packages, ConsentService consents)
     {
         _db = db;
         _packages = packages;
+        _consents = consents;
     }
 
     // ── GET /api/v1/appointments?start=&end=&esteticistId=&branchId= ────
@@ -227,6 +229,21 @@ public class AppointmentsController : ControllerBase
 
         if (GetRole() == "Esteticista" && appointment.EsteticistId != GetUserId())
             return Forbid();
+
+        // Consentimiento informado: sin uno vigente, la cita de un procedimiento que lo exige no inicia
+        if (request.Estado == AppointmentStatus.EnCurso && appointment.Estado != AppointmentStatus.EnCurso)
+        {
+            var requiere = await _db.Procedures.Where(p => p.Id == appointment.ProcedureId)
+                .Select(p => p.RequiereConsentimiento).FirstOrDefaultAsync();
+            if (requiere && !await _consents.HasValidConsentAsync(appointment.PatientId, appointment.ProcedureId))
+            {
+                return Conflict(new
+                {
+                    error = "Este procedimiento requiere consentimiento informado firmado antes de iniciar.",
+                    code = "consent_required"
+                });
+            }
+        }
 
         var previousEstado = appointment.Estado;
         appointment.Estado = request.Estado;

@@ -35,6 +35,8 @@ public class AttachmentService
         [AttachmentEntityType.Product] = [AttachmentKind.Producto],
         [AttachmentEntityType.Procedure] = [AttachmentKind.Procedimiento],
         [AttachmentEntityType.Tenant] = [AttachmentKind.Logo],
+        [AttachmentEntityType.Valuation] = [AttachmentKind.Antes],
+        // Kind.Consentimiento no aparece: ese PDF lo genera el sistema (SaveGeneratedPdfAsync), no se sube.
     };
 
     private readonly AppDbContext _db;
@@ -151,6 +153,28 @@ public class AttachmentService
         return attachment;
     }
 
+    /// <summary>Guarda un PDF generado por el sistema (consentimiento firmado). No hace SaveChanges.</summary>
+    public async Task<Attachment> SaveGeneratedPdfAsync(
+        byte[] pdf, string fileName, AttachmentEntityType entityType, Guid entityId, AttachmentKind kind, Guid userId, CancellationToken ct)
+    {
+        using var stream = new MemoryStream(pdf);
+        var path = await _storage.SaveAsync(_db.CurrentTenantId, ".pdf", stream, ct);
+        var attachment = new Attachment
+        {
+            EntityType = entityType,
+            EntityId = entityId,
+            Kind = kind,
+            FileName = fileName,
+            ContentType = "application/pdf",
+            Size = pdf.Length,
+            StoragePath = path,
+            ThumbnailPath = path, // un PDF no tiene miniatura: ?size=thumb sirve el mismo archivo
+            CreatedBy = userId
+        };
+        _db.Attachments.Add(attachment);
+        return attachment;
+    }
+
     // ── URL firmada y descarga ──────────────────────────────────────
     public async Task<SignedUrlDto> GetSignedUrlAsync(Guid id, CancellationToken ct)
     {
@@ -188,8 +212,9 @@ public class AttachmentService
         var stream = await _storage.OpenReadAsync(path, ct)
             ?? throw ApiException.NotFound("Imagen no encontrada.");
 
-        var isSvg = attachment.ContentType == "image/svg+xml";
-        var contentType = thumbnail && !isSvg ? "image/webp" : attachment.ContentType;
+        // La miniatura WebP solo existe para imágenes raster subidas; SVG y PDF se sirven tal cual
+        var isRaster = attachment.ContentType is "image/jpeg" or "image/png" or "image/webp";
+        var contentType = thumbnail && isRaster ? "image/webp" : attachment.ContentType;
         return (stream, contentType, attachment.FileName);
     }
 
@@ -199,6 +224,8 @@ public class AttachmentService
         var attachment = await _db.Attachments.FirstOrDefaultAsync(a => a.Id == id, ct)
             ?? throw ApiException.NotFound("Imagen no encontrada.");
         EnsureRoleCanWrite(attachment.EntityType, role);
+        if (attachment.Kind == AttachmentKind.Consentimiento)
+            throw ApiException.Conflict("Un consentimiento firmado es un documento legal y no se puede eliminar.");
 
         // Soft delete; AttachmentCleanupService borra los archivos físicos más tarde.
         attachment.IsDeleted = true;
@@ -257,7 +284,11 @@ public class AttachmentService
     }
 
     /// <summary>Enlaza a una nota clínica recién creada las fotos subidas como pendientes. No guarda.</summary>
-    public async Task ClaimForNoteAsync(IReadOnlyCollection<Guid> attachmentIds, Guid noteId, CancellationToken ct = default)
+    public Task ClaimForNoteAsync(IReadOnlyCollection<Guid> attachmentIds, Guid noteId, CancellationToken ct = default) =>
+        ClaimAsync(attachmentIds, AttachmentEntityType.ClinicalNote, noteId, ct);
+
+    /// <summary>Enlaza a una entidad los adjuntos pendientes de su tipo (o deja igual los que ya eran suyos). No guarda.</summary>
+    public async Task ClaimAsync(IReadOnlyCollection<Guid> attachmentIds, AttachmentEntityType entityType, Guid noteId, CancellationToken ct = default)
     {
         if (attachmentIds.Count == 0)
             return;
@@ -269,7 +300,7 @@ public class AttachmentService
 
         foreach (var attachment in attachments)
         {
-            if (attachment.EntityType != AttachmentEntityType.ClinicalNote || attachment.EntityId.HasValue)
+            if (attachment.EntityType != entityType || (attachment.EntityId.HasValue && attachment.EntityId != noteId))
                 throw ApiException.BadRequest("Alguna de las fotos ya pertenece a otro registro.");
             attachment.EntityId = noteId;
         }
@@ -305,6 +336,7 @@ public class AttachmentService
             AttachmentEntityType.Product => await _db.Products.AnyAsync(x => x.Id == entityId, ct),
             AttachmentEntityType.Procedure => await _db.Procedures.AnyAsync(x => x.Id == entityId, ct),
             AttachmentEntityType.Tenant => entityId == _db.CurrentTenantId,
+            AttachmentEntityType.Valuation => await _db.Valuations.AnyAsync(x => x.Id == entityId, ct),
             _ => false
         };
         if (!exists)

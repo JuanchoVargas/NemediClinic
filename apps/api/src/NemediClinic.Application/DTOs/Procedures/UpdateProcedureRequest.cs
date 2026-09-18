@@ -23,4 +23,7 @@ public class UpdateProcedureRequest
 
     /// <summary>Id de un Attachment (Kind=Procedimiento) subido antes con POST /files.</summary>
     public Guid? ImagenId { get; set; }
+
+    /// <summary>La cita de este procedimiento no inicia sin un consentimiento informado firmado.</summary>
+    public bool? RequiereConsentimiento { get; set; }
 }

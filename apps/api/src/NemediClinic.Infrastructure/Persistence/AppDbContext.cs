@@ -40,6 +40,10 @@ public class AppDbContext : DbContext
     public DbSet<InventoryEntry> InventoryEntries => Set<InventoryEntry>();
     public DbSet<InventoryMovement> InventoryMovements => Set<InventoryMovement>();
     public DbSet<Attachment> Attachments => Set<Attachment>();
+    public DbSet<Valuation> Valuations => Set<Valuation>();
+    public DbSet<ValuationProcedure> ValuationProcedures => Set<ValuationProcedure>();
+    public DbSet<ConsentTemplate> ConsentTemplates => Set<ConsentTemplate>();
+    public DbSet<Consent> Consents => Set<Consent>();
 
     // Nivel de plataforma: sin TenantId ni filtro global.
     public DbSet<Channel> Channels => Set<Channel>();
@@ -69,6 +73,44 @@ public class AppDbContext : DbContext
             a.Property(x => x.StoragePath).HasMaxLength(300);
             a.Property(x => x.ThumbnailPath).HasMaxLength(300);
             a.HasIndex(x => new { x.TenantId, x.EntityType, x.EntityId });
+        });
+
+        // ── Valoraciones ────────────────────────────────────
+        modelBuilder.Entity<Valuation>(v =>
+        {
+            v.Property(x => x.Estado).HasConversion<string>().HasMaxLength(20);
+            v.Property(x => x.PrecioCotizado).HasPrecision(18, 2);
+            v.Property(x => x.ProspectoNombre).HasMaxLength(200);
+            v.Property(x => x.ProspectoTelefono).HasMaxLength(50);
+            v.Property(x => x.MotivoRechazo).HasMaxLength(500);
+            v.HasIndex(x => new { x.TenantId, x.Fecha });
+            v.HasOne(x => x.Patient).WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
+            v.HasOne(x => x.Esteticist).WithMany().HasForeignKey(x => x.EsteticistId).OnDelete(DeleteBehavior.Restrict);
+            v.HasOne(x => x.Package).WithMany().HasForeignKey(x => x.PackageId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<ValuationProcedure>(vp =>
+        {
+            vp.HasKey(x => new { x.ValuationId, x.ProcedureId });
+            vp.HasOne(x => x.Valuation).WithMany(v => v.Procedures).HasForeignKey(x => x.ValuationId).OnDelete(DeleteBehavior.Cascade);
+            vp.HasOne(x => x.Procedure).WithMany().HasForeignKey(x => x.ProcedureId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── Consentimiento informado ────────────────────────
+        modelBuilder.Entity<ConsentTemplate>(t =>
+        {
+            t.Property(x => x.Titulo).HasMaxLength(200);
+            t.HasIndex(x => new { x.TenantId, x.ProcedureId }).IsUnique().HasFilter("IsDeleted = 0");
+            t.HasOne(x => x.Procedure).WithMany().HasForeignKey(x => x.ProcedureId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<Consent>(c =>
+        {
+            c.Property(x => x.Titulo).HasMaxLength(200);
+            c.Property(x => x.FirmanteNombre).HasMaxLength(200);
+            c.Property(x => x.FirmanteCedula).HasMaxLength(20);
+            c.HasIndex(x => new { x.PatientId, x.ProcedureId, x.FechaFirma });
+            c.HasOne(x => x.Patient).WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
+            c.HasOne(x => x.Procedure).WithMany().HasForeignKey(x => x.ProcedureId).OnDelete(DeleteBehavior.Restrict);
+            c.HasOne(x => x.Esteticist).WithMany().HasForeignKey(x => x.EsteticistId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // ── Plataforma: Channel / Lead / PlatformAdmin ──────

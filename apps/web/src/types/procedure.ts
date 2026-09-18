@@ -6,6 +6,8 @@
 // ============================================================
 
 export interface Procedure {
+  /** La cita no pasa a "En curso" sin un consentimiento informado firmado. */
+  requiereConsentimiento?: boolean;
   id: string;
   nombre: string;
   descripcion: string;
@@ -26,6 +28,7 @@ export interface CreateProcedureRequest {
   areaCorporal: string;
   /** Id del Attachment con la imagen (se sube antes con POST /files). */
   imagenId?: string | null;
+  requiereConsentimiento?: boolean;
 }
 
 export interface UpdateProcedureRequest {
@@ -37,4 +40,5 @@ export interface UpdateProcedureRequest {
   activo?: boolean;
   /** Id del Attachment con la imagen (se sube antes con POST /files). */
   imagenId?: string | null;
+  requiereConsentimiento?: boolean;
 }

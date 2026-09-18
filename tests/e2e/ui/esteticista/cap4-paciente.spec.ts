@@ -93,7 +93,7 @@ test("Cap4 · Pacientes (esteticista)", async ({ page }) => {
 
   await step(page, "Observa que no existen las pestañas Paquetes ni Pagos", null, {
     after: async () => {
-      await expect(page.locator("[role=tab]")).toHaveCount(3);
+      await expect(page.locator("[role=tab]")).toHaveCount(4); // Información, Historia clínica, Evolución, Consentimientos
       await expect(tab(page, "Paquetes")).toHaveCount(0);
       await expect(tab(page, "Pagos")).toHaveCount(0);
     },

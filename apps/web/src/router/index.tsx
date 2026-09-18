@@ -45,6 +45,7 @@ import { BranchesPage } from "@/pages/admin/BranchesPage";
 import { TenantsPage } from "@/pages/super/TenantsPage";
 import { PlatformPage } from "@/pages/platform/PlatformPage";
 import { ChangePasswordPage } from "@/pages/ChangePasswordPage";
+import { ValuationsPage } from "@/pages/ValuationsPage";
 import { PLATFORM_ADMIN } from "@/lib/permissions";
 import { useAuthStore } from "@/stores/auth.store";
 import { useToastStore } from "@/stores/toast.store";
@@ -197,6 +198,12 @@ const packageEditRoute = createRoute({
   component: PackageFormPage,
 });
 
+const valuationsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/valoraciones",
+  component: ValuationsPage,
+});
+
 const inventoryRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/inventory",
@@ -259,6 +266,7 @@ const routeTree = rootRoute.addChildren([
     packageDetailRoute,
     packageEditRoute,
     inventoryRoute,
+    valuationsRoute,
     usersRoute,
     branchesRoute,
     tenantsRoute,

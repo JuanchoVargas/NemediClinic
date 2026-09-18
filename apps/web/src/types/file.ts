@@ -5,8 +5,8 @@
 // Espejo de NemediClinic.Application/DTOs/Files/AttachmentDtos.cs.
 // ============================================================
 
-export type AttachmentEntityType = "Patient" | "ClinicalNote" | "Product" | "Procedure" | "Tenant";
-export type AttachmentKind = "Perfil" | "Antes" | "Despues" | "Producto" | "Procedimiento" | "Logo";
+export type AttachmentEntityType = "Patient" | "ClinicalNote" | "Product" | "Procedure" | "Tenant" | "Valuation";
+export type AttachmentKind = "Perfil" | "Antes" | "Despues" | "Producto" | "Procedimiento" | "Logo" | "Consentimiento";
 
 export interface Attachment {
   id: string;

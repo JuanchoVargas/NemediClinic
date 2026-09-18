@@ -59,6 +59,8 @@ import { usePatient, usePatients } from "@/api/patients.api";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePermissions } from "@/hooks/use-permissions";
 import { ClinicalNoteDialog } from "@/components/patient/ClinicalNoteDialog";
+import { ConsentSignDialog } from "@/components/consent/ConsentSignDialog";
+import { ApiError } from "@/types/api";
 import { useToastStore } from "@/stores/toast.store";
 import { cn } from "@/lib/utils";
 import {
@@ -525,6 +527,7 @@ function AppointmentDetailSheet({
   const updateStatus = useUpdateAppointmentStatus();
   const { can, role, userId } = usePermissions();
   const [noteOpen, setNoteOpen] = useState(false);
+  const [consentOpen, setConsentOpen] = useState(false);
   // El backend deja cambiar estado a Admin/SuperAdmin sobre cualquier cita y
   // a Esteticista solo sobre las propias (403 en caso contrario).
   const canAct =
@@ -537,8 +540,10 @@ function AppointmentDetailSheet({
       await updateStatus.mutateAsync({ id, body: { estado } });
       useToastStore.success(`Cita marcada como ${APPOINTMENT_LABELS[estado]}`);
       onClose();
-    } catch {
-      // toast global
+    } catch (error) {
+      // 409 consent_required: el procedimiento exige consentimiento firmado → se abre la firma.
+      // El toast global ya explicó el motivo.
+      if (isConsentRequired(error)) setConsentOpen(true);
     }
   };
 
@@ -629,6 +634,16 @@ function AppointmentDetailSheet({
             </>
           )}
         </div>
+      {consentOpen && data && (
+        <ConsentSignDialog
+          patientId={data.patientId}
+          procedureId={data.procedureId}
+          appointmentId={data.id}
+          onClose={() => setConsentOpen(false)}
+          // Con el consentimiento firmado, la cita inicia sin otro clic
+          onSigned={() => void handleStatus(AppointmentStatus.EnCurso)}
+        />
+      )}
       {noteOpen && data && (
         <ClinicalNoteDialog
           patientId={data.patientId}
@@ -642,6 +657,13 @@ function AppointmentDetailSheet({
       )}
     </FormDialog>
   );
+}
+
+/** ¿El backend rechazó el cambio de estado por falta de consentimiento informado? */
+function isConsentRequired(error: unknown): boolean {
+  if (!(error instanceof ApiError) || error.codigoRespuesta !== 409) return false;
+  const original = error.originalError as { response?: { data?: { code?: string } } } | undefined;
+  return original?.response?.data?.code === "consent_required";
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {

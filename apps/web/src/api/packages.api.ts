@@ -24,8 +24,10 @@ import type {
 
 const BASE = "/api/v1/Packages";
 
-export function usePackages(page: number, pageSize: number, search?: string) {
+export function usePackages(page: number, pageSize: number, search?: string, enabled = true) {
   return useQuery({
+    // enabled=false para roles que no pueden leer paquetes (PackagesController es policy Admin)
+    enabled,
     queryKey: ["packages", { page, pageSize, search }],
     queryFn: async () => {
       const { data } = await api.get<PagedResponse<Package>>(BASE, {

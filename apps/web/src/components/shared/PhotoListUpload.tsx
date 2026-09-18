@@ -13,17 +13,19 @@ import { useDeleteFile } from "@/api/files.api";
 import { useImageUploader } from "@/hooks/use-image-uploader";
 import { ACCEPTED_IMAGE_TYPES } from "@/lib/compress-image";
 import { cn } from "@/lib/utils";
-import type { AttachmentKind } from "@/types/file";
+import type { AttachmentEntityType, AttachmentKind } from "@/types/file";
 
 interface PhotoListUploadProps {
   label: string;
   kind: Extract<AttachmentKind, "Antes" | "Despues">;
+  /** Dueño de las fotos: la nota clínica (por defecto) o una valoración. */
+  entityType?: Extract<AttachmentEntityType, "ClinicalNote" | "Valuation">;
   value: string[];
   onChange: (ids: string[]) => void;
   max?: number;
 }
 
-export function PhotoListUpload({ label, kind, value, onChange, max = 6 }: PhotoListUploadProps) {
+export function PhotoListUpload({ label, kind, value, onChange, max = 6, entityType = "ClinicalNote" }: PhotoListUploadProps) {
   const inputId = useId();
   const { upload, progress, error, isUploading } = useImageUploader();
   const deleteFile = useDeleteFile();
@@ -34,7 +36,7 @@ export function PhotoListUpload({ label, kind, value, onChange, max = 6 }: Photo
     let ids = value;
     // En serie: una sola barra de progreso y el orden de las fotos se conserva
     for (const file of Array.from(files).slice(0, max - value.length)) {
-      const attachment = await upload(file, { entityType: "ClinicalNote", kind });
+      const attachment = await upload(file, { entityType, kind });
       if (attachment) {
         ids = [...ids, attachment.id];
         onChange(ids);

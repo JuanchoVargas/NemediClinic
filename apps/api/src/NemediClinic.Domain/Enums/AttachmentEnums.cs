@@ -6,7 +6,8 @@ public enum AttachmentEntityType
     ClinicalNote = 1,
     Product = 2,
     Procedure = 3,
-    Tenant = 4
+    Tenant = 4,
+    Valuation = 5
 }
 
 public enum AttachmentKind
@@ -16,5 +17,7 @@ public enum AttachmentKind
     Despues = 2,
     Producto = 3,
     Procedimiento = 4,
-    Logo = 5
+    Logo = 5,
+    /// <summary>PDF del consentimiento informado firmado (lo genera el sistema, no se sube).</summary>
+    Consentimiento = 6
 }

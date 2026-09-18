@@ -36,7 +36,7 @@ import { useToastStore } from "@/stores/toast.store";
 
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
 // Segmentos que tienen pantalla propia y por tanto enlace en el breadcrumb
-const LINKABLE = new Set(["/dashboard", "/patients", "/calendar", "/procedures", "/packages", "/inventory", "/platform"]);
+const LINKABLE = new Set(["/dashboard", "/patients", "/calendar", "/procedures", "/packages", "/inventory", "/platform", "/valoraciones"]);
 
 function useBreadcrumb() {
   const pathname = useLocation({ select: (l) => l.pathname });

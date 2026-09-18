@@ -62,6 +62,13 @@ export type Action =
   | "products.update"
   | "products.delete"
   | "inventory.entries.create"
+  // Valoraciones (crear/editar/rechazar: Esteticista; convertir y eliminar: Admin)
+  | "valuations.write"
+  | "valuations.convert"
+  | "valuations.delete"
+  // Consentimiento: firmar lo hace cualquier rol; editar la plantilla, Admin
+  | "consents.sign"
+  | "consents.template.update"
   // Usuarios (GET cualquiera; PUT/DELETE Admin; crear = auth/register SuperAdmin)
   | "users.read"
   | "users.create"
@@ -88,6 +95,8 @@ const ESTETICISTA: Action[] = [
   "appointments.delete",
   "inventory.entries.create",
   "users.read",
+  "valuations.write",
+  "consents.sign",
 ];
 
 const ADMIN: Action[] = [
@@ -106,6 +115,9 @@ const ADMIN: Action[] = [
   "payments.create",
   "payments.delete",
   "patientPackages.delete",
+  "valuations.convert",
+  "valuations.delete",
+  "consents.template.update",
   "products.create",
   "products.update",
   "products.delete",

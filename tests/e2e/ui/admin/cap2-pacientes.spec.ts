@@ -65,7 +65,7 @@ test("Cap2 · Pacientes (recepción)", async ({ page }) => {
   await step(page, "Busca a Valentina y haz clic en Ver", page.locator("main table tr", { hasText: "Valentina" }).locator("button", { hasText: "Ver" }), {
     before: async () => { await search().fill("Valentina"); await expect(page.locator("main table tbody tr")).toHaveCount(1); },
     after: async () => {
-      await expect(page.locator("[role=tab]")).toHaveCount(5); // Información, Historia clínica, Evolución, Paquetes, Pagos
+      await expect(page.locator("[role=tab]")).toHaveCount(6); // Información, Historia clínica, Evolución, Consentimientos, Paquetes, Pagos
       await expect(activePanel(page)).toContainText("Datos personales");
     },
   });

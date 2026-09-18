@@ -27,6 +27,48 @@ public class PatientPackageService
     public static DateOnly FechaVencimiento(DateOnly fechaInicio, int vigenciaDias) => fechaInicio.AddDays(vigenciaDias);
 
     /// <summary>
+    /// Asigna un paquete del catálogo a un paciente y genera sus sesiones. No guarda: quien llama
+    /// hace un solo SaveChanges. patientIsNew = el paciente se está creando en esta misma unidad
+    /// de trabajo (convertir una valoración de prospecto) y aún no existe en la base.
+    /// </summary>
+    public async Task<PatientPackage> AssignAsync(
+        Guid patientId, Guid packageId, decimal precioAcordado, DateOnly fechaInicio, CancellationToken ct = default, bool patientIsNew = false)
+    {
+        if (!patientIsNew && !await _db.Patients.AnyAsync(p => p.Id == patientId, ct))
+            throw ApiException.BadRequest("Paciente no encontrado.");
+
+        var package = await _db.Packages.Include(p => p.PackageProcedures).FirstOrDefaultAsync(p => p.Id == packageId, ct)
+            ?? throw ApiException.BadRequest("Paquete no encontrado.");
+
+        var patientPackage = new PatientPackage
+        {
+            PatientId = patientId,
+            PackageId = packageId,
+            PrecioAcordado = precioAcordado,
+            FechaInicio = fechaInicio,
+            Estado = PackageStatus.Activo
+        };
+        _db.PatientPackages.Add(patientPackage);
+
+        // Una sesión por cada CantidadSesiones de cada procedimiento del paquete
+        var numero = 1;
+        foreach (var item in package.PackageProcedures)
+        {
+            for (var i = 0; i < item.CantidadSesiones; i++)
+            {
+                _db.PatientPackageSessions.Add(new PatientPackageSession
+                {
+                    PatientPackageId = patientPackage.Id,
+                    ProcedureId = item.ProcedureId,
+                    Numero = numero++,
+                    Estado = SessionStatus.Pendiente
+                });
+            }
+        }
+        return patientPackage;
+    }
+
+    /// <summary>
     /// Marca la sesión como completada y aplica el cierre. No guarda: el caller hace SaveChanges
     /// junto con su propio cambio (p. ej. el estado de la cita). Devuelve false si ya estaba completada.
     /// </summary>

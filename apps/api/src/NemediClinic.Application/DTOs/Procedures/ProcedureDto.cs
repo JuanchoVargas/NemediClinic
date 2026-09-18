@@ -10,5 +10,6 @@ public class ProcedureDto
     public string AreaCorporal { get; set; } = string.Empty;
     public bool Activo { get; set; }
     public Guid? ImagenId { get; set; }
+    public bool RequiereConsentimiento { get; set; }
     public DateTime CreatedAt { get; set; }
 }

@@ -96,6 +96,10 @@ builder.Services.AddScoped<DemoImageSeeder>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<PatientPackageService>();
 
+// ── Valoraciones y consentimiento informado ─────────────────────
+builder.Services.AddScoped<ValuationService>();
+builder.Services.AddScoped<ConsentService>();
+
 // ── Hangfire: jobs recurrentes sobre la misma base (esquema HangFire) ──
 // Sin dashboard web de Hangfire: no se expone nada nuevo. El schema se crea solo al arrancar
 // el servidor de jobs, que en Production ocurre DESPUÉS de Database.Migrate() (crea la base).

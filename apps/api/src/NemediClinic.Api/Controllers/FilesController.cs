@@ -41,12 +41,20 @@ public class FilesController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Get(Guid id, [FromQuery] string? t, [FromQuery] string? size, CancellationToken ct)
     {
-        var (content, contentType, _) = await _service.OpenAsync(id, t, thumbnail: size == "thumb", ct);
+        var (content, contentType, fileName) = await _service.OpenAsync(id, t, thumbnail: size == "thumb", ct);
 
         Response.Headers.CacheControl = "private, max-age=600";
         Response.Headers.XContentTypeOptions = "nosniff";
-        // Un SVG puede llevar scripts: aunque hoy solo los genera el seed, se sirve en sandbox.
-        Response.Headers.ContentSecurityPolicy = "default-src 'none'; style-src 'unsafe-inline'; sandbox";
+        if (contentType == "image/svg+xml")
+        {
+            // Un SVG puede llevar scripts: aunque hoy solo los genera el seed, se sirve en sandbox.
+            Response.Headers.ContentSecurityPolicy = "default-src 'none'; style-src 'unsafe-inline'; sandbox";
+        }
+        else if (contentType == "application/pdf")
+        {
+            // inline: el navegador lo abre en su visor; el nombre sirve si el usuario lo descarga
+            Response.Headers.ContentDisposition = $"inline; filename=\"{fileName}\"";
+        }
         return File(content, contentType);
     }
 

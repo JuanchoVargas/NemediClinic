@@ -53,6 +53,10 @@ export function hardDeleteTenants(tenantIds: string[]): void {
   const statements = [
     // Los archivos físicos quedan en App_Data/uploads/<tenantId> (carpeta ignorada por git)
     byTenant("Attachments"),
+    // Valoraciones y consentimientos (ValuationProcedures no tiene TenantId: cae por cascada)
+    byTenant("Consents"),
+    byTenant("ConsentTemplates"),
+    byTenant("Valuations"),
     byTenant("InventoryMovements"),
     byTenant("InventoryEntries"),
     byTenant("Products"),

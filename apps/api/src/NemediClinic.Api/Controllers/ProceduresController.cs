@@ -53,6 +53,7 @@ public class ProceduresController : ControllerBase
                 AreaCorporal = p.AreaCorporal,
                 Activo = p.Activo,
                 ImagenId = p.ImagenId,
+                RequiereConsentimiento = p.RequiereConsentimiento,
                 CreatedAt = p.CreatedAt
             })
             .ToListAsync();
@@ -82,6 +83,7 @@ public class ProceduresController : ControllerBase
                 AreaCorporal = p.AreaCorporal,
                 Activo = p.Activo,
                 ImagenId = p.ImagenId,
+                RequiereConsentimiento = p.RequiereConsentimiento,
                 CreatedAt = p.CreatedAt
             })
             .FirstOrDefaultAsync();
@@ -103,7 +105,8 @@ public class ProceduresController : ControllerBase
             PrecioBase = request.PrecioBase,
             DuracionMinutos = request.DuracionMinutos,
             AreaCorporal = request.AreaCorporal,
-            ImagenId = request.ImagenId
+            ImagenId = request.ImagenId,
+            RequiereConsentimiento = request.RequiereConsentimiento
         };
 
         _db.Procedures.Add(procedure);
@@ -120,6 +123,7 @@ public class ProceduresController : ControllerBase
             AreaCorporal = procedure.AreaCorporal,
             Activo = procedure.Activo,
             ImagenId = procedure.ImagenId,
+            RequiereConsentimiento = procedure.RequiereConsentimiento,
             CreatedAt = procedure.CreatedAt
         });
     }
@@ -138,6 +142,7 @@ public class ProceduresController : ControllerBase
         if (request.DuracionMinutos.HasValue) procedure.DuracionMinutos = request.DuracionMinutos.Value;
         if (request.AreaCorporal is not null) procedure.AreaCorporal = request.AreaCorporal;
         if (request.Activo.HasValue) procedure.Activo = request.Activo.Value;
+        if (request.RequiereConsentimiento.HasValue) procedure.RequiereConsentimiento = request.RequiereConsentimiento.Value;
         if (request.ImagenId.HasValue)
         {
             await _attachments.AssignImageAsync(AttachmentEntityType.Procedure, procedure.Id, request.ImagenId, procedure.ImagenId);

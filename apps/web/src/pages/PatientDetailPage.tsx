@@ -2,7 +2,7 @@
 // PatientDetailPage.tsx — Detalle de paciente con tabs
 //
 // Cabecera (PatientHeader) con foto, badges y acciones rápidas.
-// Tabs: Información, Historia Clínica, Evolución (fotos por sesión), Paquetes, Pagos.
+// Tabs: Información, Historia Clínica, Evolución (fotos por sesión), Consentimientos, Paquetes, Pagos.
 // Cada tab tiene su propio query independiente (lazy: solo cuando
 // el usuario abre el tab, TanStack Query lo cachea por 5min).
 // ============================================================
@@ -60,6 +60,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { SecureImage } from "@/components/shared/SecureImage";
 import { PatientHeader } from "@/components/patient/PatientHeader";
 import { EvolutionTab } from "@/components/patient/EvolutionTab";
+import { ConsentsTab } from "@/components/patient/ConsentsTab";
 import { ClinicalNoteDialog } from "@/components/patient/ClinicalNoteDialog";
 import { ClinicalRecordDialog } from "@/components/patient/ClinicalRecordDialog";
 import { formatShortDate } from "@/lib/format-platform";
@@ -136,6 +137,7 @@ export function PatientDetailPage() {
           <TabsTrigger value="info">Información</TabsTrigger>
           <TabsTrigger value="clinical">Historia clínica</TabsTrigger>
           <TabsTrigger value="evolution">Evolución</TabsTrigger>
+          <TabsTrigger value="consents">Consentimientos</TabsTrigger>
           {canReadPackages && <TabsTrigger value="packages">Paquetes</TabsTrigger>}
           {canReadPackages && <TabsTrigger value="payments">Pagos</TabsTrigger>}
         </TabsList>
@@ -148,6 +150,9 @@ export function PatientDetailPage() {
         </TabsContent>
         <TabsContent value="evolution" className="mt-4">
           <EvolutionTab patientId={patient.id} onNewNote={canCreateNote ? () => setNoteOpen(true) : undefined} />
+        </TabsContent>
+        <TabsContent value="consents" className="mt-4">
+          <ConsentsTab patientId={patient.id} />
         </TabsContent>
         {canReadPackages && (
           <TabsContent value="packages" className="mt-4">

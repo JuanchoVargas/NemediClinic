@@ -26,43 +26,8 @@ public class PatientPackagesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> AssignPackage([FromBody] AssignPackageRequest request)
     {
-        var patient = await _db.Patients.AnyAsync(p => p.Id == request.PatientId);
-        if (!patient)
-            return BadRequest(new { error = "Paciente no encontrado." });
-
-        var package = await _db.Packages
-            .Include(p => p.PackageProcedures)
-            .FirstOrDefaultAsync(p => p.Id == request.PackageId);
-
-        if (package is null)
-            return BadRequest(new { error = "Paquete no encontrado." });
-
-        var patientPackage = new PatientPackage
-        {
-            PatientId = request.PatientId,
-            PackageId = request.PackageId,
-            PrecioAcordado = request.PrecioAcordado,
-            FechaInicio = request.FechaInicio,
-            Estado = PackageStatus.Activo
-        };
-
-        _db.PatientPackages.Add(patientPackage);
-
-        // Auto-generate sessions from catalog PackageProcedures
-        var sessionNumber = 1;
-        foreach (var pp in package.PackageProcedures)
-        {
-            for (var i = 0; i < pp.CantidadSesiones; i++)
-            {
-                _db.PatientPackageSessions.Add(new PatientPackageSession
-                {
-                    PatientPackageId = patientPackage.Id,
-                    ProcedureId = pp.ProcedureId,
-                    Numero = sessionNumber++,
-                    Estado = SessionStatus.Pendiente
-                });
-            }
-        }
+        var patientPackage = await _packages.AssignAsync(
+            request.PatientId, request.PackageId, request.PrecioAcordado, request.FechaInicio);
 
         await _db.SaveChangesAsync();
 

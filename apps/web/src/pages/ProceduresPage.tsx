@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Pencil, Plus, Search, Trash2, Clock, Stethoscope } from "lucide-react";
+import { Pencil, Plus, Search, Trash2, Clock, Stethoscope, FileSignature } from "lucide-react";
 
 import {
   AlertDialog,
@@ -43,6 +43,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ImageUpload } from "@/components/shared/ImageUpload";
 import { SecureImage } from "@/components/shared/SecureImage";
+import { ConsentTemplateDialog } from "@/components/consent/ConsentTemplateDialog";
 import { MotionDiv, staggerProps } from "@/components/shared/motion-elements";
 
 import {
@@ -70,6 +71,7 @@ const procedureSchema = z.object({
   areaCorporal: z.string().min(1, "Requerido"),
   activo: z.boolean(),
   imagenId: z.string().nullable(),
+  requiereConsentimiento: z.boolean(),
 });
 
 type ProcedureFormValues = z.infer<typeof procedureSchema>;
@@ -82,6 +84,7 @@ const EMPTY: ProcedureFormValues = {
   areaCorporal: "",
   activo: true,
   imagenId: null,
+  requiereConsentimiento: false,
 };
 
 export function ProceduresPage() {
@@ -96,6 +99,8 @@ export function ProceduresPage() {
     open: boolean;
     editing?: Procedure;
   }>({ open: false });
+
+  const [templateFor, setTemplateFor] = useState<string | null>(null);
 
   const totalPages = data ? Math.max(1, Math.ceil(data.totalCount / PAGE_SIZE)) : 1;
   const showEmpty = !isLoading && data && data.items.length === 0;
@@ -186,6 +191,12 @@ export function ProceduresPage() {
                   </div>
                   {p.activo ? <Badge variant="success">Activo</Badge> : <Badge variant="secondary">Inactivo</Badge>}
                 </div>
+                {p.requiereConsentimiento && (
+                  <Badge variant="outline" className="w-fit gap-1">
+                    <FileSignature className="h-3 w-3" aria-hidden />
+                    Requiere consentimiento
+                  </Badge>
+                )}
                 {p.descripcion && <p className="line-clamp-2 text-sm text-muted-foreground">{p.descripcion}</p>}
                 <div className="mt-auto flex items-end justify-between gap-2 pt-1">
                   <div>
@@ -196,6 +207,16 @@ export function ProceduresPage() {
                     </p>
                   </div>
                   <div className="flex gap-1">
+                    {can("consents.template.update") && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setTemplateFor(p.id)}
+                        aria-label={`Plantilla de consentimiento de ${p.nombre}`}
+                      >
+                        <FileSignature className="h-4 w-4" />
+                      </Button>
+                    )}
                     {can("procedures.update") && (
                       <Button
                         variant="outline"
@@ -230,6 +251,8 @@ export function ProceduresPage() {
           </div>
         </div>
       )}
+
+      {templateFor && <ConsentTemplateDialog procedureId={templateFor} onClose={() => setTemplateFor(null)} />}
 
       <ProcedureSheet
         open={sheetState.open}
@@ -274,6 +297,7 @@ function ProcedureSheet({
               areaCorporal: editing.areaCorporal,
               activo: editing.activo,
               imagenId: editing.imagenId ?? null,
+              requiereConsentimiento: editing.requiereConsentimiento ?? false,
             }
           : EMPTY,
       );
@@ -288,6 +312,7 @@ function ProcedureSheet({
       duracionMinutos: values.duracionMinutos,
       areaCorporal: values.areaCorporal,
       imagenId: values.imagenId,
+      requiereConsentimiento: values.requiereConsentimiento,
     };
     try {
       if (isEdit && editing) {
@@ -422,6 +447,21 @@ function ProcedureSheet({
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="requiereConsentimiento"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-md border p-3">
+                    <div>
+                      <FormLabel>Requiere consentimiento informado</FormLabel>
+                      <p className="text-xs text-muted-foreground">La cita no podrá iniciarse sin un consentimiento firmado por el paciente.</p>
+                    </div>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} aria-label="Requiere consentimiento informado" />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="activo"

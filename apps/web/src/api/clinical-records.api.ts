@@ -11,6 +11,8 @@ import type {
   ClinicalNote,
   ClinicalRecord,
   CreateClinicalNoteRequest,
+  CreateClinicalNoteResponse,
+  PatientConsumption,
 } from "@/types/clinical-record";
 
 export function useClinicalRecord(patientId: string | undefined) {
@@ -50,7 +52,7 @@ export function useCreateClinicalNote(patientId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: CreateClinicalNoteRequest) => {
-      const { data } = await api.post<ClinicalNote>(
+      const { data } = await api.post<CreateClinicalNoteResponse>(
         `/api/v1/patients/${patientId}/clinical-record/notes`,
         body,
       );
@@ -59,7 +61,24 @@ export function useCreateClinicalNote(patientId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["clinical-notes", patientId] });
       qc.invalidateQueries({ queryKey: ["patients", patientId, "evolution"] });
+      qc.invalidateQueries({ queryKey: ["patients", patientId, "consumption"] });
+      // El consumo de cabina movió el inventario
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["inventory"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
+  });
+}
+
+/** Historial de consumo de cabina del paciente: qué se gastó en cada sesión. */
+export function usePatientConsumption(patientId: string | undefined) {
+  return useQuery({
+    queryKey: ["patients", patientId, "consumption"],
+    queryFn: async () => {
+      const { data } = await api.get<PatientConsumption[]>(`/api/v1/patients/${patientId}/consumption`);
+      return data;
+    },
+    enabled: !!patientId,
   });
 }
 

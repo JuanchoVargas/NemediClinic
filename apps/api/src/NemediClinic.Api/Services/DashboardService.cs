@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NemediClinic.Application.DTOs.Dashboard;
+using NemediClinic.Application.DTOs.Inventory;
 using NemediClinic.Domain.Enums;
 using NemediClinic.Infrastructure.Persistence;
 
@@ -188,17 +189,17 @@ public class DashboardService
 
         // ── Paquetes por vencer en 30 días ──
         var activos = await _db.PatientPackages.AsNoTracking()
-            .Where(pp => pp.Estado == PackageStatus.Activo && pp.Package.VigenciaDias > 0)
+            .Where(pp => pp.Estado == PackageStatus.Activo && pp.VigenciaDias > 0)
             .Select(pp => new
             {
                 pp.Id,
                 pp.PatientId,
                 Paciente = pp.Patient.Nombre + " " + pp.Patient.Apellido,
-                Paquete = pp.Package.Nombre,
+                Paquete = pp.PackageNombre,
                 pp.FechaInicio,
-                pp.Package.VigenciaDias,
+                pp.VigenciaDias,
                 pp.SesionesCompletadas,
-                pp.Package.SesionesTotales
+                pp.SesionesTotales
             })
             .ToListAsync(ct);
         dto.PaquetesPorVencer = activos

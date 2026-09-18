@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ConsumptionSummary } from "@/components/patient/ConsumptionSummary";
 import { SignedLightbox } from "@/components/shared/SignedLightbox";
 import { SecureImage } from "@/components/shared/SecureImage";
 import { MotionLi, staggerProps } from "@/components/shared/motion-elements";
@@ -68,6 +69,10 @@ export function EvolutionTab({ patientId, onNewNote }: EvolutionTabProps) {
 
   return (
     <>
+      <div className="mb-6">
+        <ConsumptionSummary patientId={patientId} />
+      </div>
+
       <ol className="relative space-y-6 border-l-2 border-border pl-6">
         {sessions.map((session, index) => (
           <MotionLi key={session.noteId} className="relative" {...staggerProps(index)}>
@@ -141,6 +146,12 @@ function SessionCard({
 
           <div className="space-y-3">
             <p className="text-sm whitespace-pre-wrap">{session.observaciones}</p>
+            {session.productos.length > 0 && (
+              <p className="mt-2 text-sm">
+                <span className="text-muted-foreground">Productos: </span>
+                {session.productos.map((p) => `${p.nombre} (${p.cantidad} ${p.unidadMedida})`).join(" · ")}
+              </p>
+            )}
             {session.productosUsados && (
               <p className="text-sm text-muted-foreground">
                 <span className="font-medium text-foreground">Productos: </span>

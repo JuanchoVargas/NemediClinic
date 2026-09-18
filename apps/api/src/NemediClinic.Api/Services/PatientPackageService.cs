@@ -168,13 +168,18 @@ public class PatientPackageService
         var package = await _db.Packages.Include(p => p.PackageProcedures).FirstOrDefaultAsync(p => p.Id == packageId, ct)
             ?? throw ApiException.BadRequest("Paquete no encontrado.");
 
+        // Copia del catálogo: la venta no cambia si después se edita o se elimina el paquete
         var patientPackage = new PatientPackage
         {
             PatientId = patientId,
             PackageId = packageId,
             PrecioAcordado = precioAcordado,
             FechaInicio = fechaInicio,
-            Estado = PackageStatus.Activo
+            Estado = PackageStatus.Activo,
+            PackageNombre = package.Nombre,
+            SesionesTotales = package.SesionesTotales,
+            VigenciaDias = package.VigenciaDias,
+            DiasAlertaVencimiento = package.DiasAlertaVencimiento
         };
         _db.PatientPackages.Add(patientPackage);
 
@@ -207,12 +212,7 @@ public class PatientPackageService
 
         var patientPackage = session.PatientPackage
             ?? await _db.PatientPackages.FirstAsync(p => p.Id == session.PatientPackageId, ct);
-
-        // IgnoreQueryFilters: si el paquete de catálogo fue eliminado, la asignación sigue viva
-        var sesionesTotales = await _db.Packages.IgnoreQueryFilters()
-            .Where(p => p.Id == patientPackage.PackageId)
-            .Select(p => p.SesionesTotales)
-            .FirstAsync(ct);
+        var sesionesTotales = patientPackage.SesionesTotales;
 
         session.Estado = SessionStatus.Completada;
         session.FechaCompletada = DateTime.Now;
@@ -272,15 +272,12 @@ public class PatientPackageService
         var hoy = DateOnly.FromDateTime(DateTime.Now);
 
         var candidatos = await _db.PatientPackages.IgnoreQueryFilters()
-            .Where(pp => !pp.IsDeleted && (pp.Estado == PackageStatus.Activo || pp.Estado == PackageStatus.Pausado))
-            .Join(_db.Packages.IgnoreQueryFilters(), pp => pp.PackageId, p => p.Id,
-                (pp, p) => new { PatientPackage = pp, p.VigenciaDias })
-            .Where(x => x.VigenciaDias > 0)
+            .Where(pp => !pp.IsDeleted && pp.VigenciaDias > 0
+                && (pp.Estado == PackageStatus.Activo || pp.Estado == PackageStatus.Pausado))
             .ToListAsync();
 
         var vencidos = candidatos
-            .Where(x => FechaVencimiento(x.PatientPackage.FechaInicio, x.VigenciaDias) < hoy)
-            .Select(x => x.PatientPackage)
+            .Where(pp => FechaVencimiento(pp.FechaInicio, pp.VigenciaDias) < hoy)
             .ToList();
 
         foreach (var patientPackage in vencidos)

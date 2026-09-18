@@ -15,7 +15,8 @@ public class CreateClinicalNoteRequest
     [Required, MaxLength(4000)]
     public string Observaciones { get; set; } = string.Empty;
 
-    public string? ProductosUsados { get; set; }
+    /// <summary>Productos gastados en la sesión. Si la cita está Completada, salen del inventario.</summary>
+    public List<NemediClinic.Application.DTOs.Inventory.ClinicalNoteProductRequest> Productos { get; set; } = [];
 
     /// <summary>Ids de Attachments (Kind Antes/Despues) subidos antes con POST /files, sin entityId.</summary>
     [MaxLength(12)]

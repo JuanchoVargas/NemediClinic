@@ -38,6 +38,9 @@ public class EvolutionSessionDto
     public string Procedimiento { get; set; } = string.Empty;
     public string Esteticista { get; set; } = string.Empty;
     public string Observaciones { get; set; } = string.Empty;
+    /// <summary>Texto libre heredado (notas anteriores al consumo de cabina).</summary>
     public string? ProductosUsados { get; set; }
+    /// <summary>Consumo de cabina de la sesión.</summary>
+    public List<NemediClinic.Application.DTOs.Inventory.ClinicalNoteProductDto> Productos { get; set; } = [];
     public List<EvolutionPhotoDto> Fotos { get; set; } = [];
 }

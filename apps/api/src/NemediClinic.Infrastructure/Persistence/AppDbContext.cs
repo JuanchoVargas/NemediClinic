@@ -32,6 +32,7 @@ public class AppDbContext : DbContext
     public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<ClinicalRecord> ClinicalRecords => Set<ClinicalRecord>();
     public DbSet<ClinicalNote> ClinicalNotes => Set<ClinicalNote>();
+    public DbSet<ClinicalNoteProduct> ClinicalNoteProducts => Set<ClinicalNoteProduct>();
     public DbSet<PatientPackage> PatientPackages => Set<PatientPackage>();
     public DbSet<PatientPackageSession> PatientPackageSessions => Set<PatientPackageSession>();
     public DbSet<PatientPayment> PatientPayments => Set<PatientPayment>();
@@ -221,9 +222,12 @@ public class AppDbContext : DbContext
             .Property(p => p.PrecioTotal)
             .HasPrecision(18, 2);
 
-        // PackageProcedure: composite key
+        // PackageProcedure: BaseEntity (Id propio). Un procedimiento no se repite dentro del mismo
+        // paquete mientras no esté eliminado.
         modelBuilder.Entity<PackageProcedure>()
-            .HasKey(pp => new { pp.PackageId, pp.ProcedureId });
+            .HasIndex(pp => new { pp.PackageId, pp.ProcedureId })
+            .IsUnique()
+            .HasFilter("IsDeleted = 0");
 
         modelBuilder.Entity<PackageProcedure>()
             .HasOne(pp => pp.Package)
@@ -236,6 +240,33 @@ public class AppDbContext : DbContext
             .WithMany(p => p.PackageProcedures)
             .HasForeignKey(pp => pp.ProcedureId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // ── PatientPackage ──────────────────────────────────
+        modelBuilder.Entity<PatientPackage>()
+            .Property(pp => pp.PackageNombre)
+            .HasMaxLength(150);
+
+        // Restrict: el paquete de catálogo se borra en suave y la asignación sigue viva con su copia
+        modelBuilder.Entity<PatientPackage>()
+            .HasOne(pp => pp.Package)
+            .WithMany()
+            .HasForeignKey(pp => pp.PackageId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ── ClinicalNoteProduct ─────────────────────────────
+        modelBuilder.Entity<ClinicalNoteProduct>(cnp =>
+        {
+            cnp.Property(x => x.Cantidad).HasPrecision(18, 4);
+            cnp.HasOne(x => x.ClinicalNote)
+                .WithMany(n => n.Productos)
+                .HasForeignKey(x => x.ClinicalNoteId)
+                .OnDelete(DeleteBehavior.Cascade);
+            // Restrict: un producto con consumo registrado no se puede borrar en duro
+            cnp.HasOne(x => x.Product)
+                .WithMany()
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
 
         // ── Patient ─────────────────────────────────────────
         modelBuilder.Entity<Patient>()

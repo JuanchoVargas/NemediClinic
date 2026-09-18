@@ -208,4 +208,35 @@ public class PackagesController : ControllerBase
             CantidadSesiones = request.CantidadSesiones
         });
     }
+
+    /// <summary>
+    /// Quita un procedimiento del paquete. Solo mientras el paquete no se haya vendido: cambiar su
+    /// contenido después movería las sesiones ya pactadas con pacientes (409 con cuántas hay).
+    /// </summary>
+    [HttpDelete("{id:guid}/procedures/{procedureId:guid}")]
+    public async Task<IActionResult> RemoveProcedure(Guid id, Guid procedureId)
+    {
+        var packageProcedure = await _db.PackageProcedures
+            .FirstOrDefaultAsync(pp => pp.PackageId == id && pp.ProcedureId == procedureId);
+        if (packageProcedure is null)
+            return NotFound(new { error = "El procedimiento no está asociado a este paquete." });
+
+        var asignaciones = await _db.PatientPackages.CountAsync(pp => pp.PackageId == id);
+        if (asignaciones > 0)
+        {
+            return Conflict(new
+            {
+                error = $"No se puede quitar: el paquete ya está asignado a {asignaciones} paciente(s). Crea un paquete nuevo con el contenido que necesitas."
+            });
+        }
+
+        var restantes = await _db.PackageProcedures.CountAsync(pp => pp.PackageId == id);
+        if (restantes <= 1)
+            return Conflict(new { error = "Un paquete debe tener al menos un procedimiento." });
+
+        packageProcedure.IsDeleted = true;
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
 }

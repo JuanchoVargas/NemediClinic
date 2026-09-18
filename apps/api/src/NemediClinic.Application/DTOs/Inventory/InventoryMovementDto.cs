@@ -11,5 +11,7 @@ public class InventoryMovementDto
     public string? Referencia { get; set; }
     public Guid? AppointmentId { get; set; }
     public Guid? PatientId { get; set; }
+    /// <summary>Paciente de la sesión en la que se gastó (solo en las salidas por consumo de cabina).</summary>
+    public string? PacienteNombre { get; set; }
     public DateTime FechaMovimiento { get; set; }
 }

@@ -55,7 +55,7 @@ public class PatientsController : ControllerBase
                 ImagenId = p.ImagenId,
                 PaqueteActivo = p.PatientPackages
                     .Where(pp => pp.Estado == PackageStatus.Activo)
-                    .Select(pp => pp.Package.Nombre)
+                    .Select(pp => pp.PackageNombre)
                     .FirstOrDefault()
             })
             .ToListAsync();
@@ -124,8 +124,6 @@ public class PatientsController : ControllerBase
         var patient = await _db.Patients
             .AsNoTracking()
             .Include(p => p.PatientPackages.Where(pp => pp.Estado == PackageStatus.Activo))
-                .ThenInclude(pp => pp.Package)
-            .Include(p => p.PatientPackages.Where(pp => pp.Estado == PackageStatus.Activo))
                 .ThenInclude(pp => pp.Payments)
             .FirstOrDefaultAsync(p => p.Id == id);
 
@@ -159,10 +157,10 @@ public class PatientsController : ControllerBase
             PaquetesActivos = patient.PatientPackages.Select(pp => new PatientPackageSummary
             {
                 Id = pp.Id,
-                PackageNombre = pp.Package.Nombre,
+                PackageNombre = pp.PackageNombre,
                 Estado = pp.Estado.ToString(),
                 SesionesCompletadas = pp.SesionesCompletadas,
-                SesionesTotales = pp.Package.SesionesTotales,
+                SesionesTotales = pp.SesionesTotales,
                 // Dato financiero: solo recepción y dueño (misma regla que /patient-packages)
                 PorcentajePagado = User.IsInRole("Esteticista")
                     ? null

@@ -1,3 +1,5 @@
+using NemediClinic.Application.DTOs.Inventory;
+
 namespace NemediClinic.Application.DTOs.Dashboard;
 
 /// <summary>
@@ -115,13 +117,3 @@ public class PaquetePorVencerDto
     public int SesionesTotales { get; set; }
 }
 
-public class StockAlertaDto
-{
-    public Guid ProductId { get; set; }
-    public string Nombre { get; set; } = string.Empty;
-    public string UnidadMedida { get; set; } = string.Empty;
-    public decimal StockActual { get; set; }
-    public decimal StockMinimo { get; set; }
-    /// <summary>"Amarillo" | "Rojo"</summary>
-    public string Semaforo { get; set; } = string.Empty;
-}

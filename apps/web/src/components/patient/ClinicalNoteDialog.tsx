@@ -3,6 +3,9 @@
 //
 // Las fotos se suben mientras se llena el formulario (adjuntos pendientes,
 // etiquetados Antes / Después) y al guardar la nota viaja solo la lista de ids.
+// "Productos usados" es una lista de (producto, cantidad): si la nota es de una
+// cita Completada, esas cantidades salen del inventario y la respuesta avisa de
+// lo que quedó bajo el mínimo.
 // Si el rol es Esteticista la nota queda a su nombre; Admin/SuperAdmin eligen.
 // Se monta solo al abrir: el form nace limpio, sin efectos de reset.
 // ============================================================
@@ -19,7 +22,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -30,6 +32,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { FormDialog } from "@/components/shared/FormDialog";
 import { PhotoListUpload } from "@/components/shared/PhotoListUpload";
+import { ProductConsumptionField } from "@/components/patient/ProductConsumptionField";
 import { useCreateClinicalNote } from "@/api/clinical-records.api";
 import { useProcedures } from "@/api/procedures.api";
 import { useEsteticistas } from "@/api/users.api";
@@ -40,7 +43,10 @@ const noteSchema = z.object({
   esteticistId: z.string().min(1, "Elige quién atendió la sesión"),
   procedimiento: z.string().min(1, "Requerido").max(200),
   observaciones: z.string().min(1, "Describe la sesión").max(4000),
-  productosUsados: z.string().max(500),
+  productos: z
+    .array(z.object({ productId: z.string(), cantidad: z.number() }))
+    .refine((rows) => rows.every((r) => r.productId !== ""), "Elige el producto de cada línea")
+    .refine((rows) => rows.every((r) => r.cantidad > 0), "La cantidad debe ser mayor a cero"),
   fotosAntes: z.array(z.string()),
   fotosDespues: z.array(z.string()),
 });
@@ -74,7 +80,7 @@ export function ClinicalNoteDialog({
       esteticistId: lockedToSelf ? (userId ?? "") : (defaults?.esteticistId ?? ""),
       procedimiento: defaults?.procedimiento ?? "",
       observaciones: "",
-      productosUsados: "",
+      productos: [],
       fotosAntes: [],
       fotosDespues: [],
     },
@@ -83,15 +89,22 @@ export function ClinicalNoteDialog({
 
   const onSubmit = async (values: NoteFormValues) => {
     try {
-      await createNote.mutateAsync({
+      const { alertasStock } = await createNote.mutateAsync({
         esteticistId: values.esteticistId,
         procedimiento: values.procedimiento,
         observaciones: values.observaciones,
-        productosUsados: values.productosUsados || undefined,
+        productos: values.productos,
         appointmentId: defaults?.appointmentId,
         adjuntoIds: [...values.fotosAntes, ...values.fotosDespues],
       });
       useToastStore.success("Nota clínica guardada", values.procedimiento);
+      // El descuento pudo dejar algún insumo bajo el mínimo: se avisa en el momento
+      for (const alerta of alertasStock) {
+        useToastStore.warning(
+          `${alerta.nombre} quedó bajo el mínimo`,
+          `Quedan ${alerta.stockActual} ${alerta.unidadMedida} (mínimo ${alerta.stockMinimo})`,
+        );
+      }
       onClose();
     } catch {
       // toast global
@@ -186,13 +199,11 @@ export function ClinicalNoteDialog({
 
           <FormField
             control={form.control}
-            name="productosUsados"
+            name="productos"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Productos usados</FormLabel>
-                <FormControl>
-                  <Input placeholder="Separados por coma" {...field} />
-                </FormControl>
+                <ProductConsumptionField value={field.value} onChange={field.onChange} disabled={createNote.isPending} />
                 <FormMessage />
               </FormItem>
             )}

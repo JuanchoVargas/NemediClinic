@@ -356,7 +356,11 @@ function UserSheet({
 
   // SuperAdmin no se puede crear desde aquí; solo aparece como opción si se
   // está editando un usuario que ya lo es (para no perder su rol al guardar).
+  const { role: userRole } = usePermissions();
   const showSuperAdminOption = isEdit && editing?.rol === "SuperAdmin";
+  // Recepción da de alta al personal de cabina, pero no crea pares ni dueños:
+  // el backend (auth/register) rechaza cualquier otro rol con 403.
+  const soloEsteticista = !isEdit && userRole === "Admin";
 
   return (
     <FormDialog
@@ -446,10 +450,13 @@ function UserSheet({
                         {showSuperAdminOption && (
                           <SelectItem value="SuperAdmin">SuperAdmin</SelectItem>
                         )}
-                        <SelectItem value="Admin">Admin</SelectItem>
+                        {!soloEsteticista && <SelectItem value="Admin">Admin</SelectItem>}
                         <SelectItem value="Esteticista">Esteticista</SelectItem>
                       </SelectContent>
                     </Select>
+                    {soloEsteticista && (
+                      <FormDescription>Solo el dueño puede crear usuarios de recepción.</FormDescription>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}

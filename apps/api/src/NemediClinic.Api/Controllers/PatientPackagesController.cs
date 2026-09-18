@@ -38,9 +38,9 @@ public class PatientPackagesController : ControllerBase
     [HttpGet("patient/{patientId:guid}")]
     public async Task<IActionResult> GetByPatient(Guid patientId)
     {
+        // Sin Include(Package): el nombre, las sesiones y la vigencia son la copia de la asignación
         var packages = await _db.PatientPackages
             .AsNoTracking()
-            .Include(pp => pp.Package)
             .Include(pp => pp.Payments)
             .Where(pp => pp.PatientId == patientId)
             .OrderByDescending(pp => pp.FechaInicio)
@@ -49,17 +49,17 @@ public class PatientPackagesController : ControllerBase
                 Id = pp.Id,
                 PatientId = pp.PatientId,
                 PackageId = pp.PackageId,
-                PackageNombre = pp.Package.Nombre,
+                PackageNombre = pp.PackageNombre,
                 PrecioAcordado = pp.PrecioAcordado,
                 FechaInicio = pp.FechaInicio,
                 Estado = pp.Estado.ToString(),
                 SesionesCompletadas = pp.SesionesCompletadas,
-                SesionesTotales = pp.Package.SesionesTotales,
+                SesionesTotales = pp.SesionesTotales,
                 TotalPagado = pp.Payments.Sum(p => p.Monto),
                 SaldoPendiente = pp.PrecioAcordado - pp.Payments.Sum(p => p.Monto),
                 // VigenciaDias / alerta viajan temporalmente aquí y se resuelven abajo, en memoria
-                FechaVencimiento = pp.Package.VigenciaDias > 0 ? pp.FechaInicio.AddDays(pp.Package.VigenciaDias) : null,
-                DiasParaVencer = pp.Package.DiasAlertaVencimiento
+                FechaVencimiento = pp.VigenciaDias > 0 ? pp.FechaInicio.AddDays(pp.VigenciaDias) : null,
+                DiasParaVencer = pp.DiasAlertaVencimiento
             })
             .ToListAsync();
 
@@ -77,7 +77,6 @@ public class PatientPackagesController : ControllerBase
     {
         var pp = await _db.PatientPackages
             .AsNoTracking()
-            .Include(p => p.Package)
             .Include(p => p.Patient)
             .Include(p => p.Sessions)
                 .ThenInclude(s => s.Procedure)
@@ -91,19 +90,19 @@ public class PatientPackagesController : ControllerBase
 
         var dto = new PatientPackageDto
         {
-            FechaVencimiento = pp.Package.VigenciaDias > 0
-                ? PatientPackageService.FechaVencimiento(pp.FechaInicio, pp.Package.VigenciaDias)
+            FechaVencimiento = pp.VigenciaDias > 0
+                ? PatientPackageService.FechaVencimiento(pp.FechaInicio, pp.VigenciaDias)
                 : null,
             Id = pp.Id,
             PatientId = pp.PatientId,
             PatientNombre = pp.Patient.Nombre + " " + pp.Patient.Apellido,
             PackageId = pp.PackageId,
-            PackageNombre = pp.Package.Nombre,
+            PackageNombre = pp.PackageNombre,
             PrecioAcordado = pp.PrecioAcordado,
             FechaInicio = pp.FechaInicio,
             Estado = pp.Estado.ToString(),
             SesionesCompletadas = pp.SesionesCompletadas,
-            SesionesTotales = pp.Package.SesionesTotales,
+            SesionesTotales = pp.SesionesTotales,
             TotalPagado = totalPagado,
             SaldoPendiente = pp.PrecioAcordado - totalPagado,
             Sesiones = pp.Sessions
@@ -120,7 +119,7 @@ public class PatientPackagesController : ControllerBase
                 }).ToList(),
             Pagos = await _packages.ListPaymentsAsync(id)
         };
-        ApplyExpiry(dto, pp.Package.DiasAlertaVencimiento);
+        ApplyExpiry(dto, pp.DiasAlertaVencimiento);
         PatientPackageService.ApplyPaymentSummary(dto);
         return Ok(dto);
     }
@@ -195,7 +194,6 @@ public class PatientPackagesController : ControllerBase
     public async Task<IActionResult> CompleteSession(Guid id, Guid sessionId)
     {
         var patientPackage = await _db.PatientPackages
-            .Include(p => p.Package)
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (patientPackage is null)
@@ -217,7 +215,7 @@ public class PatientPackagesController : ControllerBase
         return Ok(new
         {
             sesionesCompletadas = patientPackage.SesionesCompletadas,
-            sesionesTotales = patientPackage.Package.SesionesTotales,
+            sesionesTotales = patientPackage.SesionesTotales,
             estado = patientPackage.Estado.ToString()
         });
     }

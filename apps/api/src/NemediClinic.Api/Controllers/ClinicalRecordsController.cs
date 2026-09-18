@@ -5,6 +5,7 @@ using NemediClinic.Api.Services;
 using NemediClinic.Application.DTOs.ClinicalRecords;
 using NemediClinic.Application.DTOs.Common;
 using NemediClinic.Application.DTOs.Files;
+using NemediClinic.Application.DTOs.Inventory;
 using NemediClinic.Domain.Entities;
 using NemediClinic.Domain.Enums;
 using NemediClinic.Infrastructure.Persistence;
@@ -18,11 +19,13 @@ public class ClinicalRecordsController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly AttachmentService _attachments;
+    private readonly CabinConsumptionService _consumption;
 
-    public ClinicalRecordsController(AppDbContext db, AttachmentService attachments)
+    public ClinicalRecordsController(AppDbContext db, AttachmentService attachments, CabinConsumptionService consumption)
     {
         _db = db;
         _attachments = attachments;
+        _consumption = consumption;
     }
 
     [HttpGet]
@@ -98,9 +101,14 @@ public class ClinicalRecordsController : ControllerBase
             })
             .ToListAsync();
 
-        var fotos = await LoadPhotosAsync(notes.Select(n => n.Id).ToList());
+        var noteIds = notes.Select(n => n.Id).ToList();
+        var fotos = await LoadPhotosAsync(noteIds);
+        var productos = await LoadProductsAsync(noteIds);
         foreach (var note in notes)
+        {
             note.Fotos = fotos.GetValueOrDefault(note.Id, []);
+            note.Productos = productos.GetValueOrDefault(note.Id, []);
+        }
 
         return Ok(new PagedResponse<ClinicalNoteDto>
         {
@@ -131,11 +139,12 @@ public class ClinicalRecordsController : ControllerBase
             EsteticistId = request.EsteticistId,
             Procedimiento = request.Procedimiento,
             Observaciones = request.Observaciones,
-            ProductosUsados = request.ProductosUsados,
             FechaCreacion = DateTime.Now
         };
 
         _db.ClinicalNotes.Add(note);
+        // Consumo de cabina: enlaza los productos y, si la cita ya está Completada, los saca del stock
+        var alertas = await _consumption.ApplyAsync(note, request.Productos, patientId, GetUserId());
         // Las fotos se subieron antes como pendientes; la nota las reclama en el mismo SaveChanges.
         await _attachments.ClaimForNoteAsync(request.AdjuntoIds, note.Id);
 
@@ -153,17 +162,23 @@ public class ClinicalRecordsController : ControllerBase
         await _db.SaveChangesAsync();
 
         var fotos = await LoadPhotosAsync([note.Id]);
+        var productos = await LoadProductsAsync([note.Id]);
 
-        return Created($"api/v1/patients/{patientId}/clinical-record/notes", new ClinicalNoteDto
+        return Created($"api/v1/patients/{patientId}/clinical-record/notes", new CreateClinicalNoteResponse
         {
-            Id = note.Id,
-            AppointmentId = note.AppointmentId,
-            EsteticistId = note.EsteticistId,
-            Procedimiento = note.Procedimiento,
-            Observaciones = note.Observaciones,
-            ProductosUsados = note.ProductosUsados,
-            Fotos = fotos.GetValueOrDefault(note.Id, []),
-            FechaCreacion = note.FechaCreacion
+            Nota = new ClinicalNoteDto
+            {
+                Id = note.Id,
+                AppointmentId = note.AppointmentId,
+                EsteticistId = note.EsteticistId,
+                Procedimiento = note.Procedimiento,
+                Observaciones = note.Observaciones,
+                Productos = productos.GetValueOrDefault(note.Id, []),
+                Fotos = fotos.GetValueOrDefault(note.Id, []),
+                FechaCreacion = note.FechaCreacion
+            },
+            // La web avisa en el momento: "la mascarilla quedó bajo el mínimo"
+            AlertasStock = alertas
         });
     }
 
@@ -198,11 +213,53 @@ public class ClinicalRecordsController : ControllerBase
             .ToListAsync();
 
         var fotos = await LoadPhotosAsync(sessions.Select(s => s.NoteId).ToList());
+        var consumo = await LoadProductsAsync(sessions.Select(s => s.NoteId).ToList());
+        foreach (var session in sessions)
+            session.Productos = consumo.GetValueOrDefault(session.NoteId, []);
         foreach (var session in sessions)
             session.Fotos = fotos.GetValueOrDefault(session.NoteId, []);
 
         return Ok(sessions);
     }
+
+    /// <summary>Historial de consumo de cabina del paciente: qué producto se gastó en cada sesión.</summary>
+    [HttpGet("~/api/v1/patients/{patientId:guid}/consumption")]
+    public async Task<ActionResult<List<PatientConsumptionDto>>> GetConsumption(Guid patientId, CancellationToken ct)
+    {
+        if (!await _db.Patients.AnyAsync(p => p.Id == patientId, ct))
+            return NotFound(new { error = "Paciente no encontrado." });
+
+        return Ok(await _consumption.GetByPatientAsync(patientId, ct));
+    }
+
+    /// <summary>Consumo de cabina por nota. Una sola consulta para todas las notas.</summary>
+    private async Task<Dictionary<Guid, List<ClinicalNoteProductDto>>> LoadProductsAsync(List<Guid> noteIds)
+    {
+        if (noteIds.Count == 0)
+            return [];
+
+        var rows = await _db.ClinicalNoteProducts
+            .AsNoTracking()
+            .Where(cnp => noteIds.Contains(cnp.ClinicalNoteId))
+            .OrderBy(cnp => cnp.Product.Nombre)
+            .Select(cnp => new
+            {
+                cnp.ClinicalNoteId,
+                Dto = new ClinicalNoteProductDto
+                {
+                    ProductId = cnp.ProductId,
+                    Nombre = cnp.Product.Nombre,
+                    UnidadMedida = cnp.Product.UnidadMedida,
+                    Cantidad = cnp.Cantidad
+                }
+            })
+            .ToListAsync();
+
+        return rows.GroupBy(r => r.ClinicalNoteId).ToDictionary(g => g.Key, g => g.Select(r => r.Dto).ToList());
+    }
+
+    private Guid GetUserId() =>
+        Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id) ? id : Guid.Empty;
 
     /// <summary>Fotos por nota, "Antes" primero. Una sola consulta para todas las notas.</summary>
     private async Task<Dictionary<Guid, List<EvolutionPhotoDto>>> LoadPhotosAsync(List<Guid> noteIds)

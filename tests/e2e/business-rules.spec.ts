@@ -3,6 +3,10 @@
 //
 //   · Pagos: un pago no puede superar el saldo (422), guarda quién lo registró, referencia y
 //     comprobante; POST /files acepta PDF solo por magic bytes y solo para Comprobante/Consentimiento.
+//   · Consumo de cabina: la nota de una cita Completada descuenta inventario y deja la salida ligada
+//     al paciente; sin cita completada no mueve stock y nunca lo deja negativo.
+//   · Un paquete de catálogo eliminado no esconde ni altera las asignaciones ya vendidas.
+//   · Recepción crea esteticistas, no administradores.
 //
 // Requisitos: los mismos del gate de aislamiento (API en 5055 y el seed demo).
 import { test, expect, type APIRequestContext } from "@playwright/test";
@@ -23,7 +27,7 @@ const auth = (token: string) => ({ headers: { Authorization: `Bearer ${token}` }
 async function login(api: APIRequestContext, email: string, password: string) {
   const res = await api.post("/api/v1/auth/login", { data: { email, password } });
   expect(res.status(), `login ${email}`).toBe(200);
-  return (await res.json()) as { token: string; userInfo: { id: string; nombre: string; apellido: string } };
+  return (await res.json()) as { token: string; mustChangePassword: boolean; userInfo: { id: string; nombre: string; apellido: string } };
 }
 
 async function post<T>(api: APIRequestContext, token: string, url: string, data: unknown): Promise<T> {
@@ -163,5 +167,192 @@ test.describe("Pagos con trazabilidad", () => {
     expect(consent.status(), await consent.text()).toBe(201);
     const del = await api.delete(`/api/v1/files/${(await consent.json()).id}`, auth(token));
     expect(del.status()).toBe(409);
+  });
+});
+
+test.describe("Consumo de cabina", () => {
+  let token = "";
+  let patientId = "";
+  let esteticistId = "";
+  let appointmentId = "";
+  let productId = "";
+  let stockInicial = 0;
+
+  test.beforeAll(async ({ request: api }) => {
+    token = (await login(api, ADMIN_EMAIL, ADMIN_PASSWORD)).token;
+
+    const patient = await post<{ id: string }>(api, token, "/api/v1/patients", {
+      nombre: "Cabina", apellido: `E2E ${RUN}`, cedula: `78${RUN}`, telefono: "3000000001",
+    });
+    patientId = patient.id;
+
+    const users = await get<{ items: { id: string; rol: string }[] }>(api, token, "/api/v1/users?page=1&pageSize=50");
+    esteticistId = users.items.find((u) => u.rol === "Esteticista")!.id;
+
+    const products = await get<{ items: { id: string; stockActual: number; tipoProducto: string }[] }>(
+      api, token, "/api/v1/products?page=1&pageSize=50");
+    const insumo = products.items.find((p) => p.tipoProducto !== "Venta" && p.stockActual >= 5)!;
+    productId = insumo.id;
+    stockInicial = insumo.stockActual;
+
+    const procedures = await get<{ items: { id: string }[] }>(api, token, "/api/v1/procedures?page=1&pageSize=20");
+    const branches = await get<{ items: { id: string }[] }>(api, token, "/api/v1/branches");
+    const cita = await post<{ id: string }>(api, token, "/api/v1/appointments", {
+      patientId, esteticistId, procedureId: procedures.items[0].id, branchId: branches.items[0].id,
+      fechaInicio: `${today()}T07:00:00`, fechaFin: `${today()}T07:30:00`,
+    });
+    appointmentId = cita.id;
+  });
+
+  test.afterAll(async ({ request: api }) => {
+    // Borrar al paciente arrastra sus notas; el stock se devuelve con una entrada de ajuste
+    if (productId) {
+      const actual = await get<{ stockActual: number }>(api, token, `/api/v1/products/${productId}`);
+      const faltante = stockInicial - actual.stockActual;
+      if (faltante > 0) {
+        await api.post("/api/v1/inventory/entries", {
+          ...auth(token),
+          data: { productId, cantidad: faltante, motivoEntrada: "Ajuste", observacion: "Devolución del test e2e" },
+        });
+      }
+    }
+    if (appointmentId) {
+      await api.put(`/api/v1/appointments/${appointmentId}/status`, { ...auth(token), data: { estado: "Agendada" } });
+      await api.delete(`/api/v1/appointments/${appointmentId}`, auth(token));
+    }
+    if (patientId) await api.delete(`/api/v1/patients/${patientId}`, auth(token));
+  });
+
+  test("una nota sin cita completada guarda los productos pero no mueve inventario", async ({ request: api }) => {
+    const res = await post<{ nota: { id: string; productos: unknown[] } }>(
+      api, token, `/api/v1/patients/${patientId}/clinical-record/notes`,
+      { esteticistId, procedimiento: "Sesión sin cerrar", observaciones: "La cita sigue agendada.", productos: [{ productId, cantidad: 2 }] });
+
+    expect(res.nota.productos).toHaveLength(1);
+    const product = await get<{ stockActual: number }>(api, token, `/api/v1/products/${productId}`);
+    expect(product.stockActual, "el stock no cambia hasta que la cita se completa").toBe(stockInicial);
+  });
+
+  test("al completar la cita, la nota descuenta el stock y deja la salida con paciente", async ({ request: api }) => {
+    for (const estado of ["Confirmada", "EnCurso", "Completada"]) {
+      const res = await api.put(`/api/v1/appointments/${appointmentId}/status`, { ...auth(token), data: { estado } });
+      expect(res.status(), `estado ${estado} → ${await res.text()}`).toBeLessThan(300);
+    }
+
+    await post(api, token, `/api/v1/patients/${patientId}/clinical-record/notes`,
+      { esteticistId, appointmentId, procedimiento: "Sesión cerrada", observaciones: "Se gastaron insumos.", productos: [{ productId, cantidad: 2 }] });
+
+    const product = await get<{ stockActual: number }>(api, token, `/api/v1/products/${productId}`);
+    expect(product.stockActual).toBe(stockInicial - 2);
+
+    const movimientos = await get<{ tipoMovimiento: string; cantidad: number; patientId: string | null; pacienteNombre: string | null }[]>(
+      api, token, `/api/v1/inventory/movements/product/${productId}`);
+    const salida = movimientos.find((m) => m.tipoMovimiento === "Salida" && m.patientId === patientId);
+    expect(salida, "la salida queda ligada al paciente de la sesión").toBeTruthy();
+    expect(salida!.cantidad).toBe(2);
+    expect(salida!.pacienteNombre).toContain("Cabina");
+
+    const consumo = await get<{ producto: string }[]>(api, token, `/api/v1/patients/${patientId}/consumption`);
+    expect(consumo.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("no se puede consumir más de lo que hay en stock", async ({ request: api }) => {
+    const res = await api.post(`/api/v1/patients/${patientId}/clinical-record/notes`, {
+      ...auth(token),
+      data: { esteticistId, appointmentId, procedimiento: "Sesión imposible", observaciones: "x", productos: [{ productId, cantidad: 99_999 }] },
+    });
+    expect(res.status()).toBe(400);
+    expect((await res.json()).error).toContain("No hay stock suficiente");
+  });
+});
+
+test.describe("Paquete vendido: copia del catálogo", () => {
+  test("borrar el paquete del catálogo no esconde la asignación ni cambia lo vendido", async ({ request: api }) => {
+    const token = (await login(api, ADMIN_EMAIL, ADMIN_PASSWORD)).token;
+
+    const procedures = await get<{ items: { id: string }[] }>(api, token, "/api/v1/procedures?page=1&pageSize=20");
+    const paquete = await post<{ id: string }>(api, token, "/api/v1/packages", {
+      nombre: `Paquete E2E ${RUN}`, descripcion: "Se elimina a propósito", precioTotal: 200_000,
+      sesionesTotales: 3, vigenciaDias: 90, diasAlertaVencimiento: 15,
+    });
+    // Los procedimientos del paquete se agregan aparte
+    await post(api, token, `/api/v1/packages/${paquete.id}/procedures`, { procedureId: procedures.items[0].id, cantidadSesiones: 2 });
+    await post(api, token, `/api/v1/packages/${paquete.id}/procedures`, { procedureId: procedures.items[1].id, cantidadSesiones: 1 });
+    const patient = await post<{ id: string }>(api, token, "/api/v1/patients", {
+      nombre: "Snapshot", apellido: `E2E ${RUN}`, cedula: `79${RUN}`, telefono: "3000000002",
+    });
+    const asignacion = await post<{ id: string }>(api, token, "/api/v1/patient-packages", {
+      patientId: patient.id, packageId: paquete.id, precioAcordado: 200_000, fechaInicio: today(),
+    });
+
+    // Sin asignaciones se puede quitar uno (mientras quede al menos otro)
+    const sinVender = await post<{ id: string }>(api, token, "/api/v1/packages", {
+      nombre: `Paquete libre ${RUN}`, descripcion: "Sin vender", precioTotal: 50_000,
+      sesionesTotales: 2, vigenciaDias: 30, diasAlertaVencimiento: 5,
+    });
+    await post(api, token, `/api/v1/packages/${sinVender.id}/procedures`, { procedureId: procedures.items[0].id, cantidadSesiones: 1 });
+    await post(api, token, `/api/v1/packages/${sinVender.id}/procedures`, { procedureId: procedures.items[1].id, cantidadSesiones: 1 });
+    const quitado = await api.delete(`/api/v1/packages/${sinVender.id}/procedures/${procedures.items[1].id}`, auth(token));
+    expect(quitado.status(), await quitado.text()).toBe(204);
+    // El último no se puede quitar: un paquete sin procedimientos no significa nada
+    const ultimo = await api.delete(`/api/v1/packages/${sinVender.id}/procedures/${procedures.items[0].id}`, auth(token));
+    expect(ultimo.status()).toBe(409);
+    await api.delete(`/api/v1/packages/${sinVender.id}`, auth(token));
+
+    // Ya vendido, quitarle un procedimiento se rechaza: movería sesiones pactadas
+    const quitar = await api.delete(`/api/v1/packages/${paquete.id}/procedures/${procedures.items[0].id}`, auth(token));
+    expect(quitar.status()).toBe(409);
+    expect((await quitar.json()).error).toContain("ya está asignado");
+
+    const borrado = await api.delete(`/api/v1/packages/${paquete.id}`, auth(token));
+    expect(borrado.status()).toBeLessThan(300);
+
+    const dto = await get<{ packageNombre: string; sesionesTotales: number; fechaVencimiento: string | null; sesiones: unknown[] }>(
+      api, token, `/api/v1/patient-packages/${asignacion.id}`);
+    expect(dto.packageNombre).toBe(`Paquete E2E ${RUN}`);
+    expect(dto.sesionesTotales).toBe(3);
+    expect(dto.fechaVencimiento, "la vigencia acordada se conserva").not.toBeNull();
+    expect(dto.sesiones).toHaveLength(3);
+
+    await api.delete(`/api/v1/patient-packages/${asignacion.id}`, auth(token));
+    await api.delete(`/api/v1/patients/${patient.id}`, auth(token));
+  });
+});
+
+test.describe("Quién puede crear usuarios", () => {
+  test("recepción crea esteticistas pero no administradores", async ({ request: api }) => {
+    const superToken = (await login(api, ADMIN_EMAIL, ADMIN_PASSWORD)).token;
+    const creados: string[] = [];
+
+    const recepcion = await post<{ id: string }>(api, superToken, "/api/v1/auth/register", {
+      nombre: "Recepción", apellido: `E2E ${RUN}`, email: `recepcion.${RUN}@e2e.test`,
+      password: "Recepcion2026x", rol: "Admin",
+    });
+    creados.push(recepcion.id);
+
+    // Toda cuenta nueva nace con clave temporal: hay que cambiarla para poder operar
+    const primer = await login(api, `recepcion.${RUN}@e2e.test`, "Recepcion2026x");
+    expect(primer.mustChangePassword).toBe(true);
+    const cambio = await api.post("/api/v1/auth/change-password", {
+      ...auth(primer.token), data: { currentPassword: "Recepcion2026x", newPassword: "Recepcion2027x" },
+    });
+    expect(cambio.status(), await cambio.text()).toBe(200);
+    const adminToken = ((await cambio.json()) as { token: string }).token;
+
+    const esteticista = await api.post("/api/v1/auth/register", {
+      ...auth(adminToken),
+      data: { nombre: "Cabina", apellido: `E2E ${RUN}`, email: `cabina.${RUN}@e2e.test`, password: "Cabina2026x", rol: "Esteticista" },
+    });
+    expect(esteticista.status(), await esteticista.text()).toBeLessThan(300);
+    creados.push(((await esteticista.json()) as { id: string }).id);
+
+    const otroAdmin = await api.post("/api/v1/auth/register", {
+      ...auth(adminToken),
+      data: { nombre: "Otro", apellido: `E2E ${RUN}`, email: `otro.${RUN}@e2e.test`, password: "Otro2026xx", rol: "Admin" },
+    });
+    expect(otroAdmin.status()).toBe(403);
+    expect((await otroAdmin.json()).error).toContain("Solo el dueño");
+
+    for (const id of creados) await api.delete(`/api/v1/users/${id}`, auth(superToken));
   });
 });

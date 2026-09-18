@@ -69,7 +69,7 @@ export type Action =
   // Consentimiento: firmar lo hace cualquier rol; editar la plantilla, Admin
   | "consents.sign"
   | "consents.template.update"
-  // Usuarios (GET cualquiera; PUT/DELETE Admin; crear = auth/register SuperAdmin)
+  // Usuarios (GET cualquiera; PUT/DELETE Admin; crear: el dueño cualquier rol, recepción solo esteticistas)
   | "users.read"
   | "users.create"
   | "users.update"
@@ -121,6 +121,7 @@ const ADMIN: Action[] = [
   "products.create",
   "products.update",
   "products.delete",
+  "users.create", // recepción solo puede crear esteticistas; el backend rechaza los demás roles
   "users.update",
   "users.delete",
   "branches.read",
@@ -130,7 +131,6 @@ const ADMIN: Action[] = [
 
 const SUPER_ADMIN: Action[] = [
   ...ADMIN,
-  "users.create",
   "branches.create",
   "tenants.read",
   "tenants.update",

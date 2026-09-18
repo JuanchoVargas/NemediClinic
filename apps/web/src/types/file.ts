@@ -26,6 +26,8 @@ export interface SignedImage {
   expiresInSeconds: number;
 }
 
+import type { ClinicalNoteProduct } from "@/types/clinical-record";
+
 export interface EvolutionPhoto {
   id: string;
   kind: "Antes" | "Despues";
@@ -40,5 +42,6 @@ export interface EvolutionSession {
   esteticista: string;
   observaciones: string;
   productosUsados: string | null;
+  productos: ClinicalNoteProduct[];
   fotos: EvolutionPhoto[];
 }

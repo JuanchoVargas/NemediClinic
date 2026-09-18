@@ -96,6 +96,7 @@ public class DevController : ControllerBase
         if (alreadySeeded)
         {
             await BackfillPaymentTraceabilityAsync(superAdmin.Id);
+            await SeedCabinConsumptionAsync(superAdmin.Id);
             await _db.SaveChangesAsync();
             // Las imágenes de muestra tienen su propia idempotencia: una base sembrada antes
             // de que existieran los adjuntos las recibe en la siguiente ejecución.
@@ -255,6 +256,9 @@ public class DevController : ControllerBase
         pp1.Sessions[1].ClinicalNoteId = note1.Id;
         pp3.Sessions[2].ClinicalNoteId = note2.Id;
 
+        // ── Consumo de cabina de las citas completadas del historial ────
+        // Se siembra al final de SeedDemo, cuando ya existen productos, notas y citas.
+
         // ── Productos + entradas (semáforo: verde / amarillo / rojo) ────
         // Rojo: stock 0 o < 50 % del mínimo. Amarillo: < mínimo. Verde: >= mínimo.
         var products = new (Product Product, decimal Entrada)[]
@@ -285,6 +289,7 @@ public class DevController : ControllerBase
         }
 
         await _db.SaveChangesAsync();
+        await SeedCabinConsumptionAsync(superAdmin.Id);
         await _images.SeedAsync(superAdmin.Id);
         await tx.CommitAsync();
 
@@ -362,6 +367,52 @@ public class DevController : ControllerBase
     }
 
     private const string DemoEntryMarker = "Compra inicial (datos demo)";
+    private const string DemoConsumptionMarker = "Consumo de cabina (datos demo)";
+
+    /// <summary>
+    /// Consumo de cabina de muestra: cada nota clínica del seed gasta uno o dos insumos, con su
+    /// salida de inventario. Idempotente por la referencia del movimiento. No descuenta stock: los
+    /// productos demo se sembraron con la existencia que deben mostrar en el semáforo.
+    /// </summary>
+    private async Task SeedCabinConsumptionAsync(Guid userId)
+    {
+        if (await _db.InventoryMovements.AnyAsync(m => m.Referencia == DemoConsumptionMarker))
+            return;
+
+        var notas = await _db.ClinicalNotes
+            .Where(n => n.AppointmentId != null)
+            .OrderBy(n => n.FechaCreacion)
+            .Select(n => new { n.Id, n.AppointmentId, PatientId = n.ClinicalRecord.PatientId, n.FechaCreacion })
+            .ToListAsync();
+        var insumos = await _db.Products
+            .Where(p => p.Activo && p.TipoProducto != ProductType.Venta)
+            .OrderBy(p => p.Nombre)
+            .ToListAsync();
+        if (notas.Count == 0 || insumos.Count == 0)
+            return;
+
+        var n = 0;
+        foreach (var nota in notas)
+        {
+            // Una o dos líneas por sesión, rotando entre los insumos
+            var cuantos = 1 + n % 2;
+            for (var i = 0; i < cuantos; i++, n++)
+            {
+                var producto = insumos[n % insumos.Count];
+                var cantidad = 1 + n % 2;
+                _db.ClinicalNoteProducts.Add(new ClinicalNoteProduct
+                {
+                    ClinicalNoteId = nota.Id, ProductId = producto.Id, Cantidad = cantidad
+                });
+                _db.InventoryMovements.Add(new InventoryMovement
+                {
+                    ProductId = producto.Id, Cantidad = cantidad, TipoMovimiento = MovementType.Salida,
+                    Referencia = DemoConsumptionMarker, AppointmentId = nota.AppointmentId,
+                    PatientId = nota.PatientId, UserId = userId, FechaMovimiento = nota.FechaCreacion
+                });
+            }
+        }
+    }
 
     private static readonly string[] DemoProcedureNames =
     [

@@ -52,6 +52,9 @@ public class AuthController : ControllerBase
         if (!user.IsActive)
             return Unauthorized(new { error = "Usuario desactivado." });
 
+        if (await TenantBlockedAsync(user.TenantId) is { } bloqueo)
+            return Unauthorized(new { error = bloqueo });
+
         var token = _jwt.GenerateToken(user);
         var refreshToken = _jwt.GenerateRefreshToken();
 
@@ -74,14 +77,22 @@ public class AuthController : ControllerBase
 
         if (anySuperAdmin)
         {
-            // Subsequent registrations require an authenticated SuperAdmin.
+            // Ya hay clínica montada: crear usuarios exige sesión.
             if (User.Identity is null || !User.Identity.IsAuthenticated)
-                return Unauthorized(new { error = "Requiere autenticación de SuperAdmin." });
+                return Unauthorized(new { error = "Requiere autenticación." });
 
             var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value
                             ?? User.FindFirst("role")?.Value;
-            if (!string.Equals(roleClaim, UserRole.SuperAdmin.ToString(), StringComparison.Ordinal))
+
+            // El dueño crea cualquier rol; recepción (Admin) solo esteticistas: es quien da de alta
+            // al personal de cabina en el día a día, pero no puede crear pares ni dueños.
+            var esSuperAdmin = string.Equals(roleClaim, UserRole.SuperAdmin.ToString(), StringComparison.Ordinal);
+            var esAdmin = string.Equals(roleClaim, UserRole.Admin.ToString(), StringComparison.Ordinal);
+
+            if (!esSuperAdmin && !esAdmin)
                 return Forbid();
+            if (!esSuperAdmin && request.Rol != UserRole.Esteticista)
+                return StatusCode(StatusCodes.Status403Forbidden, new { error = "Solo el dueño puede crear usuarios de recepción o administración." });
 
             tenantId = GetTenantId();
             if (tenantId == Guid.Empty)
@@ -238,6 +249,10 @@ public class AuthController : ControllerBase
             return Unauthorized(new { error = "Refresh token inválido o expirado." });
         }
 
+        // Misma puerta que el login: si la clínica se suspendió, la sesión no se renueva
+        if (await TenantBlockedAsync(user.TenantId) is { } bloqueo)
+            return Unauthorized(new { error = bloqueo });
+
         var newToken = _jwt.GenerateToken(user);
         var newRefreshToken = _jwt.GenerateRefreshToken();
 
@@ -339,6 +354,30 @@ public class AuthController : ControllerBase
                 BranchId = user.BranchId
             }
         };
+
+    /// <summary>
+    /// Motivo por el que la clínica no puede iniciar sesión, o null si puede. Una clínica eliminada o
+    /// inactiva no entra nunca; una suspendida por mora tampoco abre sesión nueva (la sesión ya
+    /// abierta sigue en modo lectura hasta que expire: de eso se encarga TenantStatusMiddleware).
+    /// Va con IgnoreQueryFilters porque aún no hay JWT y el filtro global no tiene tenant.
+    /// </summary>
+    private async Task<string?> TenantBlockedAsync(Guid tenantId)
+    {
+        var tenant = await _db.Tenants
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(t => t.Id == tenantId)
+            .Select(t => new { t.IsDeleted, t.IsActive, t.Estado })
+            .FirstOrDefaultAsync();
+
+        if (tenant is null || tenant.IsDeleted || !tenant.IsActive)
+            return "Esta clínica ya no está activa. Comunícate con el administrador.";
+
+        if (tenant.Estado == TenantEstado.Suspendido)
+            return "Cuenta suspendida por mora. Comunícate con soporte para reactivarla.";
+
+        return null;
+    }
 
     private Guid GetTenantId()
     {

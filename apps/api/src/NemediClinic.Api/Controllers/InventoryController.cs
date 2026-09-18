@@ -138,7 +138,7 @@ public class InventoryController : ControllerBase
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .ToListAsync();
-        var items = rows.Select(MapToDto).ToList();
+        var items = await WithPatientsAsync(rows);
 
         return Ok(new PagedResponse<InventoryMovementDto>
         {
@@ -153,7 +153,7 @@ public class InventoryController : ControllerBase
     [HttpGet("movements/product/{productId:guid}")]
     public async Task<IActionResult> GetMovementsByProduct(Guid productId)
     {
-        var items = await _db.InventoryMovements
+        var rows = await _db.InventoryMovements
             .AsNoTracking()
             .Include(m => m.Product)
             .Where(m => m.ProductId == productId)
@@ -161,7 +161,29 @@ public class InventoryController : ControllerBase
             .ToListAsync();
 
         // MapToDto lee m.Product: sin el Include era null y el endpoint respondía 500
-        return Ok(items.Select(MapToDto).ToList());
+        return Ok(await WithPatientsAsync(rows));
+    }
+
+    /// <summary>
+    /// Añade el nombre del paciente a las salidas por consumo de cabina. Va en una consulta aparte
+    /// porque InventoryMovement.PatientId no tiene navegación (el movimiento sobrevive al paciente).
+    /// </summary>
+    private async Task<List<InventoryMovementDto>> WithPatientsAsync(List<InventoryMovement> rows)
+    {
+        var items = rows.Select(MapToDto).ToList();
+
+        var patientIds = rows.Where(m => m.PatientId.HasValue).Select(m => m.PatientId!.Value).Distinct().ToList();
+        if (patientIds.Count == 0)
+            return items;
+
+        var nombres = await _db.Patients.IgnoreQueryFilters().AsNoTracking()
+            .Where(p => p.TenantId == _db.CurrentTenantId && patientIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => p.Nombre + " " + p.Apellido);
+
+        foreach (var item in items.Where(i => i.PatientId.HasValue))
+            item.PacienteNombre = nombres.GetValueOrDefault(item.PatientId!.Value);
+
+        return items;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────

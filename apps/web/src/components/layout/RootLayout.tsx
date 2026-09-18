@@ -27,6 +27,7 @@ import { useToastStore } from "@/stores/toast.store";
 export function RootLayout() {
   const branding = useApplyBranding();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
+  const mustChangePassword = useAuthStore((s) => !!s.user?.mustChangePassword);
   const pathname = useLocation({ select: (l) => l.pathname });
 
   // Avisos que el guard de rutas encoló antes de que existiera el Toaster ("No tienes permisos…")
@@ -34,7 +35,8 @@ export function RootLayout() {
     useToastStore.flushDeferred();
   }, [pathname]);
 
-  if (!isAuthenticated) {
+  // Sin sesión, o con clave temporal (solo puede ver /change-password): layout mínimo, sin menú
+  if (!isAuthenticated || mustChangePassword) {
     return (
       <MotionConfig reducedMotion="user">
         <div className="flex min-h-screen flex-col">

@@ -68,6 +68,7 @@ Los tenants los crea **solo el administrador de plataforma** (`POST /api/v1/auth
 
 1. Entra a `https://TU_DOMINIO/login` con `Platform__AdminEmail` / `Platform__AdminPassword`. Llegas a **Plataforma**.
 2. Pestaña **Tenants → Nuevo tenant**: nombre, NIT, canal, plan, IPS y estado.
+   La primera vez el sistema te pide cambiar esa contraseña (mínimo 8 caracteres con letra y número).
 3. En la fila del tenant, **Crear admin**: crea la "Sede Principal" y el primer SuperAdmin, y muestra **una sola vez** la contraseña temporal. Entrégasela a la clínica.
 4. La clínica entra con ese correo y contraseña; desde **Administración → Usuarios** crea al resto del equipo.
 

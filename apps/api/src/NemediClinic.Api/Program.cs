@@ -71,6 +71,10 @@ builder.Services.AddScoped<ITenantProvider, HttpTenantProvider>();
 // ── JWT Service ─────────────────────────────────────────────────
 builder.Services.AddScoped<IJwtService, JwtService>();
 
+// ── Contraseñas y correo ────────────────────────────────────────
+builder.Services.AddSingleton<IEmailService, SmtpEmailService>(); // sin Smtp:Host no envía nada
+builder.Services.AddScoped<PasswordService>();
+
 // ── Nivel de plataforma ─────────────────────────────────────────
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton(builder.Configuration.GetSection("Platform:Precios").Get<PlatformPricing>() ?? new PlatformPricing());
@@ -252,6 +256,7 @@ app.UseCors(WebAppCorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<TenantMiddleware>();
+app.UseMiddleware<PasswordChangeMiddleware>(); // claim pwd_change: solo /auth/* hasta cambiar la clave
 app.UseMiddleware<TenantStatusMiddleware>(); // tenant Suspendido: escrituras → 423
 app.UseMiddleware<BrandingMiddleware>();     // branding por Host para GET /api/v1/branding
 app.MapControllers();

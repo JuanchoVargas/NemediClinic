@@ -25,6 +25,7 @@ const PLATFORM_EMAIL = process.env.E2E_PLATFORM_EMAIL ?? "platform@nemedi.dev";
 const PLATFORM_PASSWORD = process.env.E2E_PLATFORM_PASSWORD ?? "Platform2026!";
 const NEMEDI_CHANNEL_ID = "11111111-1111-1111-1111-111111111111";
 const RUN = Date.now().toString(36);
+const OWNER_PASSWORD = "E2eTenant2026!";
 
 type TenantData = {
   name: string;
@@ -49,7 +50,7 @@ const localDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pa
 async function login(api: APIRequestContext, email: string, password: string) {
   const res = await api.post("/api/v1/auth/login", { data: { email, password } });
   expect(res.status(), `login ${email}`).toBe(200);
-  return (await res.json()) as { token: string; userInfo: { id: string; tenantId: string; rol: string } };
+  return (await res.json()) as { token: string; mustChangePassword: boolean; userInfo: { id: string; tenantId: string; rol: string } };
 }
 
 const auth = (token: string) => ({ headers: { Authorization: `Bearer ${token}` } });
@@ -78,7 +79,18 @@ async function createTenantWithOwner(api: APIRequestContext, platformToken: stri
   expect(res.status(), `bootstrap-admin → ${await res.text()}`).toBe(200);
   const credentials = (await res.json()) as { email: string; passwordTemporal: string };
 
-  const session = await login(api, credentials.email, credentials.passwordTemporal);
+  // La clave temporal obliga a cambiarla: hasta entonces la API solo responde /auth/*
+  const temporal = await login(api, credentials.email, credentials.passwordTemporal);
+  expect(temporal.mustChangePassword, "bootstrap-admin exige cambio de contraseña").toBe(true);
+  expect((await api.get("/api/v1/patients", auth(temporal.token))).status(), "API bloqueada con clave temporal").toBe(403);
+  const weak = await api.post("/api/v1/auth/change-password", { ...auth(temporal.token), data: { currentPassword: credentials.passwordTemporal, newPassword: "sololetras" } });
+  expect(weak.status(), "contraseña sin número").toBe(400);
+  const changed = await api.post("/api/v1/auth/change-password", { ...auth(temporal.token), data: { currentPassword: credentials.passwordTemporal, newPassword: OWNER_PASSWORD } });
+  expect(changed.status(), `change-password → ${await changed.text()}`).toBe(200);
+  expect((await api.post("/api/v1/auth/login", { data: { email: credentials.email, password: credentials.passwordTemporal } })).status(), "la clave temporal deja de servir").toBe(401);
+
+  const session = await login(api, credentials.email, OWNER_PASSWORD);
+  expect(session.mustChangePassword).toBe(false);
   expect(session.userInfo.rol).toBe("SuperAdmin");
   expect(session.userInfo.tenantId.toLowerCase(), "el JWT debe llevar el tenant nuevo").toBe(tenant.id.toLowerCase());
 

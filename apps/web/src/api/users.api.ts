@@ -144,3 +144,20 @@ export function useDeleteUser() {
     },
   });
 }
+
+export interface ResetPasswordResponse {
+  userId: string;
+  email: string;
+  passwordTemporal: string;
+  emailEnviado: boolean;
+}
+
+/** Clave temporal para un usuario del tenant (Admin/SuperAdmin). Se muestra una sola vez. */
+export function useResetUserPassword() {
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.post<ResetPasswordResponse>(`${BASE}/${id}/reset-password`);
+      return data;
+    },
+  });
+}

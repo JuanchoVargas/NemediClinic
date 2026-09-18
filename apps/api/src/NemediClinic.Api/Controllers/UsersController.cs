@@ -123,6 +123,16 @@ public class UsersController : ControllerBase
         return NoContent();
     }
 
+    // ── POST /api/v1/users/{id}/reset-password ── clave temporal (se muestra una vez) + cambio obligatorio
+    [HttpPost("{id:guid}/reset-password")]
+    [Authorize(Policy = "Admin")]
+    public async Task<IActionResult> ResetPassword(Guid id, [FromServices] NemediClinic.Api.Services.PasswordService passwords, CancellationToken ct)
+    {
+        var actorId = Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var uid) ? uid : Guid.Empty;
+        var actorRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? string.Empty;
+        return Ok(await passwords.ResetUserPasswordAsync(id, actorId, actorRole, ct));
+    }
+
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = "Admin")]
     public async Task<IActionResult> Delete(Guid id)

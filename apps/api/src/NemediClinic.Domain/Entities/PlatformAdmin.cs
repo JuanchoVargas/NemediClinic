@@ -14,6 +14,8 @@ public class PlatformAdmin
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
+    /// <summary>true al crearse desde configuración: la clave inicial vive en variables de entorno.</summary>
+    public bool MustChangePassword { get; set; } = true;
     public string? RefreshToken { get; set; }
     public DateTime? RefreshTokenExpiry { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

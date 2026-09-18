@@ -11,6 +11,11 @@ public class User : BaseEntity
     public UserRole Rol { get; set; }
     public Guid? BranchId { get; set; }
     public bool IsActive { get; set; } = true;
+    /// <summary>
+    /// true al crear o restablecer: la contraseña la eligió otra persona. El JWT lleva el claim
+    /// pwd_change y la API solo deja pasar /auth/* hasta que el usuario la cambie.
+    /// </summary>
+    public bool MustChangePassword { get; set; } = true;
     public string? RefreshToken { get; set; }
     public DateTime? RefreshTokenExpiry { get; set; }
 

@@ -5,6 +5,8 @@ public class LoginResponse
     public string Token { get; set; } = string.Empty;
     public string RefreshToken { get; set; } = string.Empty;
     public DateTime Expiration { get; set; }
+    /// <summary>true: la web bloquea todo hasta pasar por /change-password (y la API responde 403 fuera de /auth).</summary>
+    public bool MustChangePassword { get; set; }
     public UserInfo UserInfo { get; set; } = null!;
 }
 

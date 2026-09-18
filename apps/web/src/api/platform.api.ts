@@ -193,3 +193,15 @@ export function useLiquidacion(mes: string) {
     enabled: /^\d{4}-\d{2}$/.test(mes),
   });
 }
+
+/** Restablece la contraseña del SuperAdmin de un tenant. La clave temporal se muestra una sola vez. */
+export function useResetTenantAdminPassword() {
+  return useMutation({
+    mutationFn: async (tenantId: string) => {
+      const { data } = await api.post<{ userId: string; email: string; passwordTemporal: string; emailEnviado: boolean }>(
+        `${BASE}/tenants/${tenantId}/reset-admin-password`,
+      );
+      return data;
+    },
+  });
+}

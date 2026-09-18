@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { KeyRound, Pencil, Plus, Search, Trash2 } from "lucide-react";
 
 import {
   AlertDialog,
@@ -43,6 +43,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FormDialog } from "@/components/shared/FormDialog";
+import { CredentialsDialog } from "@/components/shared/CredentialsDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -63,6 +64,8 @@ import {
   useUsersPaged,
   type RolName,
   type UserDto,
+  useResetUserPassword,
+  type ResetPasswordResponse,
 } from "@/api/users.api";
 import { useBranches } from "@/api/branches.api";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -102,7 +105,7 @@ const roleBadgeVariant = (rol: string): "default" | "secondary" | "success" => {
 };
 
 export function UsersPage() {
-  const { can } = usePermissions();
+  const { can, role, userId } = usePermissions();
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounce(searchInput, 300);
   const [rolFilter, setRolFilter] = useState<"all" | RolName>("all");
@@ -229,6 +232,10 @@ export function UsersPage() {
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
+                    )}
+                    {/* Un Admin no puede restablecer a un SuperAdmin (el backend responde 403); tampoco a sí mismo */}
+                    {can("users.update") && u.id !== userId && (role === "SuperAdmin" || u.rol !== "SuperAdmin") && (
+                      <ResetPasswordButton user={u} />
                     )}
                     {can("users.delete") && <DeleteUserButton user={u} />}
                   </div>
@@ -415,6 +422,7 @@ function UserSheet({
                       <FormControl>
                         <Input type="password" autoComplete="new-password" {...field} />
                       </FormControl>
+                      <FormDescription>Clave inicial: la persona deberá cambiarla en su primer ingreso.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -498,6 +506,56 @@ function UserSheet({
 // ────────────────────────────────────────────────────────────
 // Eliminar con confirmación
 // ────────────────────────────────────────────────────────────
+function ResetPasswordButton({ user }: { user: UserDto }) {
+  const reset = useResetUserPassword();
+  const [result, setResult] = useState<ResetPasswordResponse | null>(null);
+
+  const handleConfirm = async () => {
+    try {
+      setResult(await reset.mutateAsync(user.id));
+    } catch {
+      // toast global
+    }
+  };
+
+  return (
+    <>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="outline" size="sm" disabled={reset.isPending} aria-label={`Restablecer contraseña de ${user.nombre}`}>
+            <KeyRound className="h-4 w-4" />
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Restablecer la contraseña de {user.nombre}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se genera una clave temporal que verás una sola vez. Su clave actual deja de servir y deberá crear una
+              nueva al ingresar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={reset.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirm} disabled={reset.isPending}>
+              Restablecer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {result && (
+        <CredentialsDialog
+          title="Contraseña restablecida"
+          recipient={`${user.nombre} ${user.apellido}`}
+          email={result.email}
+          passwordTemporal={result.passwordTemporal}
+          emailEnviado={result.emailEnviado}
+          onClose={() => setResult(null)}
+        />
+      )}
+    </>
+  );
+}
+
 function DeleteUserButton({ user }: { user: UserDto }) {
   const del = useDeleteUser();
 

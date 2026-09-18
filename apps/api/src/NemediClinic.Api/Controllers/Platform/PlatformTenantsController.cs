@@ -44,6 +44,12 @@ public class PlatformTenantsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>Restablece la contraseña del SuperAdmin del tenant: clave temporal mostrada una vez.</summary>
+    [HttpPost("{id:guid}/reset-admin-password")]
+    public async Task<ActionResult<NemediClinic.Application.DTOs.Auth.ResetPasswordResponse>> ResetAdminPassword(
+        Guid id, [FromServices] PasswordService passwords, CancellationToken ct) =>
+        Ok(await passwords.ResetTenantAdminPasswordAsync(id, ct));
+
     /// <summary>Crea la Sede Principal (si falta) y el primer SuperAdmin. Devuelve la contraseña temporal una sola vez.</summary>
     [HttpPost("{id:guid}/bootstrap-admin")]
     public async Task<ActionResult<BootstrapAdminResponse>> BootstrapAdmin(Guid id, [FromBody] BootstrapAdminRequest request) =>

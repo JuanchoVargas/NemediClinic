@@ -7,6 +7,8 @@ import { rmSync, mkdirSync } from "node:fs";
 import { apiLogin, CREDS, listAll, req, localIso, dayAt } from "./api";
 import { IMG_DIR, RESULTS_DIR } from "./walk";
 
+const TEMP_PASSWORD = "Temporal2026!";
+
 setup("seed demo + usuario de recepción", async () => {
   const seed = await req("POST", "/api/v1/dev/seed-demo?reanchor=true");
   expect(seed.status, `seed-demo → ${seed.text}`).toBe(200);
@@ -18,9 +20,18 @@ setup("seed demo + usuario de recepción", async () => {
     const principal = branches.find((b) => /principal/i.test(b.nombre)) ?? branches[0];
     const r = await req("POST", "/api/v1/auth/register", {
       token: sa.token,
-      body: { nombre: "Recepción", apellido: "Nemedi", email: CREDS.admin.email, password: CREDS.admin.password, rol: "Admin", branchId: principal?.id },
+      body: { nombre: "Recepción", apellido: "Nemedi", email: CREDS.admin.email, password: TEMP_PASSWORD, rol: "Admin", branchId: principal?.id },
     });
     expect(r.status, `register recepcion → ${r.text}`).toBe(201);
+
+    // Un usuario recién creado debe cambiar su contraseña: se hace aquí por API para que el
+    // recorrido de recepción entre directo con su clave definitiva.
+    const temp = await req<{ token: string }>("POST", "/api/v1/auth/login", { body: { email: CREDS.admin.email, password: TEMP_PASSWORD } });
+    const changed = await req("POST", "/api/v1/auth/change-password", {
+      token: temp.data!.token,
+      body: { currentPassword: TEMP_PASSWORD, newPassword: CREDS.admin.password },
+    });
+    expect(changed.status, `change-password recepcion → ${changed.text}`).toBe(200);
   }
 
   // Residuos de corridas anteriores interrumpidas: citas del recorrido (por sus notas) y

@@ -8,7 +8,7 @@
 import { Fragment, useState } from "react";
 import { Link, useLocation, useNavigate, type LinkProps } from "@tanstack/react-router";
 import { useTheme } from "next-themes";
-import { LogOut, Moon, Search, Sun } from "lucide-react";
+import { KeyRound, LogOut, Moon, Search, Sun } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -133,6 +133,10 @@ export function AppHeader() {
           <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setTheme(isDark ? "light" : "dark"); }}>
             {isDark ? <Sun /> : <Moon />}
             {isDark ? "Modo claro" : "Modo oscuro"}
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => navigate({ to: "/change-password" })}>
+            <KeyRound />
+            Cambiar contraseña
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={handleLogout}>

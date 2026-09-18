@@ -44,6 +44,7 @@ import { UsersPage } from "@/pages/admin/UsersPage";
 import { BranchesPage } from "@/pages/admin/BranchesPage";
 import { TenantsPage } from "@/pages/super/TenantsPage";
 import { PlatformPage } from "@/pages/platform/PlatformPage";
+import { ChangePasswordPage } from "@/pages/ChangePasswordPage";
 import { PLATFORM_ADMIN } from "@/lib/permissions";
 import { useAuthStore } from "@/stores/auth.store";
 import { useToastStore } from "@/stores/toast.store";
@@ -97,6 +98,14 @@ const protectedRoute = createRoute({
         search: { redirect: location.href },
       });
     }
+    // Clave temporal (usuario nuevo o restablecido): nada más que /change-password.
+    // La API además responde 403 fuera de /auth/* mientras el JWT lleve ese bloqueo.
+    const mustChange = useAuthStore.getState().user?.mustChangePassword;
+    if (mustChange && location.pathname !== "/change-password") {
+      throw redirect({ to: "/change-password" });
+    }
+    if (location.pathname === "/change-password") return;
+
     // El PlatformAdmin vive fuera de todo tenant: las pantallas de clínica le darían 403.
     const role = useAuthStore.getState().user?.role;
     if (role === PLATFORM_ADMIN && !location.pathname.startsWith("/platform")) {
@@ -217,6 +226,13 @@ const tenantsRoute = createRoute({
   component: TenantsPage,
 });
 
+// Cualquier rol (incluido PlatformAdmin). Obligatoria con clave temporal, voluntaria desde el menú de usuario.
+const changePasswordRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/change-password",
+  component: ChangePasswordPage,
+});
+
 // ─── Plataforma (sobre los tenants) ────────────────────────
 const platformRoute = createRoute({
   getParentRoute: () => protectedRoute,
@@ -247,6 +263,7 @@ const routeTree = rootRoute.addChildren([
     branchesRoute,
     tenantsRoute,
     platformRoute,
+    changePasswordRoute,
   ]),
 ]);
 

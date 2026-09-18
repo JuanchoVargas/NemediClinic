@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NemediClinic.Api.Services;
 using NemediClinic.Application.DTOs.Auth;
 using NemediClinic.Application.Interfaces;
 using NemediClinic.Domain.Entities;
@@ -18,9 +19,11 @@ public class AuthController : ControllerBase
     private readonly IJwtService _jwt;
     private readonly ITenantProvider _tenantProvider;
     private readonly IWebHostEnvironment _env;
+    private readonly PasswordService _passwords;
 
-    public AuthController(AppDbContext db, IJwtService jwt, ITenantProvider tenantProvider, IWebHostEnvironment env)
+    public AuthController(AppDbContext db, IJwtService jwt, ITenantProvider tenantProvider, IWebHostEnvironment env, PasswordService passwords)
     {
+        _passwords = passwords;
         _db = db;
         _jwt = jwt;
         _tenantProvider = tenantProvider;
@@ -116,6 +119,11 @@ public class AuthController : ControllerBase
                 return BadRequest(new { error = "La sede especificada no existe." });
         }
 
+        var invalidPassword = PasswordPolicy.Validate(request.Password);
+        if (invalidPassword is not null)
+            return BadRequest(new { error = invalidPassword });
+
+        // MustChangePassword queda en true (valor por defecto): la clave la eligió quien crea al usuario
         var user = new User
         {
             Nombre = request.Nombre,
@@ -188,7 +196,8 @@ public class AuthController : ControllerBase
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.AdminPassword),
             Rol = UserRole.SuperAdmin,
             TenantId = tenant.Id,
-            BranchId = branch.Id
+            BranchId = branch.Id,
+            MustChangePassword = false // la eligió quien hace el seed
         };
         _db.Users.Add(admin);
 
@@ -239,6 +248,31 @@ public class AuthController : ControllerBase
         return Ok(BuildLoginResponse(user, newToken, newRefreshToken));
     }
 
+    // ── POST /api/v1/auth/change-password ───────────────────────────
+    // Cualquier rol, incluido PlatformAdmin. Invalida los refresh tokens y devuelve una sesión
+    // nueva (JWT sin el claim pwd_change) para que la web siga sin volver a pedir credenciales.
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken ct)
+    {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id))
+            return Unauthorized(new { error = "Sesión inválida." });
+
+        if (User.IsInRole(PlatformAdmin.RoleName))
+        {
+            var admin = await _passwords.ChangePlatformAdminPasswordAsync(id, request, ct);
+            return Ok(await IssuePlatformTokens(admin));
+        }
+
+        var user = await _passwords.ChangeUserPasswordAsync(id, request, ct);
+        var token = _jwt.GenerateToken(user);
+        var refreshToken = _jwt.GenerateRefreshToken();
+        user.RefreshToken = refreshToken;
+        user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+        await _db.SaveChangesAsync(ct);
+        return Ok(BuildLoginResponse(user, token, refreshToken));
+    }
+
     // ── PlatformAdmin (fuera de todo tenant) ────────────────────────
     private async Task<IActionResult> LoginPlatformAdmin(PlatformAdmin admin, string password)
     {
@@ -270,6 +304,7 @@ public class AuthController : ControllerBase
 
         return new LoginResponse
         {
+            MustChangePassword = admin.MustChangePassword,
             Token = token,
             RefreshToken = refreshToken,
             Expiration = DateTime.UtcNow.AddHours(1),
@@ -289,6 +324,7 @@ public class AuthController : ControllerBase
     private static LoginResponse BuildLoginResponse(User user, string token, string refreshToken) =>
         new()
         {
+            MustChangePassword = user.MustChangePassword,
             Token = token,
             RefreshToken = refreshToken,
             Expiration = DateTime.UtcNow.AddHours(1),

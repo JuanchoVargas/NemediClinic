@@ -12,6 +12,8 @@ export interface User {
   name: string;
   role?: string;
   tenantId?: string; // ← agregado para Nemedi multi-tenant
+  /** true: clave temporal. El router solo deja ver /change-password hasta cambiarla. */
+  mustChangePassword?: boolean;
 }
 
 export interface JwtPayload {

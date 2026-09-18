@@ -18,6 +18,9 @@ public class JwtService : IJwtService
         _configuration = configuration;
     }
 
+    /// <summary>Presente mientras el usuario deba cambiar su contraseña (PasswordChangeMiddleware).</summary>
+    public const string PasswordChangeClaim = "pwd_change";
+
     public string GenerateToken(User user)
     {
         var jwtSection = _configuration.GetSection("Jwt");
@@ -36,6 +39,8 @@ public class JwtService : IJwtService
             new("branch_id", user.BranchId?.ToString() ?? string.Empty),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+        if (user.MustChangePassword)
+            claims.Add(new Claim(PasswordChangeClaim, "1"));
 
         var token = new JwtSecurityToken(
             issuer: jwtSection["Issuer"],
@@ -57,6 +62,8 @@ public class JwtService : IJwtService
             new(ClaimTypes.Role, PlatformAdmin.RoleName),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+        if (admin.MustChangePassword)
+            claims.Add(new Claim(PasswordChangeClaim, "1"));
         return WriteToken(claims);
     }
 

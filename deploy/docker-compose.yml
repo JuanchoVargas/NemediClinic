@@ -39,6 +39,13 @@ services:
       Platform__AdminEmail: ${Platform__AdminEmail:?Define Platform__AdminEmail en deploy/.env}
       Platform__AdminPassword: ${Platform__AdminPassword:?Define Platform__AdminPassword en deploy/.env}
       Storage__UploadsPath: /data/uploads
+      # Correo opcional: sin Smtp__Host no se envía nada
+      Smtp__Host: ${Smtp__Host:-}
+      Smtp__Port: ${Smtp__Port:-587}
+      Smtp__User: ${Smtp__User:-}
+      Smtp__Password: ${Smtp__Password:-}
+      Smtp__From: ${Smtp__From:-}
+      Smtp__EnableSsl: ${Smtp__EnableSsl:-true}
     volumes:
       # Fotos de pacientes, productos y procedimientos. Inclúyelo en los backups (ver README).
       - uploads_data:/data/uploads

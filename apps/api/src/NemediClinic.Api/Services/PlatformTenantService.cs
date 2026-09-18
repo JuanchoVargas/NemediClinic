@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using NemediClinic.Application.DTOs.Platform;
 using NemediClinic.Application.Interfaces;
@@ -168,7 +167,7 @@ public class PlatformTenantService
             _db.Branches.Add(branch);
         }
 
-        var passwordTemporal = GenerateTemporaryPassword();
+        var passwordTemporal = PasswordPolicy.GenerateTemporary(); // MustChangePassword = true por defecto
         var admin = new User
         {
             Nombre = request.AdminNombre.Trim(),
@@ -202,16 +201,6 @@ public class PlatformTenantService
             .Distinct()
             .ToListAsync();
         return ids.ToHashSet();
-    }
-
-    /// <summary>12 caracteres sin ambiguos (0/O, 1/l/I) + sufijo que garantiza mayúscula, minúscula, dígito y símbolo.</summary>
-    private static string GenerateTemporaryPassword()
-    {
-        const string alphabet = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
-        var chars = new char[12];
-        for (var i = 0; i < chars.Length; i++)
-            chars[i] = alphabet[RandomNumberGenerator.GetInt32(alphabet.Length)];
-        return new string(chars) + "Aa7!";
     }
 
     private static PlatformTenantDto ToDto(Tenant t, bool tieneSuperAdmin) => new()

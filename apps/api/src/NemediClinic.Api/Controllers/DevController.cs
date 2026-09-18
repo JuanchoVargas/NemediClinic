@@ -90,6 +90,7 @@ public class DevController : ControllerBase
         await using var tx = await _db.Database.BeginTransactionAsync();
 
         superAdmin.PasswordHash = BCrypt.Net.BCrypt.HashPassword(SuperAdminPassword);
+        superAdmin.MustChangePassword = false; // cuenta demo con clave conocida
 
         var alreadySeeded = await _db.Patients.AnyAsync(p => p.Cedula == DemoCedulaMarker);
         if (alreadySeeded)
@@ -123,12 +124,12 @@ public class DevController : ControllerBase
         var laura = new User
         {
             Nombre = "Laura", Apellido = "Pérez", Email = "laura.perez@nemedi.demo",
-            PasswordHash = esteticistaHash, Rol = UserRole.Esteticista, BranchId = branch.Id
+            PasswordHash = esteticistaHash, MustChangePassword = false, Rol = UserRole.Esteticista, BranchId = branch.Id
         };
         var camila = new User
         {
             Nombre = "Camila", Apellido = "Ruiz", Email = "camila.ruiz@nemedi.demo",
-            PasswordHash = esteticistaHash, Rol = UserRole.Esteticista, BranchId = branch.Id
+            PasswordHash = esteticistaHash, MustChangePassword = false, Rol = UserRole.Esteticista, BranchId = branch.Id
         };
         _db.Users.AddRange(laura, camila);
 

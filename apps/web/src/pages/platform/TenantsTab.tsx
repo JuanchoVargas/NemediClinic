@@ -10,7 +10,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Copy, KeyRound, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { KeyRound, Pencil, Plus, Search, Trash2 } from "lucide-react";
 
 import {
   AlertDialog,
@@ -25,14 +25,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -61,12 +53,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FormDialog } from "@/components/shared/FormDialog";
+import { CredentialsDialog } from "@/components/shared/CredentialsDialog";
 
 import {
   useBootstrapAdmin,
   useChannels,
   useCreatePlatformTenant,
   useDeletePlatformTenant,
+  useResetTenantAdminPassword,
   usePlatformTenants,
   useUpdatePlatformTenant,
 } from "@/api/platform.api";
@@ -191,6 +185,7 @@ export function TenantsTab() {
                 <TableCell>{formatShortDate(t.fechaActivacion)}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
+                    {t.tieneSuperAdmin && <ResetAdminPasswordButton tenant={t} />}
                     {!t.tieneSuperAdmin && (
                       <Button
                         variant="outline"
@@ -500,45 +495,15 @@ function BootstrapAdminDialog({ tenant, onClose }: { tenant: PlatformTenant; onC
     }
   };
 
-  const copy = async () => {
-    if (!credentials) return;
-    await navigator.clipboard.writeText(
-      `Usuario: ${credentials.email}\nContraseña temporal: ${credentials.passwordTemporal}`,
-    );
-    useToastStore.success("Credenciales copiadas");
-  };
-
   if (credentials) {
     return (
-      <Dialog open onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Administrador creado</DialogTitle>
-            <DialogDescription>
-              Entrega estas credenciales a {tenant.nombre}. La contraseña temporal no se vuelve a mostrar.
-            </DialogDescription>
-          </DialogHeader>
-          <dl className="space-y-2 rounded-md border bg-muted/40 p-3 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Usuario</dt>
-              <dd className="font-medium">{credentials.email}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Contraseña temporal</dt>
-              <dd className="font-mono font-medium" data-testid="temp-password">
-                {credentials.passwordTemporal}
-              </dd>
-            </div>
-          </dl>
-          <DialogFooter>
-            <Button variant="outline" onClick={copy}>
-              <Copy className="mr-2 h-4 w-4" />
-              Copiar
-            </Button>
-            <Button onClick={onClose}>Listo</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CredentialsDialog
+        title="Administrador creado"
+        recipient={tenant.nombre}
+        email={credentials.email}
+        passwordTemporal={credentials.passwordTemporal}
+        onClose={onClose}
+      />
     );
   }
 
@@ -596,6 +561,59 @@ function BootstrapAdminDialog({ tenant, onClose }: { tenant: PlatformTenant; onC
         </form>
       </Form>
     </FormDialog>
+  );
+}
+
+// ────────────────────────────────────────────────────────────
+// Restablecer la contraseña del SuperAdmin del tenant
+// ────────────────────────────────────────────────────────────
+function ResetAdminPasswordButton({ tenant }: { tenant: PlatformTenant }) {
+  const reset = useResetTenantAdminPassword();
+  const [result, setResult] = useState<{ email: string; passwordTemporal: string; emailEnviado: boolean } | null>(null);
+
+  const handleConfirm = async () => {
+    try {
+      setResult(await reset.mutateAsync(tenant.id));
+    } catch {
+      // toast global
+    }
+  };
+
+  return (
+    <>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="outline" size="sm" disabled={reset.isPending} aria-label={`Restablecer contraseña del administrador de ${tenant.nombre}`}>
+            <KeyRound className="h-4 w-4" />
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Restablecer la contraseña del administrador?</AlertDialogTitle>
+            <AlertDialogDescription>
+              El SuperAdmin de {tenant.nombre} recibirá una clave temporal, su clave actual dejará de servir y deberá
+              cambiarla al ingresar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={reset.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirm} disabled={reset.isPending}>
+              Restablecer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {result && (
+        <CredentialsDialog
+          title="Contraseña restablecida"
+          recipient={tenant.nombre}
+          email={result.email}
+          passwordTemporal={result.passwordTemporal}
+          emailEnviado={result.emailEnviado}
+          onClose={() => setResult(null)}
+        />
+      )}
+    </>
   );
 }
 

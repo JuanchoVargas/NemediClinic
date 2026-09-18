@@ -67,7 +67,8 @@ export function LoginPage() {
       setSession(result.token, result.user);
       useToastStore.success("Bienvenido", `Sesión iniciada como ${result.user.email}`);
       // El PlatformAdmin no pertenece a ninguna clínica: su única pantalla es /platform
-      if (result.user.role === PLATFORM_ADMIN) navigate({ to: "/platform" });
+      if (result.user.mustChangePassword) navigate({ to: "/change-password" });
+      else if (result.user.role === PLATFORM_ADMIN) navigate({ to: "/platform" });
       else navigate({ to: search.redirect ?? "/dashboard" });
     } catch {
       // El queryClient global ya disparó el toast.

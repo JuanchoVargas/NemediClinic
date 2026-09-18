@@ -102,6 +102,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   super: "Administración",
   tenants: "Mi clínica",
   platform: "Plataforma",
+  "change-password": "Cambiar contraseña",
   new: "Nuevo",
   edit: "Editar",
 };

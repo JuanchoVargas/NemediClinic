@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -43,6 +44,7 @@ import {
 } from "@/components/ui/select";
 import { FormDialog } from "@/components/shared/FormDialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -78,6 +80,7 @@ const userSchema = z.object({
   password: z.string().optional().or(z.literal("")),
   rol: z.enum(["SuperAdmin", "Admin", "Esteticista"]),
   branchId: z.string(),
+  isActive: z.boolean(),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -89,6 +92,7 @@ const EMPTY: UserFormValues = {
   password: "",
   rol: "Esteticista",
   branchId: NO_BRANCH,
+  isActive: true,
 };
 
 const roleBadgeVariant = (rol: string): "default" | "secondary" | "success" => {
@@ -294,6 +298,7 @@ function UserSheet({
               password: "",
               rol: editing.rol as RolName,
               branchId: editing.branchId ?? NO_BRANCH,
+              isActive: editing.isActive,
             }
           : EMPTY,
       );
@@ -313,6 +318,7 @@ function UserSheet({
             email: values.email,
             rol: ROLE_TO_INT[values.rol],
             branchId,
+            isActive: values.isActive,
           },
         });
         useToastStore.success("Usuario actualizado");
@@ -463,6 +469,24 @@ function UserSheet({
                   </FormItem>
                 )}
               />
+              {/* Desactivar sin borrar: el usuario no puede ingresar, pero su historial queda */}
+              {isEdit && (
+                <FormField
+                  control={form.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-md border p-3">
+                      <div>
+                        <FormLabel>Activo</FormLabel>
+                        <FormDescription>Un usuario inactivo no puede iniciar sesión.</FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
             </form>
           </Form>
         </div>

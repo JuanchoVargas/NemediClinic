@@ -88,6 +88,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { MovementsTab } from "@/components/inventory/MovementsTab";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ImageUpload } from "@/components/shared/ImageUpload";
 import { SecureImage } from "@/components/shared/SecureImage";
@@ -151,6 +152,7 @@ export function InventoryPage() {
         <TabsList>
           <TabsTrigger value="products">Productos</TabsTrigger>
           <TabsTrigger value="entries">Entradas</TabsTrigger>
+          <TabsTrigger value="movements">Movimientos</TabsTrigger>
           <TabsTrigger value="alerts">Alertas</TabsTrigger>
         </TabsList>
 
@@ -162,6 +164,9 @@ export function InventoryPage() {
         </TabsContent>
         <TabsContent value="entries" className="mt-4">
           <EntriesTab onNew={() => openEntry()} />
+        </TabsContent>
+        <TabsContent value="movements" className="mt-4">
+          <MovementsTab />
         </TabsContent>
         <TabsContent value="alerts" className="mt-4">
           <AlertsTab onRegisterEntry={(p) => openEntry(p)} />

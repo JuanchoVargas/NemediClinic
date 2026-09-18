@@ -19,8 +19,10 @@ const BASE = "/api/v1/Branches";
 /**
  * Lista plana (sin paginar) para selects — p. ej. asignar sede a un usuario.
  */
-export function useBranches(pageSize = 100) {
+export function useBranches(pageSize = 100, enabled = true) {
   return useQuery({
+    // enabled=false para roles que no pueden leer sedes (el endpoint es policy Admin)
+    enabled,
     queryKey: ["branches", "list", { pageSize }],
     queryFn: async () => {
       const { data } = await api.get<PagedResponse<Branch>>(BASE, {

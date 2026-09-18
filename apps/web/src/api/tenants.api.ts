@@ -42,6 +42,7 @@ export function useUpdateTenant() {
       return { id };
     },
     onSuccess: () => {
+      // incluye ["tenants","current"]: el logo y el nombre del menú lateral se refrescan
       qc.invalidateQueries({ queryKey: ["tenants"] });
     },
   });

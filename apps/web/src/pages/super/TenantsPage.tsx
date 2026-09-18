@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { FormDialog } from "@/components/shared/FormDialog";
+import { ImageUpload } from "@/components/shared/ImageUpload";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -49,11 +50,12 @@ const tenantSchema = z.object({
   nit: z.string().min(1, "Requerido"),
   email: z.string().min(1, "Requerido").email("Email inválido"),
   telefono: z.string().optional().or(z.literal("")),
+  logoId: z.string().nullable(),
 });
 
 type TenantFormValues = z.infer<typeof tenantSchema>;
 
-const EMPTY: TenantFormValues = { nombre: "", nit: "", email: "", telefono: "" };
+const EMPTY: TenantFormValues = { nombre: "", nit: "", email: "", telefono: "", logoId: null };
 
 export function TenantsPage() {
   const { can } = usePermissions();
@@ -207,6 +209,7 @@ function TenantSheet({
               nit: editing.nit,
               email: editing.email,
               telefono: editing.telefono ?? "",
+              logoId: editing.logoId ?? null,
             }
           : EMPTY,
       );
@@ -219,6 +222,7 @@ function TenantSheet({
       nit: values.nit,
       email: values.email,
       telefono: values.telefono || "",
+      logoId: values.logoId,
     };
     try {
       if (!editing) return;
@@ -246,6 +250,20 @@ function TenantSheet({
         <div className="pt-1">
           <Form {...form}>
             <form id="tenant-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="logoId"
+                render={({ field }) => (
+                  <ImageUpload
+                    entityType="Tenant"
+                    kind="Logo"
+                    entityId={editing?.id}
+                    value={field.value}
+                    onChange={field.onChange}
+                    label="Logo de la clínica"
+                  />
+                )}
+              />
               <FormField
                 control={form.control}
                 name="nombre"

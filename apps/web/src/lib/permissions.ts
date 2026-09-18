@@ -55,6 +55,8 @@ export type Action =
   | "patientPackages.assign"
   | "patientPackages.updateStatus"
   | "payments.create"
+  | "payments.delete"
+  | "patientPackages.delete"
   // Inventario (ProductsController: GET cualquiera, escritura Admin; entradas: cualquiera)
   | "products.create"
   | "products.update"
@@ -102,6 +104,8 @@ const ADMIN: Action[] = [
   "patientPackages.assign",
   "patientPackages.updateStatus",
   "payments.create",
+  "payments.delete",
+  "patientPackages.delete",
   "products.create",
   "products.update",
   "products.delete",

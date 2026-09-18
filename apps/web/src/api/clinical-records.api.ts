@@ -62,3 +62,16 @@ export function useCreateClinicalNote(patientId: string) {
     },
   });
 }
+
+/** Edita antecedentes, alergias, medicamentos y observaciones del paciente. */
+export function useUpdateClinicalRecord(patientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: Partial<Omit<ClinicalRecord, "id" | "patientId" | "updatedAt">>) => {
+      await api.put(`/api/v1/patients/${patientId}/clinical-record`, body);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["clinical-record", patientId] });
+    },
+  });
+}

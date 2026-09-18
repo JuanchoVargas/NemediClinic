@@ -17,7 +17,22 @@
 
 import { toast } from "sonner";
 
+// Toasts pedidos antes de que exista el <Toaster /> (p. ej. el guard de rutas en una carga
+// directa de la URL): sonner los perdería. Se encolan y RootLayout los suelta al montar.
+const deferred: (() => void)[] = [];
+
 export const useToastStore = {
+  /** Encola un toast de error para mostrarlo cuando la app ya esté montada. */
+  deferError: (message: string) => {
+    deferred.push(() => toast.error(message));
+  },
+  /** Lo llama RootLayout en cada cambio de ruta. */
+  flushDeferred: () => {
+    // setTimeout: tras los efectos de este commit, cuando el Toaster ya se suscribió
+    window.setTimeout(() => {
+      while (deferred.length) deferred.shift()?.();
+    }, 0);
+  },
   success: (message: string, description?: string) => {
     toast.success(message, { description });
   },

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NemediClinic.Api.Services;
 using NemediClinic.Application.DTOs.PatientPackages;
 using NemediClinic.Domain.Entities;
 using NemediClinic.Domain.Enums;
@@ -14,10 +15,12 @@ namespace NemediClinic.Api.Controllers;
 public class PatientPackagesController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly PatientPackageService _packages;
 
-    public PatientPackagesController(AppDbContext db)
+    public PatientPackagesController(AppDbContext db, PatientPackageService packages)
     {
         _db = db;
+        _packages = packages;
     }
 
     [HttpPost]
@@ -87,9 +90,15 @@ public class PatientPackagesController : ControllerBase
                 SesionesCompletadas = pp.SesionesCompletadas,
                 SesionesTotales = pp.Package.SesionesTotales,
                 TotalPagado = pp.Payments.Sum(p => p.Monto),
-                SaldoPendiente = pp.PrecioAcordado - pp.Payments.Sum(p => p.Monto)
+                SaldoPendiente = pp.PrecioAcordado - pp.Payments.Sum(p => p.Monto),
+                // VigenciaDias / alerta viajan temporalmente aquí y se resuelven abajo, en memoria
+                FechaVencimiento = pp.Package.VigenciaDias > 0 ? pp.FechaInicio.AddDays(pp.Package.VigenciaDias) : null,
+                DiasParaVencer = pp.Package.DiasAlertaVencimiento
             })
             .ToListAsync();
+
+        foreach (var package in packages)
+            ApplyExpiry(package, package.DiasParaVencer ?? 0);
 
         return Ok(packages);
     }
@@ -111,8 +120,11 @@ public class PatientPackagesController : ControllerBase
 
         var totalPagado = pp.Payments.Sum(p => p.Monto);
 
-        return Ok(new PatientPackageDto
+        var dto = new PatientPackageDto
         {
+            FechaVencimiento = pp.Package.VigenciaDias > 0
+                ? PatientPackageService.FechaVencimiento(pp.FechaInicio, pp.Package.VigenciaDias)
+                : null,
             Id = pp.Id,
             PatientId = pp.PatientId,
             PatientNombre = pp.Patient.Nombre + " " + pp.Patient.Apellido,
@@ -147,7 +159,38 @@ public class PatientPackagesController : ControllerBase
                     MetodoPago = p.MetodoPago.ToString(),
                     Observacion = p.Observacion
                 }).ToList()
-        });
+        };
+        ApplyExpiry(dto, pp.Package.DiasAlertaVencimiento);
+        return Ok(dto);
+    }
+
+    /// <summary>Días que faltan para vencer y si ya entró en la ventana de alerta del paquete.</summary>
+    private static void ApplyExpiry(PatientPackageDto dto, int diasAlerta)
+    {
+        if (dto.FechaVencimiento is null)
+        {
+            dto.DiasParaVencer = null;
+            return;
+        }
+        var hoy = DateOnly.FromDateTime(DateTime.Now);
+        dto.DiasParaVencer = dto.FechaVencimiento.Value.DayNumber - hoy.DayNumber;
+        dto.PorVencer = dto.Estado == nameof(PackageStatus.Activo) && dto.DiasParaVencer >= 0 && dto.DiasParaVencer <= diasAlerta;
+    }
+
+    // ── DELETE /api/v1/patient-packages/{id} ── soft delete de la asignación, sus sesiones y pagos
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        await _packages.DeleteAssignmentAsync(id);
+        return NoContent();
+    }
+
+    // ── DELETE /api/v1/patient-packages/{id}/payments/{paymentId} ── soft delete de un pago
+    [HttpDelete("{id:guid}/payments/{paymentId:guid}")]
+    public async Task<IActionResult> DeletePayment(Guid id, Guid paymentId)
+    {
+        await _packages.DeletePaymentAsync(id, paymentId);
+        return NoContent();
     }
 
     [HttpPut("{id:guid}/status")]
@@ -232,19 +275,10 @@ public class PatientPackagesController : ControllerBase
         if (session is null)
             return NotFound(new { error = "Sesión no encontrada." });
 
-        if (session.Estado == SessionStatus.Completada)
+        // Regla compartida con AppointmentsController (cierra el paquete en la última sesión)
+        session.PatientPackage = patientPackage;
+        if (!await _packages.CompleteSessionAsync(session))
             return BadRequest(new { error = "La sesión ya fue completada." });
-
-        session.Estado = SessionStatus.Completada;
-        session.FechaCompletada = DateTime.Now;
-
-        patientPackage.SesionesCompletadas++;
-
-        // Auto-complete package if all sessions done
-        if (patientPackage.SesionesCompletadas >= patientPackage.Package.SesionesTotales)
-        {
-            patientPackage.Estado = PackageStatus.Completado;
-        }
 
         await _db.SaveChangesAsync();
 

@@ -138,6 +138,18 @@ public class ClinicalRecordsController : ControllerBase
         _db.ClinicalNotes.Add(note);
         // Las fotos se subieron antes como pendientes; la nota las reclama en el mismo SaveChanges.
         await _attachments.ClaimForNoteAsync(request.AdjuntoIds, note.Id);
+
+        // Nota creada desde una cita de paquete: la sesión queda apuntando a su nota
+        if (request.AppointmentId.HasValue)
+        {
+            var session = await _db.Appointments
+                .Where(a => a.Id == request.AppointmentId.Value && a.PatientId == patientId)
+                .Select(a => a.PatientPackageSession)
+                .FirstOrDefaultAsync();
+            if (session is not null && session.ClinicalNoteId is null)
+                session.ClinicalNoteId = note.Id;
+        }
+
         await _db.SaveChangesAsync();
 
         var fotos = await LoadPhotosAsync([note.Id]);

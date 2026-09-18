@@ -13,11 +13,14 @@ export interface Tenant {
   telefono: string;
   email: string;
   logo?: string | null;
+  logoId?: string | null;
   isActive: boolean;
   createdAt: string;
 }
 
 export interface UpdateTenantRequest {
+  /** Id del Attachment (Kind=Logo) subido antes con POST /files. */
+  logoId?: string | null;
   nombre?: string;
   nit?: string;
   telefono?: string;

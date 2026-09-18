@@ -104,3 +104,34 @@ export function useRegisterPayment(packageId: string) {
     },
   });
 }
+
+/** Soft delete de la asignación con sus sesiones y pagos (solo Admin). */
+export function useDeletePatientPackage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/api/v1/patient-packages/${id}`);
+      return { id };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["patient-packages"] });
+      qc.invalidateQueries({ queryKey: ["patients"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+/** Soft delete de un pago (solo Admin): corrige un pago mal registrado. */
+export function useDeletePayment(packageId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (paymentId: string) => {
+      await api.delete(`/api/v1/patient-packages/${packageId}/payments/${paymentId}`);
+      return { paymentId };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["patient-packages"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}

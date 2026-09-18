@@ -17,7 +17,7 @@ import interactionPlugin from "@fullcalendar/interaction";
 import esLocale from "@fullcalendar/core/locales/es";
 import type { DateSelectArg, DatesSetArg, EventClickArg } from "@fullcalendar/core";
 import { Link, useSearch } from "@tanstack/react-router";
-import { Check, ChevronsUpDown, ListChecks } from "lucide-react";
+import { Check, ChevronsUpDown, ListChecks, NotebookPen } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,7 @@ import { useEsteticistas } from "@/api/users.api";
 import { usePatient, usePatients } from "@/api/patients.api";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePermissions } from "@/hooks/use-permissions";
+import { ClinicalNoteDialog } from "@/components/patient/ClinicalNoteDialog";
 import { useToastStore } from "@/stores/toast.store";
 import { cn } from "@/lib/utils";
 import {
@@ -277,7 +278,9 @@ function CreateAppointmentSheet({
   onClose: () => void;
 }) {
   const create = useCreateAppointment();
-  const { data: procedures } = useProcedures();
+  // Solo procedimientos activos: uno inactivo no se puede agendar
+  const { data: allProcedures } = useProcedures();
+  const procedures = allProcedures?.filter((p) => p.activo);
   const { data: esteticistas } = useEsteticistas();
 
   // El rol Esteticista solo agenda citas propias (el backend permite más; la UI lo restringe)
@@ -521,6 +524,7 @@ function AppointmentDetailSheet({
   const { data, isLoading } = useAppointment(id);
   const updateStatus = useUpdateAppointmentStatus();
   const { can, role, userId } = usePermissions();
+  const [noteOpen, setNoteOpen] = useState(false);
   // El backend deja cambiar estado a Admin/SuperAdmin sobre cualquier cita y
   // a Esteticista solo sobre las propias (403 en caso contrario).
   const canAct =
@@ -610,6 +614,13 @@ function AppointmentDetailSheet({
                 })}
               />
               {data.notas && <DetailRow label="Notas" value={data.notas} />}
+              {/* Cita atendida: la nota clínica nace con el procedimiento y la esteticista de la cita */}
+              {data.estado === AppointmentStatus.Completada && can("clinical.note.create") && (
+                <Button variant="outline" className="w-full" onClick={() => setNoteOpen(true)}>
+                  <NotebookPen className="mr-2 h-4 w-4" />
+                  Crear nota clínica de esta cita
+                </Button>
+              )}
               {!canAct && actions.length > 0 && (
                 <p className="text-xs text-muted-foreground">
                   Solo la esteticista asignada puede cambiar el estado de esta cita.
@@ -618,6 +629,17 @@ function AppointmentDetailSheet({
             </>
           )}
         </div>
+      {noteOpen && data && (
+        <ClinicalNoteDialog
+          patientId={data.patientId}
+          defaults={{
+            procedimiento: data.procedureNombre,
+            esteticistId: data.esteticistId,
+            appointmentId: data.id,
+          }}
+          onClose={() => setNoteOpen(false)}
+        />
+      )}
     </FormDialog>
   );
 }

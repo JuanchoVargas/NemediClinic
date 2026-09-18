@@ -233,6 +233,7 @@ public class TenantActualDto
 {
     public Guid Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
+    public Guid? LogoId { get; set; }
     public string Plan { get; set; } = string.Empty;
     public string Estado { get; set; } = string.Empty;
 }

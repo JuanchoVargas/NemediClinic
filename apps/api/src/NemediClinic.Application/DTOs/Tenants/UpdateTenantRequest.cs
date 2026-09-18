@@ -18,5 +18,8 @@ public class UpdateTenantRequest
 
     public string? Logo { get; set; }
 
+    /// <summary>Id de un Attachment (Kind=Logo) subido antes con POST /files.</summary>
+    public Guid? LogoId { get; set; }
+
     public bool? IsActive { get; set; }
 }

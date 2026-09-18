@@ -160,6 +160,8 @@ export interface Liquidacion {
 export interface CurrentTenant {
   id: string;
   nombre: string;
+  /** Logo subido por la clínica (Attachment Kind=Logo); reemplaza al del canal en su interfaz. */
+  logoId: string | null;
   plan: TenantPlan;
   estado: TenantEstado;
 }

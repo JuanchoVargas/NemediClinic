@@ -12,7 +12,19 @@ import { Link, useParams } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, ArrowLeft } from "lucide-react";
+import { AlarmClock, ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,11 +61,15 @@ import { SecureImage } from "@/components/shared/SecureImage";
 import { PatientHeader } from "@/components/patient/PatientHeader";
 import { EvolutionTab } from "@/components/patient/EvolutionTab";
 import { ClinicalNoteDialog } from "@/components/patient/ClinicalNoteDialog";
+import { ClinicalRecordDialog } from "@/components/patient/ClinicalRecordDialog";
+import { formatShortDate } from "@/lib/format-platform";
 import { usePermissions } from "@/hooks/use-permissions";
 
 import { usePatient } from "@/api/patients.api";
 import { useClinicalNotes, useClinicalRecord } from "@/api/clinical-records.api";
 import {
+  useDeletePatientPackage,
+  useDeletePayment,
   usePatientPackagePayments,
   usePatientPackagesByPatient,
   useRegisterPayment,
@@ -193,6 +209,8 @@ function Field({ label, value }: { label: string; value: string }) {
 // ────────────────────────────────────────────────────────────
 function ClinicalTab({ patientId, onNewNote }: { patientId: string; onNewNote?: () => void }) {
   const { data: record, isLoading: loadingRecord } = useClinicalRecord(patientId);
+  const { can } = usePermissions();
+  const [editingRecord, setEditingRecord] = useState(false);
   const [notesPage, setNotesPage] = useState(1);
   const { data: notes, isLoading: loadingNotes } = useClinicalNotes(
     patientId,
@@ -206,10 +224,21 @@ function ClinicalTab({ patientId, onNewNote }: { patientId: string; onNewNote?: 
 
   return (
     <div className="space-y-6">
+      {editingRecord && record && (
+        <ClinicalRecordDialog patientId={patientId} record={record} onClose={() => setEditingRecord(false)} />
+      )}
       <Card>
-        <CardHeader>
-          <CardTitle>Resumen clínico</CardTitle>
-          <CardDescription>Antecedentes y alergias del paciente.</CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle>Resumen clínico</CardTitle>
+            <CardDescription>Antecedentes y alergias del paciente.</CardDescription>
+          </div>
+          {record && can("clinical.record.update") && (
+            <Button variant="outline" size="sm" onClick={() => setEditingRecord(true)}>
+              <Pencil className="mr-1.5 h-4 w-4" />
+              Editar resumen
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="grid gap-4">
           {loadingRecord ? (
@@ -366,6 +395,8 @@ function PackagesTab({ patientId }: { patientId: string }) {
 }
 
 function PackageCard({ pkg }: { pkg: PatientPackage }) {
+  const { can } = usePermissions();
+  const deletePackage = useDeletePatientPackage();
   const pct = pkg.sesionesTotales
     ? Math.min(100, (pkg.sesionesCompletadas / pkg.sesionesTotales) * 100)
     : 0;
@@ -378,8 +409,15 @@ function PackageCard({ pkg }: { pkg: PatientPackage }) {
           {statusBadge(pkg.estado)}
         </div>
         <CardDescription>
-          Inicio: {new Date(pkg.fechaInicio).toLocaleDateString("es-CO")}
+          Inicio: {formatShortDate(pkg.fechaInicio)}
+          {pkg.fechaVencimiento && ` · Vence: ${formatShortDate(pkg.fechaVencimiento)}`}
         </CardDescription>
+        {pkg.porVencer && (
+          <Badge variant="warning" className="mt-1 w-fit gap-1">
+            <AlarmClock className="h-3 w-3" aria-hidden />
+            {pkg.diasParaVencer === 0 ? "Vence hoy" : `Vence en ${pkg.diasParaVencer} días`}
+          </Badge>
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
         <div>
@@ -406,8 +444,73 @@ function PackageCard({ pkg }: { pkg: PatientPackage }) {
             <p className="font-medium">${pkg.saldoPendiente.toLocaleString("es-CO")}</p>
           </div>
         </div>
+        {can("patientPackages.delete") && (
+          <ConfirmDeleteButton
+            label="Eliminar asignación"
+            title={`¿Eliminar "${pkg.packageNombre}" de este paciente?`}
+            description="Se eliminan también sus sesiones y pagos registrados. Las citas ya agendadas se conservan, sin vínculo al paquete."
+            pending={deletePackage.isPending}
+            onConfirm={async () => {
+              await deletePackage.mutateAsync(pkg.id);
+              useToastStore.success("Asignación eliminada", pkg.packageNombre);
+            }}
+          />
+        )}
       </CardContent>
     </Card>
+  );
+}
+
+/** Botón de borrado con confirmación (asignaciones y pagos). */
+function ConfirmDeleteButton({
+  label,
+  title,
+  description,
+  pending,
+  onConfirm,
+  iconOnly = false,
+}: {
+  label: string;
+  title: string;
+  description: string;
+  pending: boolean;
+  onConfirm: () => Promise<void>;
+  iconOnly?: boolean;
+}) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        {iconOnly ? (
+          <Button variant="ghost" size="icon" className="text-destructive" disabled={pending} aria-label={label}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button variant="ghost" size="sm" className="text-destructive" disabled={pending}>
+            <Trash2 className="mr-1.5 h-4 w-4" />
+            {label}
+          </Button>
+        )}
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={pending}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={() => {
+              // el toast global reporta el error
+              onConfirm().catch(() => undefined);
+            }}
+          >
+            Eliminar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -452,6 +555,7 @@ function PackagePaymentsSection({ pkg }: { pkg: PatientPackage }) {
   const { data: payments, isLoading } = usePatientPackagePayments(pkg.id);
   const { can } = usePermissions();
   const [registerOpen, setRegisterOpen] = useState(false);
+  const deletePayment = useDeletePayment(pkg.id);
 
   const saldoCero = pkg.saldoPendiente <= 0;
 
@@ -520,11 +624,26 @@ function PackagePaymentsSection({ pkg }: { pkg: PatientPackage }) {
                     {new Date(pay.fechaPago).toLocaleDateString("es-CO")} · {pay.metodoPago}
                   </p>
                 </div>
-                {pay.observacion && (
-                  <p className="text-xs text-muted-foreground italic max-w-xs text-right">
-                    {pay.observacion}
-                  </p>
-                )}
+                <div className="flex items-center gap-2">
+                  {pay.observacion && (
+                    <p className="text-xs text-muted-foreground italic max-w-xs text-right">
+                      {pay.observacion}
+                    </p>
+                  )}
+                  {can("payments.delete") && (
+                    <ConfirmDeleteButton
+                      iconOnly
+                      label={`Eliminar pago de ${pay.monto.toLocaleString("es-CO")}`}
+                      title="¿Eliminar este pago?"
+                      description="El saldo pendiente del paquete vuelve a incluir este valor."
+                      pending={deletePayment.isPending}
+                      onConfirm={async () => {
+                        await deletePayment.mutateAsync(pay.id);
+                        useToastStore.success("Pago eliminado");
+                      }}
+                    />
+                  )}
+                </div>
               </li>
             ))}
           </ul>

@@ -14,6 +14,11 @@ public class PatientPackageDto
     public int SesionesTotales { get; set; }
     public decimal TotalPagado { get; set; }
     public decimal SaldoPendiente { get; set; }
+    /// <summary>FechaInicio + VigenciaDias del paquete. Null si el paquete no vence (VigenciaDias = 0).</summary>
+    public DateOnly? FechaVencimiento { get; set; }
+    public int? DiasParaVencer { get; set; }
+    /// <summary>Activo y dentro de los DiasAlertaVencimiento del paquete: la ficha lo resalta.</summary>
+    public bool PorVencer { get; set; }
     public List<PatientPackageSessionDto> Sesiones { get; set; } = [];
     public List<PatientPaymentDto> Pagos { get; set; } = [];
 }

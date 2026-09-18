@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NemediClinic.Api.Services;
 using NemediClinic.Application.DTOs.Common;
 using NemediClinic.Application.DTOs.Platform;
 using NemediClinic.Application.DTOs.Tenants;
+using NemediClinic.Domain.Enums;
 using NemediClinic.Infrastructure.Persistence;
 
 namespace NemediClinic.Api.Controllers;
@@ -16,10 +18,12 @@ namespace NemediClinic.Api.Controllers;
 public class TenantsController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly AttachmentService _attachments;
 
-    public TenantsController(AppDbContext db)
+    public TenantsController(AppDbContext db, AttachmentService attachments)
     {
         _db = db;
+        _attachments = attachments;
     }
 
     /// <summary>Tenant de la sesión (estado y plan). Lo usa la web para el aviso de cuenta suspendida.</summary>
@@ -35,6 +39,7 @@ public class TenantsController : ControllerBase
             {
                 Id = t.Id,
                 Nombre = t.Nombre,
+                LogoId = t.LogoId,
                 Plan = t.Plan.ToString(),
                 Estado = t.Estado.ToString()
             })
@@ -75,6 +80,7 @@ public class TenantsController : ControllerBase
                 Telefono = t.Telefono,
                 Email = t.Email,
                 Logo = t.Logo,
+                LogoId = t.LogoId,
                 IsActive = t.IsActive,
                 CreatedAt = t.CreatedAt
             })
@@ -105,6 +111,7 @@ public class TenantsController : ControllerBase
                 Telefono = t.Telefono,
                 Email = t.Email,
                 Logo = t.Logo,
+                LogoId = t.LogoId,
                 IsActive = t.IsActive,
                 CreatedAt = t.CreatedAt
             })
@@ -136,6 +143,11 @@ public class TenantsController : ControllerBase
         if (request.Telefono is not null) tenant.Telefono = request.Telefono;
         if (request.Email is not null) tenant.Email = request.Email;
         if (request.Logo is not null) tenant.Logo = request.Logo;
+        if (request.LogoId.HasValue)
+        {
+            await _attachments.AssignImageAsync(AttachmentEntityType.Tenant, tenant.Id, request.LogoId, tenant.LogoId);
+            tenant.LogoId = request.LogoId;
+        }
         if (request.IsActive.HasValue) tenant.IsActive = request.IsActive.Value;
 
         await _db.SaveChangesAsync();

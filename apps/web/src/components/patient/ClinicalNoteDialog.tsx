@@ -46,7 +46,22 @@ const noteSchema = z.object({
 });
 type NoteFormValues = z.infer<typeof noteSchema>;
 
-export function ClinicalNoteDialog({ patientId, onClose }: { patientId: string; onClose: () => void }) {
+export interface ClinicalNoteDefaults {
+  procedimiento?: string;
+  esteticistId?: string;
+  /** Cita de la que nace la nota: si era una sesión de paquete, la sesión queda enlazada a la nota. */
+  appointmentId?: string;
+}
+
+export function ClinicalNoteDialog({
+  patientId,
+  defaults,
+  onClose,
+}: {
+  patientId: string;
+  defaults?: ClinicalNoteDefaults;
+  onClose: () => void;
+}) {
   const { role, userId } = usePermissions();
   const lockedToSelf = role === "Esteticista";
   const { data: esteticistas } = useEsteticistas();
@@ -56,8 +71,8 @@ export function ClinicalNoteDialog({ patientId, onClose }: { patientId: string; 
   const form = useForm<NoteFormValues>({
     resolver: zodResolver(noteSchema),
     defaultValues: {
-      esteticistId: lockedToSelf ? (userId ?? "") : "",
-      procedimiento: "",
+      esteticistId: lockedToSelf ? (userId ?? "") : (defaults?.esteticistId ?? ""),
+      procedimiento: defaults?.procedimiento ?? "",
       observaciones: "",
       productosUsados: "",
       fotosAntes: [],
@@ -73,6 +88,7 @@ export function ClinicalNoteDialog({ patientId, onClose }: { patientId: string; 
         procedimiento: values.procedimiento,
         observaciones: values.observaciones,
         productosUsados: values.productosUsados || undefined,
+        appointmentId: defaults?.appointmentId,
         adjuntoIds: [...values.fotosAntes, ...values.fotosDespues],
       });
       useToastStore.success("Nota clínica guardada", values.procedimiento);
@@ -113,7 +129,8 @@ export function ClinicalNoteDialog({ patientId, onClose }: { patientId: string; 
                     </FormControl>
                     <SelectContent>
                       {procedures
-                        ?.filter((p) => p.activo)
+                        // activos, más el de la cita aunque hoy esté inactivo
+                        ?.filter((p) => p.activo || p.nombre === defaults?.procedimiento)
                         .map((p) => (
                           <SelectItem key={p.id} value={p.nombre}>
                             {p.nombre}

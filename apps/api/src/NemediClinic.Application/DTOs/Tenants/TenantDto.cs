@@ -8,6 +8,7 @@ public class TenantDto
     public string Telefono { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string? Logo { get; set; }
+    public Guid? LogoId { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
 }

@@ -1,5 +1,7 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using Hangfire;
+using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
@@ -85,6 +87,21 @@ builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 builder.Services.AddSingleton<FileTokenService>();
 builder.Services.AddScoped<AttachmentService>();
 builder.Services.AddScoped<DemoImageSeeder>();
+
+// ── Dashboard y ciclo de vida de paquetes ───────────────────────
+builder.Services.AddScoped<DashboardService>();
+builder.Services.AddScoped<PatientPackageService>();
+
+// ── Hangfire: jobs recurrentes sobre la misma base (esquema HangFire) ──
+// Sin dashboard web de Hangfire: no se expone nada nuevo. El schema se crea solo al arrancar
+// el servidor de jobs, que en Production ocurre DESPUÉS de Database.Migrate() (crea la base).
+builder.Services.AddHangfire(config => config
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection"),
+        new SqlServerStorageOptions { PrepareSchemaIfNecessary = true, QueuePollInterval = TimeSpan.FromSeconds(30) }));
+builder.Services.AddHangfireServer(options => options.WorkerCount = 1);
 builder.Services.AddHostedService<AttachmentCleanupService>();
 
 // ── Swagger ─────────────────────────────────────────────────────
@@ -203,6 +220,22 @@ if (app.Environment.IsProduction())
 // ── Primer PlatformAdmin (Platform__AdminEmail / Platform__AdminPassword) ──
 await PlatformAdminSeeder.SeedAsync(
     app.Services, app.Configuration, app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("PlatformAdminSeeder"));
+
+// ── Jobs recurrentes (hora local de Bogotá, como el resto del sistema) ──
+// 02:00 todos los días: paquetes cuya vigencia ya pasó → Vencido.
+try
+{
+    app.Services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<PatientPackageService>(
+        "paquetes-vencimiento",
+        service => service.ExpireOverdueAsync(),
+        "0 2 * * *",
+        new RecurringJobOptions { TimeZone = TimeZoneInfo.Local });
+}
+catch (Exception ex)
+{
+    app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Hangfire")
+        .LogWarning("No se pudo registrar el job de vencimiento de paquetes: {Message}", ex.GetBaseException().Message);
+}
 
 // ── Pipeline ────────────────────────────────────────────────────
 app.UseForwardedHeaders();

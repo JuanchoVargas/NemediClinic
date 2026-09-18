@@ -130,12 +130,15 @@ public class InventoryController : ControllerBase
 
         var totalCount = await query.CountAsync();
 
-        var items = await query
+        // Include + mapeo en memoria: MapToDto lee m.Product y dentro de un Select traducido por EF
+        // llegaba null (500), igual que en movements/product/{id}.
+        var rows = await query
+            .Include(m => m.Product)
             .OrderByDescending(m => m.FechaMovimiento)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(m => MapToDto(m))
             .ToListAsync();
+        var items = rows.Select(MapToDto).ToList();
 
         return Ok(new PagedResponse<InventoryMovementDto>
         {
@@ -152,12 +155,13 @@ public class InventoryController : ControllerBase
     {
         var items = await _db.InventoryMovements
             .AsNoTracking()
+            .Include(m => m.Product)
             .Where(m => m.ProductId == productId)
             .OrderByDescending(m => m.FechaMovimiento)
-            .Select(m => MapToDto(m))
             .ToListAsync();
 
-        return Ok(items);
+        // MapToDto lee m.Product: sin el Include era null y el endpoint respondía 500
+        return Ok(items.Select(MapToDto).ToList());
     }
 
     // ── Helpers ───────────────────────────────────────────────────────

@@ -53,7 +53,8 @@ import { useToastStore } from "@/stores/toast.store";
 function requireRoles(allowed: string[]) {
   const role = useAuthStore.getState().user?.role;
   if (!role || !allowed.includes(role)) {
-    useToastStore.error("No tienes permisos para acceder a esa sección");
+    // deferError: en una carga directa de la URL el <Toaster /> aún no existe
+    useToastStore.deferError("No tienes permisos para acceder a esa sección");
     throw redirect({ to: "/dashboard" });
   }
 }

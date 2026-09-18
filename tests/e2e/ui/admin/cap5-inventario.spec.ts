@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { startChapter, step, endChapter } from "../helpers/guide";
-import { uiLogin, dialog, lastToast, tab, headerLink } from "../walk";
+import { uiLogin, dialog, lastToast, tab, headerLink, activePanel } from "../walk";
 import { apiLogin, CREDS, req, safeDelete } from "../api";
 
 test.describe.configure({ mode: "serial" });
@@ -57,11 +57,10 @@ test("Cap5 · Inventario (recepción)", async ({ page }) => {
     after: async () => { await expect(page.locator("main table tr", { hasText: PROD })).toContainText("Verde"); },
   });
 
-  await step(page, "Movimientos de inventario por producto", null, {
+  await step(page, "Haz clic en la pestaña Movimientos para ver el historial de entradas y salidas", tab(page, "Movimientos"), {
     after: async () => {
-      const movTab = page.locator("[role=tab]", { hasText: /Movimientos/i });
-      if ((await movTab.count()) === 0) throw new Error("No existe una vista de movimientos en la UI (y GET /inventory/movements/product/{id} responde 500)");
-      await movTab.click();
+      await expect(activePanel(page).locator("table")).toContainText(PROD);
+      await expect(activePanel(page).locator("table")).toContainText("Entrada");
     },
   });
 

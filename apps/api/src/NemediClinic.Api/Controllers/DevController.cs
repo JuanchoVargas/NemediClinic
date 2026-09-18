@@ -26,9 +26,11 @@ public class DevController : ControllerBase
     private readonly ITenantProvider _tenantProvider;
     private readonly IWebHostEnvironment _env;
     private readonly DemoImageSeeder _images;
+    private readonly PatientPackageService _packages;
 
-    public DevController(AppDbContext db, ITenantProvider tenantProvider, IWebHostEnvironment env, DemoImageSeeder images)
+    public DevController(AppDbContext db, ITenantProvider tenantProvider, IWebHostEnvironment env, DemoImageSeeder images, PatientPackageService packages)
     {
+        _packages = packages;
         _db = db;
         _tenantProvider = tenantProvider;
         _env = env;
@@ -39,6 +41,16 @@ public class DevController : ControllerBase
     // Idempotente: si ya existe el paciente con cédula 1000000001 no duplica
     // nada, pero sí vuelve a dejar la contraseña del SuperAdmin en el valor
     // de demo para garantizar el login.
+    // ── POST /api/v1/dev/run-package-expiration ─────────────────────────
+    // Ejecuta ahora el job diario de Hangfire (paquetes vencidos → Vencido) para probarlo sin esperar a las 02:00.
+    [HttpPost("run-package-expiration")]
+    public async Task<IActionResult> RunPackageExpiration()
+    {
+        if (!_env.IsDevelopment())
+            return NotFound();
+        return Ok(new { vencidos = await _packages.ExpireOverdueAsync() });
+    }
+
     // ?reanchor=true → si los datos ya existían, desplaza TODAS las citas los días necesarios para
     // que la más antigua caiga ayer. Así la agenda demo vuelve a rodear "hoy" sin recrear nada
     // (el seed original fija las fechas al día en que se ejecutó).
@@ -291,21 +303,75 @@ public class DevController : ControllerBase
 
     // ── Helpers de construcción ─────────────────────────────────────────
 
-    /// <summary>Mueve todas las citas del tenant N días para que la más antigua quede en "ayer".</summary>
+    private const string HistoryMarker = "[demo] historial";
+
+    /// <summary>
+    /// Mueve todas las citas del tenant N días para que la más antigua de la agenda demo quede en
+    /// "ayer", y rellena las dos semanas anteriores con citas completadas (una sola vez) para que
+    /// las gráficas del Dashboard tengan historia.
+    /// </summary>
     private async Task<int> ReanchorAgendaAsync()
     {
-        var oldest = await _db.Appointments.OrderBy(a => a.FechaInicio).Select(a => (DateTime?)a.FechaInicio).FirstOrDefaultAsync();
+        // El historial no cuenta para anclar: si no, cada ejecución empujaría la agenda hacia atrás
+        var oldest = await _db.Appointments
+            .Where(a => a.Notas != HistoryMarker)
+            .OrderBy(a => a.FechaInicio)
+            .Select(a => (DateTime?)a.FechaInicio)
+            .FirstOrDefaultAsync();
         if (oldest is null)
             return 0;
 
         var days = (DateTime.Now.Date.AddDays(-1) - oldest.Value.Date).Days;
-        if (days == 0)
-            return 0;
+        if (days != 0)
+        {
+            await _db.Appointments.ExecuteUpdateAsync(s => s
+                .SetProperty(a => a.FechaInicio, a => a.FechaInicio.AddDays(days))
+                .SetProperty(a => a.FechaFin, a => a.FechaFin.AddDays(days)));
+        }
 
-        await _db.Appointments.ExecuteUpdateAsync(s => s
-            .SetProperty(a => a.FechaInicio, a => a.FechaInicio.AddDays(days))
-            .SetProperty(a => a.FechaFin, a => a.FechaFin.AddDays(days)));
+        await SeedHistoryAsync();
         return days;
+    }
+
+    private async Task SeedHistoryAsync()
+    {
+        if (await _db.Appointments.AnyAsync(a => a.Notas == HistoryMarker))
+            return;
+
+        var patients = await _db.Patients.Where(p => p.Cedula.StartsWith("100000000")).OrderBy(p => p.Cedula).ToListAsync();
+        var procedures = await _db.Procedures.Where(p => p.Activo).OrderBy(p => p.Nombre).ToListAsync();
+        var esteticistas = await _db.Users.Where(u => u.Rol == UserRole.Esteticista && u.IsActive).OrderBy(u => u.Email).ToListAsync();
+        var branch = await _db.Branches.OrderBy(b => b.CreatedAt).FirstOrDefaultAsync();
+        if (patients.Count == 0 || procedures.Count == 0 || esteticistas.Count == 0 || branch is null)
+            return;
+
+        var today = DateTime.Now.Date;
+        int[] hours = [9, 11, 14, 16];
+        var n = 0;
+        for (var offset = -15; offset <= -2; offset++)
+        {
+            var day = today.AddDays(offset);
+            if (day.DayOfWeek == DayOfWeek.Sunday) continue;
+            // Entre 1 y 4 citas por día, con una forma creíble (más carga a mitad de semana)
+            var count = 1 + (Math.Abs(offset) * 7 + (int)day.DayOfWeek) % 4;
+            for (var i = 0; i < count; i++, n++)
+            {
+                var procedure = procedures[n % procedures.Count];
+                var start = DateTime.SpecifyKind(day.AddHours(hours[i]), DateTimeKind.Unspecified);
+                _db.Appointments.Add(new Appointment
+                {
+                    PatientId = patients[n % patients.Count].Id,
+                    EsteticistId = esteticistas[(n + i) % esteticistas.Count].Id,
+                    ProcedureId = procedure.Id,
+                    BranchId = branch.Id,
+                    FechaInicio = start,
+                    FechaFin = start.AddMinutes(procedure.DuracionMinutos),
+                    Estado = n % 9 == 8 ? AppointmentStatus.Cancelada : AppointmentStatus.Completada,
+                    Notas = HistoryMarker
+                });
+            }
+        }
+        await _db.SaveChangesAsync();
     }
 
     private static Procedure Proc(string nombre, string descripcion, decimal precio, int minutos, string area) => new()

@@ -9,6 +9,8 @@ public class Tenant : BaseEntity
     public string Telefono { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string? Logo { get; set; }
+    /// <summary>Logo subido (Attachment Kind=Logo). La interfaz de la clínica lo muestra en lugar del logo del canal.</summary>
+    public Guid? LogoId { get; set; }
     public bool IsActive { get; set; } = true;
 
     // ── Nivel de plataforma ────────────────────────────────────────

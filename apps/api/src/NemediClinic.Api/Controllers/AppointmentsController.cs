@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NemediClinic.Api.Services;
 using NemediClinic.Application.DTOs.Appointments;
 using NemediClinic.Domain.Entities;
 using NemediClinic.Domain.Enums;
@@ -15,10 +16,12 @@ namespace NemediClinic.Api.Controllers;
 public class AppointmentsController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly PatientPackageService _packages;
 
-    public AppointmentsController(AppDbContext db)
+    public AppointmentsController(AppDbContext db, PatientPackageService packages)
     {
         _db = db;
+        _packages = packages;
     }
 
     // ── GET /api/v1/appointments?start=&end=&esteticistId=&branchId= ────
@@ -235,13 +238,8 @@ public class AppointmentsController : ControllerBase
             appointment.PatientPackageSession is not null &&
             appointment.PatientPackageSession.Estado != SessionStatus.Completada)
         {
-            var session = appointment.PatientPackageSession;
-            session.Estado = SessionStatus.Completada;
-            session.FechaCompletada = DateTime.Now;
-            if (session.PatientPackage is not null)
-            {
-                session.PatientPackage.SesionesCompletadas++;
-            }
+            // Suma la sesión y, si era la última, cierra el paquete (PatientPackageService)
+            await _packages.CompleteSessionAsync(appointment.PatientPackageSession);
         }
 
         await _db.SaveChangesAsync();

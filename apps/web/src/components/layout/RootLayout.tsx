@@ -11,6 +11,7 @@
 // EQUIVALENTE A: App.vue (la parte de template) en SINERGIA
 // ============================================================
 
+import { useEffect } from "react";
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import { MotionConfig } from "motion/react";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -21,11 +22,17 @@ import { PageTransition } from "@/components/shared/motion";
 import { SuspendedBanner } from "@/components/shared/SuspendedBanner";
 import { useApplyBranding } from "@/hooks/use-apply-branding";
 import { useAuthStore } from "@/stores/auth.store";
+import { useToastStore } from "@/stores/toast.store";
 
 export function RootLayout() {
   const branding = useApplyBranding();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
   const pathname = useLocation({ select: (l) => l.pathname });
+
+  // Avisos que el guard de rutas encoló antes de que existiera el Toaster ("No tienes permisos…")
+  useEffect(() => {
+    useToastStore.flushDeferred();
+  }, [pathname]);
 
   if (!isAuthenticated) {
     return (

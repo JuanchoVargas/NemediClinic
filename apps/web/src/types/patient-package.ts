@@ -22,6 +22,11 @@ export interface PatientPackage {
   sesionesTotales: number;
   totalPagado: number;
   saldoPendiente: number;
+  /** Inicio + vigencia del paquete; null si no vence. */
+  fechaVencimiento?: string | null;
+  diasParaVencer?: number | null;
+  /** Activo y dentro de la ventana de alerta del paquete. */
+  porVencer?: boolean;
   sesiones?: PatientPackageSession[];
   pagos?: PatientPayment[];
 }

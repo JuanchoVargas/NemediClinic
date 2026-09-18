@@ -219,6 +219,10 @@ public class AttachmentService
                     await _db.Procedures.Where(p => p.Id == entityId && p.ImagenId == id)
                         .ExecuteUpdateAsync(s => s.SetProperty(p => p.ImagenId, (Guid?)null), ct);
                     break;
+                case AttachmentEntityType.Tenant:
+                    await _db.Tenants.Where(t => t.Id == entityId && t.LogoId == id)
+                        .ExecuteUpdateAsync(s => s.SetProperty(t => t.LogoId, (Guid?)null), ct);
+                    break;
             }
         }
 

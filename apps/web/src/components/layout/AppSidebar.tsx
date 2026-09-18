@@ -28,6 +28,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { DEFAULT_BRANDING, useBranding } from "@/api/branding.api";
+import { useCurrentTenant } from "@/api/tenants.api";
+import { SecureImage } from "@/components/shared/SecureImage";
 import { useNavItems, type NavLink } from "@/hooks/use-nav-items";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useAuthStore } from "@/stores/auth.store";
@@ -44,25 +46,44 @@ export function AppSidebar() {
   const { data: branding = DEFAULT_BRANDING } = useBranding();
   const pathname = useLocation({ select: (l) => l.pathname });
   const user = useAuthStore((s) => s.user);
+  // La clínica firma su propia interfaz: su logo y su nombre van primero; la marca del canal
+  // queda como respaldo (y como subtítulo). El PlatformAdmin no pertenece a ningún tenant.
+  const { data: tenant } = useCurrentTenant(!!user && !isPlatformAdmin);
+  const title = tenant?.nombre ?? branding.nombreComercial;
+  const channelMark = branding.logoUrl ? (
+    <img src={branding.logoUrl} alt="" className="size-8 rounded-lg object-contain" />
+  ) : (
+    <span
+      aria-hidden
+      className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary font-heading text-sm font-bold text-primary-foreground"
+    >
+      {title.charAt(0)}
+    </span>
+  );
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild tooltip={branding.nombreComercial}>
+            <SidebarMenuButton size="lg" asChild tooltip={title}>
               <Link to={isPlatformAdmin ? "/platform" : "/dashboard"}>
-                {branding.logoUrl ? (
-                  <img src={branding.logoUrl} alt="" className="size-8 rounded-lg object-contain" />
+                {tenant?.logoId ? (
+                  <SecureImage
+                    id={tenant.logoId}
+                    alt=""
+                    className="size-8 shrink-0 rounded-lg bg-card object-contain"
+                    fallback={channelMark}
+                  />
                 ) : (
-                  <span
-                    aria-hidden
-                    className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary font-heading text-sm font-bold text-primary-foreground"
-                  >
-                    {branding.nombreComercial.charAt(0)}
-                  </span>
+                  channelMark
                 )}
-                <span className="truncate font-heading text-base font-bold">{branding.nombreComercial}</span>
+                <span className="grid min-w-0 leading-tight">
+                  <span className="truncate font-heading text-base font-bold">{title}</span>
+                  {tenant && tenant.nombre !== branding.nombreComercial && (
+                    <span className="truncate text-xs text-muted-foreground">{branding.nombreComercial}</span>
+                  )}
+                </span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

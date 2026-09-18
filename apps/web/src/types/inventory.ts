@@ -239,6 +239,8 @@ export interface InventoryMovement {
   productLotId?: string | null;
   numeroLote?: string | null;
   fechaVencimientoLote?: string | null;
+  /** Paciente de la sesión en la que se gastó (solo en las salidas de cabina). */
+  pacienteNombre?: string | null;
   productoNombre: string;
   unidadMedida: string;
   cantidad: number;

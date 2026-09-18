@@ -21,6 +21,7 @@ import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { MotionTableRow, staggerProps } from "@/components/shared/motion-elements";
 import { useInventoryMovements, useProducts } from "@/api/inventory.api";
+import { formatShortDate } from "@/lib/format-platform";
 
 const ALL = "all";
 
@@ -57,6 +58,7 @@ export function MovementsTab() {
               <TableHead>Producto</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead className="text-right">Cantidad</TableHead>
+              <TableHead>Lote</TableHead>
               <TableHead>Referencia</TableHead>
             </TableRow>
           </TableHeader>
@@ -98,7 +100,25 @@ export function MovementsTab() {
                     {isEntry ? "+" : "−"}
                     {m.cantidad} {m.unidadMedida}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{m.referencia ?? "—"}</TableCell>
+                  <TableCell>
+                    {/* De qué lote salió: es lo que hay que poder responder de un insumo */}
+                    {m.numeroLote ? (
+                      <>
+                        <span className="font-medium">{m.numeroLote}</span>
+                        {m.fechaVencimientoLote && (
+                          <div className="text-xs text-muted-foreground">
+                            vence {formatShortDate(m.fechaVencimientoLote)}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {m.referencia ?? "—"}
+                    {m.pacienteNombre && <div className="text-xs">{m.pacienteNombre}</div>}
+                  </TableCell>
                 </MotionTableRow>
               );
             })}

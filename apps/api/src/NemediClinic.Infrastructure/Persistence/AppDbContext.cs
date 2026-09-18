@@ -40,6 +40,15 @@ public class AppDbContext : DbContext
     public DbSet<InventoryEntry> InventoryEntries => Set<InventoryEntry>();
     public DbSet<InventoryMovement> InventoryMovements => Set<InventoryMovement>();
 
+    // Nivel de plataforma: sin TenantId ni filtro global.
+    public DbSet<Channel> Channels => Set<Channel>();
+    public DbSet<Lead> Leads => Set<Lead>();
+    public DbSet<PlatformAdmin> PlatformAdmins => Set<PlatformAdmin>();
+
+    /// <summary>Ids fijos de los canales sembrados por la migración AddPlatformLevel.</summary>
+    public static readonly Guid NemediChannelId = new("11111111-1111-1111-1111-111111111111");
+    public static readonly Guid InfotexChannelId = new("22222222-2222-2222-2222-222222222222");
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -47,6 +56,72 @@ public class AppDbContext : DbContext
         // Tenant: exclude from tenant filter (it IS the tenant)
         modelBuilder.Entity<Tenant>()
             .HasQueryFilter(t => !t.IsDeleted);
+
+        // ── Plataforma: Channel / Lead / PlatformAdmin ──────
+        modelBuilder.Entity<Channel>(c =>
+        {
+            c.Property(x => x.Nombre).HasMaxLength(100);
+            c.Property(x => x.Slug).HasMaxLength(50);
+            c.Property(x => x.NombreComercial).HasMaxLength(100);
+            c.Property(x => x.LogoUrl).HasMaxLength(500);
+            c.Property(x => x.ColorPrimario).HasMaxLength(7);
+            c.Property(x => x.ColorSecundario).HasMaxLength(7);
+            c.Property(x => x.Dominio).HasMaxLength(200);
+            c.Property(x => x.PorcentajeCanal).HasPrecision(5, 4);
+            c.HasIndex(x => x.Slug).IsUnique();
+            c.HasIndex(x => x.Dominio).IsUnique();
+            c.HasData(
+                new Channel
+                {
+                    Id = NemediChannelId, Nombre = "Nemedi", Slug = "nemedi",
+                    NombreComercial = "NemediClinic", ColorPrimario = "#171717", ColorSecundario = "#737373",
+                    Dominio = "app.nemediclinic.com", PorcentajeCanal = 0m, Activo = true,
+                    CreatedAt = new DateTime(2026, 9, 18, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new Channel
+                {
+                    Id = InfotexChannelId, Nombre = "Infotex", Slug = "infotex",
+                    NombreComercial = "Infotex Clinic", ColorPrimario = "#0B5FFF", ColorSecundario = "#0A2540",
+                    Dominio = "app.infotex.co", PorcentajeCanal = 0.50m, Activo = true,
+                    CreatedAt = new DateTime(2026, 9, 18, 0, 0, 0, DateTimeKind.Utc)
+                });
+        });
+
+        modelBuilder.Entity<Tenant>(t =>
+        {
+            t.Property(x => x.Plan).HasConversion<string>().HasMaxLength(20);
+            t.Property(x => x.Estado).HasConversion<string>().HasMaxLength(20);
+            t.Property(x => x.PorcentajeCanalOverride).HasPrecision(5, 4);
+            t.HasOne(x => x.Channel)
+                .WithMany(c => c.Tenants)
+                .HasForeignKey(x => x.ChannelId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Lead>(l =>
+        {
+            l.Property(x => x.Nombre).HasMaxLength(200);
+            l.Property(x => x.NIT).HasMaxLength(20);
+            l.Property(x => x.Ciudad).HasMaxLength(100);
+            l.Property(x => x.Contacto).HasMaxLength(200);
+            l.Property(x => x.Estado).HasConversion<string>().HasMaxLength(20);
+            l.HasIndex(x => x.NIT);
+            l.HasOne(x => x.Channel)
+                .WithMany(c => c.Leads)
+                .HasForeignKey(x => x.ChannelId)
+                .OnDelete(DeleteBehavior.Restrict);
+            l.HasOne(x => x.Tenant)
+                .WithMany()
+                .HasForeignKey(x => x.TenantId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PlatformAdmin>(a =>
+        {
+            a.Property(x => x.Nombre).HasMaxLength(100);
+            a.Property(x => x.Email).HasMaxLength(200);
+            a.HasIndex(x => x.Email).IsUnique();
+        });
 
         // User: unique email per tenant
         modelBuilder.Entity<User>()

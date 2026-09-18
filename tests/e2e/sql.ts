@@ -43,16 +43,11 @@ export function lit(value: string): string {
 }
 
 /**
- * Borrado físico de todo lo que pertenece a los tenants indicados, en orden de FK,
- * más los usuarios "owner-*-<run>@e2e.local" que pudieran haber quedado en otro
- * tenant si el traslado por SQL falló a mitad de camino.
+ * Borrado físico de todo lo que pertenece a los tenants indicados, en orden de FK.
  * Solo para datos creados por los tests (tenants con NIT que empieza por E2E-).
  */
-export function hardDeleteTenants(tenantIds: string[], run?: string): void {
-  if (tenantIds.length === 0) {
-    if (run) sql(`DELETE FROM Users WHERE Email LIKE ${lit(`owner-%-${run}@e2e.local`)};`);
-    return;
-  }
+export function hardDeleteTenants(tenantIds: string[]): void {
+  if (tenantIds.length === 0) return;
   const inList = tenantIds.map(lit).join(",");
   const byTenant = (table: string) => `DELETE FROM ${table} WHERE TenantId IN (${inList});`;
   const statements = [
@@ -71,9 +66,9 @@ export function hardDeleteTenants(tenantIds: string[], run?: string): void {
     byTenant("Procedures"),
     byTenant("Patients"),
     byTenant("Users"),
-    // Usuarios huérfanos (traslado por SQL fallido) al final: Appointments.EsteticistId los referencia
-    run ? `DELETE FROM Users WHERE Email LIKE ${lit(`owner-%-${run}@e2e.local`)};` : "",
     byTenant("Branches"),
+    // Oportunidades activadas que apuntan al tenant (nivel de plataforma)
+    byTenant("Leads"),
     `DELETE FROM Tenants WHERE Id IN (${inList});`,
   ];
   sql(statements.join(" "));

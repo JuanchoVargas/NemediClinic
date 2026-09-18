@@ -35,6 +35,9 @@ services:
       Jwt__Secret: ${Jwt__Secret:?Define Jwt__Secret en deploy/.env}
       Jwt__ExpirationMinutes: ${Jwt__ExpirationMinutes:-60}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
+      # Primer administrador de plataforma (solo se crea si la tabla PlatformAdmins está vacía)
+      Platform__AdminEmail: ${Platform__AdminEmail:?Define Platform__AdminEmail en deploy/.env}
+      Platform__AdminPassword: ${Platform__AdminPassword:?Define Platform__AdminPassword en deploy/.env}
     depends_on:
       mssql:
         condition: service_healthy
@@ -51,8 +54,9 @@ services:
     build:
       context: ../apps/web
       args:
-        VITE_API_URL: ${PUBLIC_URL:?Define PUBLIC_URL en deploy/.env}
-        VITE_APP_NAME: ${APP_NAME:-Nemedi Clinic}
+        # "/" = mismo origen. Cada dominio de canal llama a SU /api y el API resuelve la marca por Host.
+        VITE_API_URL: /
+        VITE_APP_NAME: ${APP_NAME:-NemediClinic}
     depends_on:
       - api
     restart: unless-stopped

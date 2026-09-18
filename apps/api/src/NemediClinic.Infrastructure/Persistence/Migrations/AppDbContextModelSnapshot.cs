@@ -17,7 +17,7 @@ namespace NemediClinic.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.27")
+                .HasAnnotation("ProductVersion", "8.0.31")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -137,6 +137,95 @@ namespace NemediClinic.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("Branches");
+                });
+
+            modelBuilder.Entity("NemediClinic.Domain.Entities.Channel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ColorPrimario")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.Property<string>("ColorSecundario")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Dominio")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NombreComercial")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("PorcentajeCanal")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Dominio")
+                        .IsUnique();
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("Channels");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111111"),
+                            Activo = true,
+                            ColorPrimario = "#171717",
+                            ColorSecundario = "#737373",
+                            CreatedAt = new DateTime(2026, 9, 18, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Dominio = "app.nemediclinic.com",
+                            Nombre = "Nemedi",
+                            NombreComercial = "NemediClinic",
+                            PorcentajeCanal = 0m,
+                            Slug = "nemedi"
+                        },
+                        new
+                        {
+                            Id = new Guid("22222222-2222-2222-2222-222222222222"),
+                            Activo = true,
+                            ColorPrimario = "#0B5FFF",
+                            ColorSecundario = "#0A2540",
+                            CreatedAt = new DateTime(2026, 9, 18, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Dominio = "app.infotex.co",
+                            Nombre = "Infotex",
+                            NombreComercial = "Infotex Clinic",
+                            PorcentajeCanal = 0.50m,
+                            Slug = "infotex"
+                        });
                 });
 
             modelBuilder.Entity("NemediClinic.Domain.Entities.ClinicalNote", b =>
@@ -357,6 +446,60 @@ namespace NemediClinic.Infrastructure.Persistence.Migrations
                     b.HasIndex("ProductId", "FechaMovimiento");
 
                     b.ToTable("InventoryMovements");
+                });
+
+            modelBuilder.Entity("NemediClinic.Domain.Entities.Lead", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ChannelId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Ciudad")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Contacto")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("FechaLiberacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("NIT")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChannelId");
+
+                    b.HasIndex("NIT");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("Leads");
                 });
 
             modelBuilder.Entity("NemediClinic.Domain.Entities.Package", b =>
@@ -650,6 +793,46 @@ namespace NemediClinic.Infrastructure.Persistence.Migrations
                     b.ToTable("PatientPayments");
                 });
 
+            modelBuilder.Entity("NemediClinic.Domain.Entities.PlatformAdmin", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RefreshToken")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("RefreshTokenExpiry")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("PlatformAdmins");
+                });
+
             modelBuilder.Entity("NemediClinic.Domain.Entities.Procedure", b =>
                 {
                     b.Property<Guid>("Id")
@@ -771,12 +954,26 @@ namespace NemediClinic.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("ChannelId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("EsIps")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("FechaActivacion")
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -795,11 +992,23 @@ namespace NemediClinic.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Plan")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal?>("PorcentajeCanalOverride")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<int>("SedesAdicionales")
+                        .HasColumnType("int");
 
                     b.Property<string>("Telefono")
                         .IsRequired()
@@ -812,6 +1021,8 @@ namespace NemediClinic.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ChannelId");
 
                     b.ToTable("Tenants");
                 });
@@ -1005,6 +1216,24 @@ namespace NemediClinic.Infrastructure.Persistence.Migrations
                     b.Navigation("Usuario");
                 });
 
+            modelBuilder.Entity("NemediClinic.Domain.Entities.Lead", b =>
+                {
+                    b.HasOne("NemediClinic.Domain.Entities.Channel", "Channel")
+                        .WithMany("Leads")
+                        .HasForeignKey("ChannelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NemediClinic.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Channel");
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("NemediClinic.Domain.Entities.PackageProcedure", b =>
                 {
                     b.HasOne("NemediClinic.Domain.Entities.Package", "Package")
@@ -1073,6 +1302,17 @@ namespace NemediClinic.Infrastructure.Persistence.Migrations
                     b.Navigation("PatientPackage");
                 });
 
+            modelBuilder.Entity("NemediClinic.Domain.Entities.Tenant", b =>
+                {
+                    b.HasOne("NemediClinic.Domain.Entities.Channel", "Channel")
+                        .WithMany("Tenants")
+                        .HasForeignKey("ChannelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Channel");
+                });
+
             modelBuilder.Entity("NemediClinic.Domain.Entities.User", b =>
                 {
                     b.HasOne("NemediClinic.Domain.Entities.Branch", "Branch")
@@ -1094,6 +1334,13 @@ namespace NemediClinic.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("NemediClinic.Domain.Entities.Branch", b =>
                 {
                     b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("NemediClinic.Domain.Entities.Channel", b =>
+                {
+                    b.Navigation("Leads");
+
+                    b.Navigation("Tenants");
                 });
 
             modelBuilder.Entity("NemediClinic.Domain.Entities.ClinicalRecord", b =>

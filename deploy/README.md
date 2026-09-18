@@ -37,7 +37,7 @@ openssl rand -base64 48        # pega el resultado en Jwt__Secret
 nano .env
 ```
 
-Completa `DOMAIN`, `PUBLIC_URL`, `CORS_ORIGINS` (los tres con tu dominio), `MSSQL_SA_PASSWORD` y **la misma contraseña** dentro de `ConnectionStrings__DefaultConnection`, y `Jwt__Secret`. El API no arranca en Production si `Jwt__Secret` está vacío, es la clave de desarrollo o tiene menos de 32 caracteres.
+Completa `DOMAIN` y `CORS_ORIGINS` (con tus dominios, uno por canal), `MSSQL_SA_PASSWORD` y **la misma contraseña** dentro de `ConnectionStrings__DefaultConnection`, `Jwt__Secret`, y `Platform__AdminEmail` / `Platform__AdminPassword` (el administrador de plataforma; mínimo 10 caracteres). El API no arranca en Production si `Jwt__Secret` está vacío, es la clave de desarrollo o tiene menos de 32 caracteres.
 
 La carpeta de backups la escribe el usuario `mssql` del contenedor (uid 10001):
 
@@ -50,7 +50,7 @@ mkdir -p backups && chown 10001:0 backups
 ```bash
 docker compose --env-file .env up -d --build
 docker compose --env-file .env ps          # los cuatro servicios en "healthy" / "running"
-docker compose --env-file .env logs -f api # "Migraciones aplicadas" y "Now listening on"
+docker compose --env-file .env logs -f api # "Migraciones aplicadas", "PlatformAdmin inicial creado" y "Now listening on"
 ```
 
 El API espera hasta 60 s a que SQL Server responda, crea la base `NemediClinic` y aplica las migraciones pendientes. Si la base no responde en ese tiempo, el contenedor termina con el mensaje `No se pudo conectar a la base de datos en 60 s` y Compose lo reinicia.
@@ -62,25 +62,37 @@ curl -s https://TU_DOMINIO/api/health          # {"status":"healthy",...}
 curl -s -o /dev/null -w '%{http_code}\n' -X POST https://TU_DOMINIO/api/v1/dev/seed-demo   # 404: el seed demo no existe en Production
 ```
 
-## 5. Crear el primer tenant (una sola vez)
+## 5. Crear el primer tenant
 
-`POST /api/v1/auth/seed` solo funciona mientras no exista ningún tenant. Crea la clínica, la "Sede Principal" y el SuperAdmin, y devuelve el JWT.
+Los tenants los crea **solo el administrador de plataforma** (`POST /api/v1/auth/seed` responde 404 fuera de Development).
+
+1. Entra a `https://TU_DOMINIO/login` con `Platform__AdminEmail` / `Platform__AdminPassword`. Llegas a **Plataforma**.
+2. Pestaña **Tenants → Nuevo tenant**: nombre, NIT, canal, plan, IPS y estado.
+3. En la fila del tenant, **Crear admin**: crea la "Sede Principal" y el primer SuperAdmin, y muestra **una sola vez** la contraseña temporal. Entrégasela a la clínica.
+4. La clínica entra con ese correo y contraseña; desde **Administración → Usuarios** crea al resto del equipo.
+
+Lo mismo por API:
 
 ```bash
-curl -s -X POST https://TU_DOMINIO/api/v1/auth/seed \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "tenantNombre": "Clínica Estética Aurora",
-    "tenantNit": "900123456-7",
-    "tenantEmail": "contacto@aurora.com",
-    "adminNombre": "Juan Diego",
-    "adminApellido": "Vargas",
-    "adminEmail": "admin@aurora.com",
-    "adminPassword": "UnaClaveSegura2026!"
-  }'
+TOKEN=$(curl -s -X POST https://TU_DOMINIO/api/v1/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"plataforma@ejemplo.com","password":"..."}' | jq -r .token)
+TENANT=$(curl -s -X POST https://TU_DOMINIO/api/v1/platform/tenants -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"nombre":"Clínica Estética Aurora","nit":"900123456-7","email":"contacto@aurora.com","channelId":"11111111-1111-1111-1111-111111111111","plan":"Basico"}' | jq -r .id)
+curl -s -X POST https://TU_DOMINIO/api/v1/platform/tenants/$TENANT/bootstrap-admin -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"adminNombre":"Juan Diego","adminApellido":"Vargas","adminEmail":"admin@aurora.com"}'   # → { email, passwordTemporal }
 ```
 
-Después entra a `https://TU_DOMINIO` con ese correo y contraseña. Desde **Administración → Usuarios** creas al resto del equipo.
+`11111111-…` es el canal Nemedi y `22222222-…` el canal Infotex (los siembra la migración `AddPlatformLevel`).
+
+## Canales con dominio propio (marca blanca)
+
+Cada canal de **Plataforma → Canales** tiene un dominio. Cuando alguien abre la app por ese dominio, `GET /api/v1/branding` devuelve su nombre comercial, logo y colores, y el frontend los aplica (si el dominio no es de ningún canal, se usa Nemedi). Para publicar un canal nuevo:
+
+1. Crea el canal en **Plataforma → Canales** con su dominio (p. ej. `app.aliado.co`).
+2. Apunta el DNS (registro A) de ese dominio al VPS.
+3. Agrégalo a `DOMAIN` y a `CORS_ORIGINS` en `.env` y ejecuta `docker compose --env-file .env up -d caddy api`. Caddy emite el certificado solo.
+
+Un tenant en estado **Suspendido** queda en solo lectura: cualquier escritura responde `423 Cuenta suspendida por mora` y la web muestra un aviso. **Exento** funciona normal pero no entra en la liquidación.
 
 ## Operación
 
@@ -116,7 +128,7 @@ docker compose --env-file .env start api
 
 ## Probar en local (sin dominio ni certificados)
 
-En `.env` usa `DOMAIN=http://localhost`, `PUBLIC_URL=http://localhost` y `CORS_ORIGINS=http://localhost`. Caddy sirve solo HTTP en el puerto 80. Luego `docker compose --env-file .env up -d --build`, abre `http://localhost`, crea el tenant con el `seed` del paso 5 e ingresa.
+En `.env` usa `DOMAIN=http://localhost` y `CORS_ORIGINS=http://localhost`. Caddy sirve solo HTTP en el puerto 80. Luego `docker compose --env-file .env up -d --build`, abre `http://localhost`, entra como administrador de plataforma y crea el tenant como en el paso 5.
 
 ## Qué NO hay todavía
 

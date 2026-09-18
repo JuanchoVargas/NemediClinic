@@ -23,6 +23,12 @@
 
 export type Role = "SuperAdmin" | "Admin" | "Esteticista";
 
+/**
+ * Rol de plataforma: vive fuera de todo tenant (su JWT no lleva tenant_id) y solo usa
+ * /platform. No entra en la matriz: can() le niega todas las acciones de clínica.
+ */
+export const PLATFORM_ADMIN = "PlatformAdmin";
+
 export type Action =
   // Pacientes e historia clínica (PatientsController / ClinicalRecordsController: Esteticista)
   | "patients.create"
@@ -64,11 +70,10 @@ export type Action =
   | "branches.create"
   | "branches.update"
   | "branches.delete"
-  // Tenants (todo: SuperAdmin)
+  // Tenant propio (TenantsController: SuperAdmin ve y edita SOLO el suyo).
+  // Crear/eliminar tenants es del PlatformAdmin (/platform), fuera de esta matriz.
   | "tenants.read"
-  | "tenants.create"
-  | "tenants.update"
-  | "tenants.delete";
+  | "tenants.update";
 
 const ESTETICISTA: Action[] = [
   "patients.create",
@@ -112,9 +117,7 @@ const SUPER_ADMIN: Action[] = [
   "users.create",
   "branches.create",
   "tenants.read",
-  "tenants.create",
   "tenants.update",
-  "tenants.delete",
 ];
 
 const MATRIX: Record<Role, ReadonlySet<Action>> = {

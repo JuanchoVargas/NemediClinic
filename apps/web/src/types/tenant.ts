@@ -1,7 +1,7 @@
 // ============================================================
 // tenant.ts — Tipos de tenants (clínicas)
 //
-// Backend: /api/v1/Tenants (solo SuperAdmin). DTO con camelCase.
+// Backend: /api/v1/Tenants (SuperAdmin, solo su propio tenant). DTO con camelCase.
 // Nota: la propiedad C# `NIT` se serializa como `nit` (la política
 // camelCase de System.Text.Json baja toda la sigla a minúsculas).
 // ============================================================
@@ -15,13 +15,6 @@ export interface Tenant {
   logo?: string | null;
   isActive: boolean;
   createdAt: string;
-}
-
-export interface CreateTenantRequest {
-  nombre: string;
-  nit: string;
-  email: string;
-  telefono?: string;
 }
 
 export interface UpdateTenantRequest {

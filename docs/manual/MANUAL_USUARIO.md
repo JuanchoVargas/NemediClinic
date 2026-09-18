@@ -53,7 +53,7 @@ Si alguien escribe una dirección interna del sistema sin haber ingresado, el si
 
 ### 1. Haz clic en Administración
 
-**Después verás** el menú desplegable con Usuarios, Sedes y Tenants.
+**Después verás** el menú desplegable con Usuarios, Sedes y Mi clínica.
 
 ![](img/superadmin/cap2-01-haz-clic-en-administracion.png)
 
@@ -117,11 +117,11 @@ Hoy el formulario no tiene un interruptor para desactivar sin borrar. Si una per
 
 ![](img/superadmin/cap2-11-vuelve-a-editar-y-apaga-el-interruptor-activo-pa.png)
 
-### 12. Abre Administración y elige Tenants para ver la ficha de tu clínica
+### 12. Abre Administración y elige Mi clínica para ver la ficha de tu clínica
 
 **Después verás** los datos de tu clínica. Esta pantalla es exclusiva del dueño.
 
-![](img/superadmin/cap2-12-abre-administracion-y-elige-tenants-para-ver-la-.png)
+![](img/superadmin/cap2-12-abre-administracion-y-elige-mi-clinica-para-ver-.png)
 
 ## Capítulo 3 · Catálogo: procedimientos y paquetes {.capitulo}
 
@@ -292,7 +292,7 @@ Un producto nuevo arranca con stock 0. **Después verás** que queda en Rojo has
 | Crear un producto | Inventario → Nuevo producto (define el stock mínimo) |
 | Ver la agenda de una esteticista | Calendario → Vista calendario → selector "Todos los esteticistas" |
 | Ver el día completo de la clínica | Calendario → Hoja del día |
-| Consultar los datos de la clínica | Administración → Tenants |
+| Consultar los datos de la clínica | Administración → Mi clínica |
 
 # Parte 2 · Recepción {.parte}
 
@@ -308,7 +308,7 @@ Recepción administra pacientes, agenda, paquetes, pagos e inventario. No crea s
 
 ### 2. Haz clic en Administración
 
-**Después verás** Usuarios y Sedes. Tenants no aparece porque es solo del dueño.
+**Después verás** Usuarios y Sedes. Mi clínica no aparece porque es solo del dueño.
 
 ![](img/admin/cap1-02-haz-clic-en-administracion-veras-usuarios-y-sede.png)
 
@@ -326,7 +326,7 @@ Recepción administra pacientes, agenda, paquetes, pagos e inventario. No crea s
 
 ### 5. Si escribes una dirección que no te corresponde, vuelves al inicio
 
-![](img/admin/cap1-05-si-escribes-la-direccion-de-tenants-en-el-navega.png)
+![](img/admin/cap1-05-si-escribes-la-direccion-de-mi-clinica-en-el-nav.png)
 
 ### 6. Aviso de permisos — Pendiente {.pendiente}
 

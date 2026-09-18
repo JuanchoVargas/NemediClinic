@@ -25,7 +25,7 @@ test("Cap1 · Entrar y qué puedes hacer (recepción)", async ({ page }) => {
       const items = page.locator("[role=menuitem]");
       await expect(items.filter({ hasText: "Usuarios" })).toHaveCount(1);
       await expect(items.filter({ hasText: "Sedes" })).toHaveCount(1);
-      await expect(items.filter({ hasText: "Tenants" })).toHaveCount(0);
+      await expect(items.filter({ hasText: "Mi clínica" })).toHaveCount(0);
     },
   });
 
@@ -47,7 +47,7 @@ test("Cap1 · Entrar y qué puedes hacer (recepción)", async ({ page }) => {
     },
   });
 
-  await step(page, "Si escribes la dirección de Tenants en el navegador, vuelves al inicio", null, {
+  await step(page, "Si escribes la dirección de Mi clínica en el navegador, vuelves al inicio", null, {
     before: async () => { await page.goto("/super/tenants"); },
     after: async () => { await expect(page).toHaveURL(/\/dashboard/); },
   });

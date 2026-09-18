@@ -17,12 +17,14 @@ public class AuthController : ControllerBase
     private readonly AppDbContext _db;
     private readonly IJwtService _jwt;
     private readonly ITenantProvider _tenantProvider;
+    private readonly IWebHostEnvironment _env;
 
-    public AuthController(AppDbContext db, IJwtService jwt, ITenantProvider tenantProvider)
+    public AuthController(AppDbContext db, IJwtService jwt, ITenantProvider tenantProvider, IWebHostEnvironment env)
     {
         _db = db;
         _jwt = jwt;
         _tenantProvider = tenantProvider;
+        _env = env;
     }
 
     [HttpPost("login")]
@@ -32,6 +34,14 @@ public class AuthController : ControllerBase
         var user = await _db.Users
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.Email == request.Email && !u.IsDeleted);
+
+        // Sin usuario de tenant con ese correo: puede ser un administrador de plataforma.
+        if (user is null)
+        {
+            var platformAdmin = await _db.PlatformAdmins.FirstOrDefaultAsync(a => a.Email == request.Email);
+            if (platformAdmin is not null)
+                return await LoginPlatformAdmin(platformAdmin, request.Password);
+        }
 
         if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             return Unauthorized(new { error = "Credenciales inválidas." });
@@ -136,6 +146,10 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Seed([FromBody] SeedRequest request)
     {
+        // Fuera de Development los tenants los crea SOLO el PlatformAdmin (api/v1/platform/tenants).
+        if (!_env.IsDevelopment())
+            return NotFound();
+
         var anyTenant = await _db.Tenants
             .IgnoreQueryFilters()
             .AnyAsync();
@@ -149,7 +163,9 @@ public class AuthController : ControllerBase
         {
             Nombre = request.TenantNombre,
             NIT = request.TenantNit,
-            Email = request.TenantEmail
+            Email = request.TenantEmail,
+            ChannelId = AppDbContext.NemediChannelId,
+            FechaActivacion = DateTime.Now
         };
 
         // The tenant provider override ensures SaveChangesAsync stamps the
@@ -203,6 +219,9 @@ public class AuthController : ControllerBase
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.Id == uid && !u.IsDeleted);
 
+        if (user is null && principal.IsInRole(PlatformAdmin.RoleName))
+            return await RefreshPlatformAdmin(uid, request.RefreshToken);
+
         if (user is null
             || user.RefreshToken != request.RefreshToken
             || user.RefreshTokenExpiry < DateTime.UtcNow)
@@ -218,6 +237,53 @@ public class AuthController : ControllerBase
         await _db.SaveChangesAsync();
 
         return Ok(BuildLoginResponse(user, newToken, newRefreshToken));
+    }
+
+    // ── PlatformAdmin (fuera de todo tenant) ────────────────────────
+    private async Task<IActionResult> LoginPlatformAdmin(PlatformAdmin admin, string password)
+    {
+        if (!BCrypt.Net.BCrypt.Verify(password, admin.PasswordHash))
+            return Unauthorized(new { error = "Credenciales inválidas." });
+
+        if (!admin.IsActive)
+            return Unauthorized(new { error = "Usuario desactivado." });
+
+        return Ok(await IssuePlatformTokens(admin));
+    }
+
+    private async Task<IActionResult> RefreshPlatformAdmin(Guid adminId, string refreshToken)
+    {
+        var admin = await _db.PlatformAdmins.FirstOrDefaultAsync(a => a.Id == adminId && a.IsActive);
+        if (admin is null || admin.RefreshToken != refreshToken || admin.RefreshTokenExpiry < DateTime.UtcNow)
+            return Unauthorized(new { error = "Refresh token inválido o expirado." });
+
+        return Ok(await IssuePlatformTokens(admin));
+    }
+
+    private async Task<LoginResponse> IssuePlatformTokens(PlatformAdmin admin)
+    {
+        var token = _jwt.GeneratePlatformToken(admin);
+        var refreshToken = _jwt.GenerateRefreshToken();
+        admin.RefreshToken = refreshToken;
+        admin.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+        await _db.SaveChangesAsync();
+
+        return new LoginResponse
+        {
+            Token = token,
+            RefreshToken = refreshToken,
+            Expiration = DateTime.UtcNow.AddHours(1),
+            UserInfo = new UserInfo
+            {
+                Id = admin.Id,
+                Nombre = admin.Nombre,
+                Apellido = string.Empty,
+                Email = admin.Email,
+                Rol = PlatformAdmin.RoleName,
+                TenantId = Guid.Empty,
+                BranchId = null
+            }
+        };
     }
 
     private static LoginResponse BuildLoginResponse(User user, string token, string refreshToken) =>

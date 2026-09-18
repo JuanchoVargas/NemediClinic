@@ -1,7 +1,8 @@
 // ============================================================
 // TenantsPage.tsx — Gestión de tenants/clínicas (/super/tenants)
 //
-// Tabla de tenants con alta/edición vía Sheet y soft delete.
+// El SuperAdmin ve y edita SOLO su clínica (el backend filtra por el tenant del JWT).
+// Crear, suspender o eliminar tenants es del PlatformAdmin → /platform.
 // Solo accesible para SuperAdmin (guard en el router).
 // ============================================================
 
@@ -9,19 +10,8 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Pencil, Search } from "lucide-react";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,12 +35,7 @@ import {
 } from "@/components/ui/table";
 import { PageContainer } from "@/components/shared/PageContainer";
 
-import {
-  useCreateTenant,
-  useDeleteTenant,
-  useTenantsPaged,
-  useUpdateTenant,
-} from "@/api/tenants.api";
+import { useTenantsPaged, useUpdateTenant } from "@/api/tenants.api";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePermissions } from "@/hooks/use-permissions";
 import { usePageReset } from "@/hooks/use-page-reset";
@@ -89,17 +74,11 @@ export function TenantsPage() {
     <PageContainer>
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Tenants</h1>
+          <h1 className="text-3xl font-bold">Mi clínica</h1>
           <p className="text-muted-foreground">
-            Clínicas registradas en la plataforma.
+            Datos de tu clínica en la plataforma.
           </p>
         </div>
-        {can("tenants.create") && (
-          <Button onClick={() => setSheetState({ open: true })}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo tenant
-          </Button>
-        )}
       </div>
 
       <div className="mb-4 relative max-w-md">
@@ -166,7 +145,6 @@ export function TenantsPage() {
                         <Pencil className="h-4 w-4" />
                       </Button>
                     )}
-                    {can("tenants.delete") && <DeleteTenantButton tenant={t} />}
                   </div>
                 </TableCell>
               </TableRow>
@@ -201,7 +179,7 @@ export function TenantsPage() {
 }
 
 // ────────────────────────────────────────────────────────────
-// Sheet con form (crear o editar)
+// Diálogo con form (solo edición)
 // ────────────────────────────────────────────────────────────
 function TenantSheet({
   open,
@@ -212,10 +190,8 @@ function TenantSheet({
   editing?: Tenant;
   onClose: () => void;
 }) {
-  const create = useCreateTenant();
   const update = useUpdateTenant();
-  const isPending = create.isPending || update.isPending;
-  const isEdit = !!editing;
+  const isPending = update.isPending;
 
   const form = useForm<TenantFormValues>({
     resolver: zodResolver(tenantSchema),
@@ -245,13 +221,9 @@ function TenantSheet({
       telefono: values.telefono || "",
     };
     try {
-      if (isEdit && editing) {
-        await update.mutateAsync({ id: editing.id, body });
-        useToastStore.success("Tenant actualizado");
-      } else {
-        await create.mutateAsync(body);
-        useToastStore.success("Tenant creado");
-      }
+      if (!editing) return;
+      await update.mutateAsync({ id: editing.id, body });
+      useToastStore.success("Clínica actualizada");
       onClose();
     } catch {
       // toast global
@@ -262,12 +234,12 @@ function TenantSheet({
     <FormDialog
       open={open}
       onOpenChange={(o) => !o && onClose()}
-      title={<>{isEdit ? "Editar tenant" : "Nuevo tenant"}</>}
-      description={<>{isEdit ? "Modifica los datos de la clínica." : "Da de alta una clínica nueva."}</>}
+      title="Editar clínica"
+      description="Modifica los datos de la clínica."
       dirty={form.formState.isDirty}
       actions={
         <Button form="tenant-form" type="submit" disabled={isPending}>
-            {isPending ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear"}
+            {isPending ? "Guardando..." : "Guardar cambios"}
           </Button>
       }
     >
@@ -323,55 +295,5 @@ function TenantSheet({
         </div>
 
         </FormDialog>
-  );
-}
-
-// ────────────────────────────────────────────────────────────
-// Eliminar con confirmación
-// ────────────────────────────────────────────────────────────
-function DeleteTenantButton({ tenant }: { tenant: Tenant }) {
-  const del = useDeleteTenant();
-
-  const handleConfirm = async () => {
-    try {
-      await del.mutateAsync(tenant.id);
-      useToastStore.success("Tenant eliminado", tenant.nombre);
-    } catch {
-      // toast global
-    }
-  };
-
-  return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button
-          variant="destructive"
-          size="sm"
-          disabled={del.isPending}
-          aria-label={`Eliminar ${tenant.nombre}`}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>¿Eliminar "{tenant.nombre}"?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Esta acción desactiva y marca el tenant como eliminado (soft delete).
-            Los datos asociados dejan de ser accesibles.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={del.isPending}>Cancelar</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleConfirm}
-            disabled={del.isPending}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            {del.isPending ? "Eliminando..." : "Eliminar"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   );
 }

@@ -33,7 +33,9 @@ export const queryClient = new QueryClient({
   // Reemplaza el "try/catch { storeAlerta.reportar() }" de cada action
   // de Pinia. Aquí pasa automáticamente.
   queryCache: new QueryCache({
-    onError: (error) => {
+    onError: (error, query) => {
+      // meta.silent: queries accesorias (branding, estado del tenant) que no deben molestar
+      if (query.meta?.silent) return;
       useToastStore.report(error);
     },
   }),

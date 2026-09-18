@@ -6,21 +6,24 @@
 // pedir ids ajenos). Con SQL comprueba que las filas sí existen en la base,
 // para que un 404 legítimo no se confunda con "no había datos".
 //
-// Requisitos: API en 5055 (playwright.config la levanta si hace falta), base
-// NemediClinic_Dev con un SuperAdmin existente (credenciales por env o las del
-// seed demo) y `sqlcmd` con autenticación de Windows.
+// Los tenants se crean como en producción: el PlatformAdmin crea el tenant
+// (POST /platform/tenants) y su primer SuperAdmin (POST /{id}/bootstrap-admin),
+// y el test entra con las credenciales temporales que devuelve. SQL se usa solo
+// para comprobar existencia de filas y para la limpieza.
 //
-// Nota: no existe endpoint para crear el SuperAdmin de un tenant nuevo
-// (`auth/register` usa el tenant del JWT). El test registra el usuario en el
-// tenant del SuperAdmin y lo mueve por SQL. Cuando exista onboarding real,
-// reemplazar `createTenantWithOwner`.
+// Requisitos: API en 5055 (playwright.config la levanta si hace falta), base
+// NemediClinic_Dev con la migración AddPlatformLevel, el PlatformAdmin de
+// appsettings.Development.json (o E2E_PLATFORM_EMAIL / E2E_PLATFORM_PASSWORD),
+// el SuperAdmin del seed demo y `sqlcmd` con autenticación de Windows.
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { hardDeleteTenants, lit, scalar, sql } from "./sql";
 
 const ADMIN_EMAIL = process.env.E2E_SUPERADMIN_EMAIL ?? "juandiegov2002@gmail.com";
 const ADMIN_PASSWORD = process.env.E2E_SUPERADMIN_PASSWORD ?? "Admin2026!";
+const PLATFORM_EMAIL = process.env.E2E_PLATFORM_EMAIL ?? "platform@nemedi.dev";
+const PLATFORM_PASSWORD = process.env.E2E_PLATFORM_PASSWORD ?? "Platform2026!";
+const NEMEDI_CHANNEL_ID = "11111111-1111-1111-1111-111111111111";
 const RUN = Date.now().toString(36);
-const PASSWORD = "E2eTenant2026!";
 
 type TenantData = {
   name: string;
@@ -55,25 +58,35 @@ async function postJson(api: APIRequestContext, token: string, url: string, data
   return (await res.json()) as { id: string };
 }
 
-/** Crea tenant + SuperAdmin propio (registro en el tenant del admin y traslado por SQL). */
-async function createTenantWithOwner(api: APIRequestContext, adminToken: string, label: string) {
-  const tenant = await postJson(api, adminToken, "/api/v1/tenants", {
+/** Crea tenant + primer SuperAdmin por el camino real: plataforma → bootstrap-admin → login con la clave temporal. */
+async function createTenantWithOwner(api: APIRequestContext, platformToken: string, label: string) {
+  const tenant = await postJson(api, platformToken, "/api/v1/platform/tenants", {
     nombre: `E2E Tenant ${label} ${RUN}`,
     nit: `E2E-${label}-${RUN}`,
     telefono: "6010000000",
     email: `tenant-${label}-${RUN}@e2e.local`,
+    channelId: NEMEDI_CHANNEL_ID,
+    plan: "Basico",
   });
   const email = `owner-${label}-${RUN}@e2e.local`;
-  const user = await postJson(api, adminToken, "/api/v1/auth/register", {
-    nombre: "Owner",
-    apellido: label,
-    email,
-    password: PASSWORD,
-    rol: "SuperAdmin",
+  const res = await api.post(`/api/v1/platform/tenants/${tenant.id}/bootstrap-admin`, {
+    ...auth(platformToken),
+    data: { adminNombre: "Owner", adminApellido: label, adminEmail: email },
   });
-  sql(`UPDATE Users SET TenantId = ${lit(tenant.id)}, BranchId = NULL WHERE Id = ${lit(user.id)};`);
-  const session = await login(api, email, PASSWORD);
+  expect(res.status(), `bootstrap-admin → ${await res.text()}`).toBe(200);
+  const credentials = (await res.json()) as { email: string; passwordTemporal: string };
+
+  const session = await login(api, credentials.email, credentials.passwordTemporal);
+  expect(session.userInfo.rol).toBe("SuperAdmin");
   expect(session.userInfo.tenantId.toLowerCase(), "el JWT debe llevar el tenant nuevo").toBe(tenant.id.toLowerCase());
+
+  // Un tenant solo tiene un bootstrap: el segundo intento se rechaza
+  const again = await api.post(`/api/v1/platform/tenants/${tenant.id}/bootstrap-admin`, {
+    ...auth(platformToken),
+    data: { adminNombre: "Otro", adminApellido: label, adminEmail: `otro-${label}-${RUN}@e2e.local` },
+  });
+  expect(again.status(), "segundo bootstrap-admin").toBe(409);
+
   return { tenantId: tenant.id, token: session.token, userId: session.userInfo.id };
 }
 
@@ -184,7 +197,7 @@ test.describe("F03 · aislamiento multi-tenant", () => {
 
   test.afterAll(() => {
     // Borrado físico de todo lo creado por el test (tenants con NIT E2E-...)
-    hardDeleteTenants(created, RUN);
+    hardDeleteTenants(created);
     const leftovers = scalar(`SELECT COUNT(*) FROM Tenants WHERE NIT LIKE 'E2E-%-${RUN}'`);
     expect(Number(leftovers)).toBe(0);
   });
@@ -193,9 +206,12 @@ test.describe("F03 · aislamiento multi-tenant", () => {
     const admin = await login(api, ADMIN_EMAIL, ADMIN_PASSWORD);
     expect(admin.userInfo.rol).toBe("SuperAdmin");
 
-    const ownerA = await createTenantWithOwner(api, admin.token, "A");
+    const platform = await login(api, PLATFORM_EMAIL, PLATFORM_PASSWORD);
+    expect(platform.userInfo.rol).toBe("PlatformAdmin");
+
+    const ownerA = await createTenantWithOwner(api, platform.token, "A");
     created.push(ownerA.tenantId);
-    const ownerB = await createTenantWithOwner(api, admin.token, "B");
+    const ownerB = await createTenantWithOwner(api, platform.token, "B");
     created.push(ownerB.tenantId);
 
     const A = await seedTenant(api, "A", ownerA);
@@ -216,6 +232,21 @@ test.describe("F03 · aislamiento multi-tenant", () => {
     // Aislamiento en ambas direcciones
     await expectNoCrossAccess(api, A, B);
     await expectNoCrossAccess(api, B, A);
+
+    // Un SuperAdmin solo ve y edita SU tenant; crear tenants es exclusivo de la plataforma
+    const ownTenants = await listIds(api, A.token, "/api/v1/tenants?page=1&pageSize=200");
+    expect(ownTenants, "A solo lista su propio tenant").toEqual([A.tenantId.toLowerCase()]);
+    expect((await api.get(`/api/v1/tenants/${B.tenantId}`, auth(A.token))).status(), "A GET tenant de B").toBe(404);
+    expect((await api.put(`/api/v1/tenants/${B.tenantId}`, { ...auth(A.token), data: { nombre: "hackeado" } })).status(), "A PUT tenant de B").toBe(404);
+    expect(scalar(`SELECT Nombre FROM Tenants WHERE Id = ${lit(B.tenantId)}`)).toBe(`E2E Tenant B ${RUN}`);
+    for (const path of ["tenants", "channels", "leads", "liquidacion?mes=2026-09"]) {
+      expect((await api.get(`/api/v1/platform/${path}`, auth(A.token))).status(), `SuperAdmin → platform/${path}`).toBe(403);
+    }
+
+    // El PlatformAdmin (JWT válido SIN tenant_id) administra tenants pero no entra a datos clínicos
+    for (const path of ["patients", "appointments?start=2026-01-01T00:00:00&end=2026-12-31T00:00:00", "products", "packages", "users"]) {
+      expect((await api.get(`/api/v1/${path}`, auth(platform.token))).status(), `PlatformAdmin → ${path}`).toBe(403);
+    }
 
     // El tenant original tampoco ve los de prueba
     const adminPatients = await listIds(api, admin.token, "/api/v1/patients?page=1&pageSize=500");

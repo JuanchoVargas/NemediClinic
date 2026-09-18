@@ -8,7 +8,9 @@ using Microsoft.OpenApi.Models;
 using NemediClinic.Api.Json;
 using NemediClinic.Api.Middleware;
 using NemediClinic.Api.Providers;
+using NemediClinic.Api.Services;
 using NemediClinic.Application.Interfaces;
+using NemediClinic.Domain.Entities;
 using NemediClinic.Infrastructure.Persistence;
 using NemediClinic.Infrastructure.Services;
 
@@ -52,7 +54,9 @@ builder.Services
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("SuperAdmin", p => p.RequireRole("SuperAdmin"))
     .AddPolicy("Admin", p => p.RequireRole("SuperAdmin", "Admin"))
-    .AddPolicy("Esteticista", p => p.RequireRole("SuperAdmin", "Admin", "Esteticista"));
+    .AddPolicy("Esteticista", p => p.RequireRole("SuperAdmin", "Admin", "Esteticista"))
+    // Fuera de todo tenant: su JWT no lleva tenant_id y NO entra en las políticas de clínica.
+    .AddPolicy("PlatformAdmin", p => p.RequireRole(PlatformAdmin.RoleName));
 
 // ── EF Core ─────────────────────────────────────────────────────
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -64,6 +68,16 @@ builder.Services.AddScoped<ITenantProvider, HttpTenantProvider>();
 
 // ── JWT Service ─────────────────────────────────────────────────
 builder.Services.AddScoped<IJwtService, JwtService>();
+
+// ── Nivel de plataforma ─────────────────────────────────────────
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton(builder.Configuration.GetSection("Platform:Precios").Get<PlatformPricing>() ?? new PlatformPricing());
+builder.Services.AddScoped<TenantStatusCache>();
+builder.Services.AddScoped<BrandingResolver>();
+builder.Services.AddScoped<PlatformTenantService>();
+builder.Services.AddScoped<ChannelService>();
+builder.Services.AddScoped<LeadService>();
+builder.Services.AddScoped<LiquidacionService>();
 
 // ── Swagger ─────────────────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
@@ -116,21 +130,22 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(corsOrigins)
               .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-              .WithHeaders("Authorization", "Content-Type");
+              .WithHeaders("Authorization", "Content-Type", "X-Branding-Host");
     });
 });
 
-// ── Detrás de Caddy: respetar X-Forwarded-Proto/For ─────────────
+// ── Detrás de Caddy: respetar X-Forwarded-Proto/For/Host ────────
+// X-Forwarded-Host conserva el dominio original: de él depende el branding por canal.
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
 });
 
 // ── Controllers ─────────────────────────────────────────────────
 builder.Services
-    .AddControllers()
+    .AddControllers(options => options.Filters.Add<ApiExceptionFilter>())
     .AddJsonOptions(options =>
     {
         // Hora local sin conversión UTC en toda la API (ver LocalDateTimeJsonConverter).
@@ -177,6 +192,10 @@ if (app.Environment.IsProduction())
     }
 }
 
+// ── Primer PlatformAdmin (Platform__AdminEmail / Platform__AdminPassword) ──
+await PlatformAdminSeeder.SeedAsync(
+    app.Services, app.Configuration, app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("PlatformAdminSeeder"));
+
 // ── Pipeline ────────────────────────────────────────────────────
 app.UseForwardedHeaders();
 
@@ -192,6 +211,8 @@ app.UseCors(WebAppCorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<TenantMiddleware>();
+app.UseMiddleware<TenantStatusMiddleware>(); // tenant Suspendido: escrituras → 423
+app.UseMiddleware<BrandingMiddleware>();     // branding por Host para GET /api/v1/branding
 app.MapControllers();
 
 app.Run();

@@ -1,6 +1,7 @@
-# DOMAIN viene de deploy/.env.
-#   clinica.ejemplo.com  → HTTPS automático con Let's Encrypt (puertos 80/443 abiertos y DNS apuntando al VPS)
-#   http://localhost     → solo HTTP, para probar en local sin certificados
+# DOMAIN viene de deploy/.env. Admite varios dominios separados por coma: uno por canal
+# (marca blanca). Caddy conserva el Host original hacia el API, que con él resuelve el branding.
+#   app.nemediclinic.com, app.infotex.co → HTTPS automático por dominio (puertos 80/443 y DNS al VPS)
+#   http://localhost                      → solo HTTP, para probar en local sin certificados
 {$DOMAIN} {
 	encode gzip
 

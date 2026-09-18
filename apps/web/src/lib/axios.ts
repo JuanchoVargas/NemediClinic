@@ -13,6 +13,7 @@
 //   403  → "No tienes permisos para esta acción"
 //   404  → mensaje del backend o "No encontrado"
 //   409  → mensaje del backend
+//   423  → mensaje del backend ("Cuenta suspendida por mora": tenant en solo lectura)
 //   5xx  → "Error del servidor, intenta de nuevo"
 //   red  → "No hay conexión con el servidor"
 //
@@ -26,7 +27,10 @@ import { useAuthStore } from "@/stores/auth.store";
 import { useToastStore } from "@/stores/toast.store";
 import { ApiError } from "@/types/api";
 
-const baseURL = import.meta.env.VITE_API_URL || "http://localhost:5055";
+// VITE_API_URL="/" = mismo origen (producción detrás de Caddy). Es lo que permite el branding
+// por dominio: cada dominio de canal llama a SU propio /api y el backend resuelve la marca por Host.
+const configuredUrl = import.meta.env.VITE_API_URL;
+const baseURL = configuredUrl === "/" ? "" : configuredUrl || "http://localhost:5055";
 
 export const api = axios.create({
   baseURL,

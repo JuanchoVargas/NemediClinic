@@ -2,7 +2,8 @@
 Fecha: Septiembre 2026 (actualizado en auditoría 2026-09-15; ver `docs/STATUS_2026-09.md`)
 
 ## Qué es
-ERP/CRM multi-tenant para clínicas estéticas. Un tenant = una clínica. Roles: SuperAdmin / Admin / Esteticista.
+ERP/CRM multi-tenant para clínicas estéticas. Un tenant = una clínica. Roles de clínica: SuperAdmin / Admin / Esteticista.
+Sobre los tenants hay un **nivel de plataforma** (2026-09-18): rol PlatformAdmin fuera de todo tenant, canales comerciales con marca blanca por dominio (Nemedi 0 %, Infotex 50 %), oportunidades con protección de NIT por 90 días, liquidación mensual por canal y suspensión por mora (423 en escrituras). Detalle en `CLAUDE.md` → "Platform level".
 Identificadores de dominio y textos de UI en español; código de infraestructura en inglés.
 
 ## Rutas reales
@@ -41,10 +42,11 @@ pnpm lint       # hoy falla: 14 errores
 ```
 
 ## Estado de la DB de desarrollo (2026-09-15)
-- 4 migraciones aplicadas: InitialClinicalEntities, AddClinicalEntities, AddAppointments, AddInventoryEntities.
+- 5 migraciones aplicadas: InitialClinicalEntities, AddClinicalEntities, AddAppointments, AddInventoryEntities, AddPlatformLevel (canales Nemedi e Infotex sembrados; el tenant existente quedó en el canal Nemedi, plan Básico, estado Activo).
 - 1 tenant y 1 sede ("Sede Principal"). Datos demo cargados con `POST /api/v1/dev/seed-demo` (solo Development, idempotente; ver `DevController.cs`).
 
 ## Credenciales de desarrollo (tras el seed demo)
+- PlatformAdmin: `platform@nemedi.dev` / `Platform2026!` (de `appsettings.Development.json`; se siembra al arrancar si la tabla está vacía). Entra a `/platform`.
 - SuperAdmin: `juandiegov2002@gmail.com` / `Admin2026!` (el seed resetea esta contraseña en cada ejecución).
 - Esteticistas: `laura.perez@nemedi.demo` y `camila.ruiz@nemedi.demo` / `Demo2026!`.
 - Datos: 6 procedimientos, 3 paquetes, 8 pacientes (cédulas 1000000001..08, historia clínica con antecedentes en 3), 5 paquetes asignados (2 pagados, 2 parciales, 1 sin pagos), 12 citas entre ayer y +4 días, 6 productos (2 verde, 2 amarillo, 2 rojo) con entradas.
@@ -63,7 +65,8 @@ pnpm lint       # hoy falla: 14 errores
 
 ## Módulos con backend + frontend
 - Auth + JWT + roles (frontend no usa el refresh token)
-- Tenants, Sedes, Usuarios (Admin no puede crear usuarios: `register` exige SuperAdmin)
+- Plataforma (`/platform`, solo PlatformAdmin): tenants con canal/plan/IPS/estado + creación del primer SuperAdmin con clave temporal, canales, oportunidades, liquidación con CSV
+- Mi clínica (el SuperAdmin ve y edita solo su tenant), Sedes, Usuarios (Admin no puede crear usuarios: `register` exige SuperAdmin)
 - Pacientes (`ProximaCita` nunca se calcula)
 - Historia clínica (UI solo lectura; falta editar antecedentes y crear notas)
 - Procedimientos, Paquetes, Paquetes de paciente (falta cambiar estado y completar sesión desde UI)
@@ -71,15 +74,16 @@ pnpm lint       # hoy falla: 14 errores
 - Inventario (productos, entradas, alertas; no hay salidas ni consumo)
 
 ## Pendiente
-- Onboarding de un tenant nuevo: no hay forma de crear su SuperAdmin por API (`register` usa el tenant del JWT)
+- Lista de precios oficial: `Platform:Precios` en `appsettings.json` tiene valores provisionales (Básico 150.000, Pro 290.000, sede adicional 60.000, recargo IPS 0)
+- El SuperAdmin creado por bootstrap-admin no puede cambiar su contraseña temporal (no hay endpoint ni pantalla de cambio de clave); tampoco el PlatformAdmin
+- Los canales no tienen usuarios propios: oportunidades y liquidación las opera el PlatformAdmin
 - Borrar un paquete del catálogo deja inaccesibles sus asignaciones; completar la última sesión desde una cita no cierra el paquete
-- 401 en mitad de sesión no limpia ni redirige (interceptor de `axios.ts`)
 - `GET /inventory/movements/product/{id}` responde 500
 - Dashboard con KPIs reales (`GET /api/v1/dashboard` no existe)
 - Descuento de inventario al completar cita
 - Job de vencimiento de paquetes (`Vencido`)
 - Header responsive (bloqueante para móvil)
-- Tests (hoy 0)
+- Tests unitarios (hoy 0; sí hay e2e: gate de aislamiento multi-tenant y recorrido UI por rol)
 - WhatsApp Meta Cloud API
 - App móvil
 - Detalle y prioridades: `docs/STATUS_2026-09.md`

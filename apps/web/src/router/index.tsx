@@ -10,7 +10,8 @@
 //       ├── /patients           → PatientsPage
 //       ├── /patients/new       → PatientFormPage (modo crear)
 //       ├── /patients/$id       → PatientDetailPage
-//       └── /patients/$id/edit  → PatientFormPage (modo editar)
+//       ├── /patients/$id/edit  → PatientFormPage (modo editar)
+//       └── /platform           → PlatformPage (solo PlatformAdmin; es su ÚNICA ruta)
 //
 // EQUIVALENTE A: router/index.js de SINERGIA con beforeEach guards
 // PATTERNS.md sección: "Routing"
@@ -42,6 +43,8 @@ import { InventoryPage } from "@/pages/InventoryPage";
 import { UsersPage } from "@/pages/admin/UsersPage";
 import { BranchesPage } from "@/pages/admin/BranchesPage";
 import { TenantsPage } from "@/pages/super/TenantsPage";
+import { PlatformPage } from "@/pages/platform/PlatformPage";
+import { PLATFORM_ADMIN } from "@/lib/permissions";
 import { useAuthStore } from "@/stores/auth.store";
 import { useToastStore } from "@/stores/toast.store";
 
@@ -92,6 +95,11 @@ const protectedRoute = createRoute({
         to: "/login",
         search: { redirect: location.href },
       });
+    }
+    // El PlatformAdmin vive fuera de todo tenant: las pantallas de clínica le darían 403.
+    const role = useAuthStore.getState().user?.role;
+    if (role === PLATFORM_ADMIN && !location.pathname.startsWith("/platform")) {
+      throw redirect({ to: "/platform" });
     }
   },
 });
@@ -206,6 +214,14 @@ const tenantsRoute = createRoute({
   component: TenantsPage,
 });
 
+// ─── Plataforma (sobre los tenants) ────────────────────────
+const platformRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/platform",
+  beforeLoad: () => requireRoles([PLATFORM_ADMIN]),
+  component: PlatformPage,
+});
+
 // ─── Árbol ─────────────────────────────────────────────────
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -227,6 +243,7 @@ const routeTree = rootRoute.addChildren([
     usersRoute,
     branchesRoute,
     tenantsRoute,
+    platformRoute,
   ]),
 ]);
 

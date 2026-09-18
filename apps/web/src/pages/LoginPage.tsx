@@ -35,6 +35,8 @@ import {
 } from "@/components/ui/form";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { useLogin } from "@/api/auth.api";
+import { DEFAULT_BRANDING, useBranding } from "@/api/branding.api";
+import { PLATFORM_ADMIN } from "@/lib/permissions";
 import { useAuthStore } from "@/stores/auth.store";
 import { useToastStore } from "@/stores/toast.store";
 
@@ -52,6 +54,7 @@ export function LoginPage() {
   const search = useSearch({ from: "/login" }) as { redirect?: string };
   const setSession = useAuthStore((s) => s.setSession);
   const loginMutation = useLogin();
+  const { data: branding = DEFAULT_BRANDING } = useBranding();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -63,7 +66,9 @@ export function LoginPage() {
       const result = await loginMutation.mutateAsync(values);
       setSession(result.token, result.user);
       useToastStore.success("Bienvenido", `Sesión iniciada como ${result.user.email}`);
-      navigate({ to: search.redirect ?? "/dashboard" });
+      // El PlatformAdmin no pertenece a ninguna clínica: su única pantalla es /platform
+      if (result.user.role === PLATFORM_ADMIN) navigate({ to: "/platform" });
+      else navigate({ to: search.redirect ?? "/dashboard" });
     } catch {
       // El queryClient global ya disparó el toast.
       // Aquí solo aprovechamos para resaltar el campo password.
@@ -76,9 +81,16 @@ export function LoginPage() {
       <div className="mx-auto max-w-md">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Iniciar sesión</CardTitle>
+            {branding.logoUrl && (
+              <img
+                src={branding.logoUrl}
+                alt={branding.nombreComercial}
+                className="mb-2 h-10 w-auto self-start object-contain"
+              />
+            )}
+            <CardTitle className="text-2xl">{branding.nombreComercial}</CardTitle>
             <CardDescription>
-              Ingresa con tus credenciales del backend Nemedi.
+              Ingresa con tu correo y contraseña.
             </CardDescription>
           </CardHeader>
           <CardContent>

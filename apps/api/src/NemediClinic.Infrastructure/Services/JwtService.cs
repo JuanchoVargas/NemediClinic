@@ -47,6 +47,36 @@ public class JwtService : IJwtService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    public string GeneratePlatformToken(PlatformAdmin admin)
+    {
+        // Sin tenant_id: el PlatformAdmin vive fuera de todo tenant. TenantMiddleware lo exime por rol.
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, admin.Id.ToString()),
+            new(JwtRegisteredClaimNames.Email, admin.Email),
+            new(ClaimTypes.Role, PlatformAdmin.RoleName),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+        return WriteToken(claims);
+    }
+
+    private string WriteToken(IEnumerable<Claim> claims)
+    {
+        var jwtSection = _configuration.GetSection("Jwt");
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSection["Secret"]!));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var expirationMinutes = int.TryParse(jwtSection["ExpirationMinutes"], out var mins) ? mins : 60;
+
+        var token = new JwtSecurityToken(
+            issuer: jwtSection["Issuer"],
+            audience: jwtSection["Audience"],
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(expirationMinutes),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
     public ClaimsPrincipal? ValidateToken(string token)
     {
         var jwtSection = _configuration.GetSection("Jwt");

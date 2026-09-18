@@ -14,7 +14,18 @@
  * EQUIVALENTE A: _vars.scss en SINERGIA
  * ============================================================ */
 
+/* Marca del canal (marca blanca por dominio). Los valores reales llegan de GET /branding y
+ * use-apply-branding.ts los escribe en <html>; estos son el respaldo mientras carga.
+ * --primary / --primary-foreground / --ring también se pintan desde ahí. */
+@theme inline {
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-secondary: var(--brand-secondary);
+}
+
 :root {
+  --brand-primary: #171717;
+  --brand-secondary: #737373;
+
   /* Ejemplos (descomentar y ajustar al cliente):
    * --primary: oklch(0.6 0.18 30);
    * --primary-foreground: oklch(1 0 0);

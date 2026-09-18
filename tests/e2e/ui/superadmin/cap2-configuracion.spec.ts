@@ -99,7 +99,7 @@ test("Cap2 · Configurar la clínica (dueño)", async ({ page }) => {
     },
   });
 
-  await step(page, "Abre Administración y elige Tenants para ver la ficha de tu clínica", menuItem(page, "Tenants"), {
+  await step(page, "Abre Administración y elige Mi clínica para ver la ficha de tu clínica", menuItem(page, "Mi clínica"), {
     before: async () => { await closeDialog(page); await openHeaderMenu(page, "Administración"); },
     after: async () => {
       await expect(page).toHaveURL(/\/super\/tenants/);

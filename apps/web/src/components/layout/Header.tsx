@@ -18,10 +18,12 @@ import {
 import { useAuthStore } from "@/stores/auth.store";
 import { useToastStore } from "@/stores/toast.store";
 import { usePermissions } from "@/hooks/use-permissions";
+import { DEFAULT_BRANDING, useBranding } from "@/api/branding.api";
 import {
   Building2,
   Calendar,
   ChevronDown,
+  Layers,
   ClipboardList,
   LogIn,
   LogOut,
@@ -38,10 +40,11 @@ export function Header() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
   const clearSession = useAuthStore((s) => s.clearSession);
 
-  const appName = import.meta.env.VITE_APP_NAME || "React Startup Base";
+  // Marca del canal resuelta por dominio (GET /branding)
+  const { data: branding = DEFAULT_BRANDING } = useBranding();
 
   // Visibilidad de menú según la matriz de permisos (src/lib/permissions.ts)
-  const { can } = usePermissions();
+  const { can, isPlatformAdmin } = usePermissions();
   const showPackages = can("packages.read");
   const showUsers = can("users.update"); // página de administración: Admin y SuperAdmin
   const showBranches = can("branches.read");
@@ -58,13 +61,32 @@ export function Header() {
     "text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5";
 
   return (
-    <header className="border-b bg-background">
+    <header className="border-b-2 border-b-brand-secondary bg-background">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-6">
-          <Link to="/" className="text-lg font-semibold">
-            {appName}
+          <Link
+            to={isPlatformAdmin ? "/platform" : "/"}
+            className="inline-flex items-center gap-2 text-lg font-semibold"
+          >
+            {branding.logoUrl && (
+              <img src={branding.logoUrl} alt="" className="h-7 w-auto object-contain" />
+            )}
+            {branding.nombreComercial}
           </Link>
-          {isAuthenticated && (
+          {/* PlatformAdmin: fuera de todo tenant, solo ve la plataforma */}
+          {isAuthenticated && isPlatformAdmin && (
+            <nav className="flex items-center gap-4">
+              <Link
+                to="/platform"
+                className={linkClass}
+                activeProps={{ className: "text-foreground font-medium" }}
+              >
+                <Layers className="h-4 w-4" />
+                Plataforma
+              </Link>
+            </nav>
+          )}
+          {isAuthenticated && !isPlatformAdmin && (
             <nav className="flex items-center gap-4">
               <Link
                 to="/"
@@ -170,7 +192,7 @@ export function Header() {
                       <DropdownMenuItem asChild>
                         <Link to="/super/tenants" className="flex items-center gap-2">
                           <Package className="h-4 w-4" />
-                          Tenants
+                          Mi clínica
                         </Link>
                       </DropdownMenuItem>
                     )}

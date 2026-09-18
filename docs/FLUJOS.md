@@ -64,7 +64,7 @@ Bloqueante: no. Para la demo, crear usuarios solo con el SuperAdmin.
 | JWT válido sin claim `tenant_id` | 403 | 403 (`TenantMiddleware`) | ✅ |
 | Login de un usuario cuyo tenant fue eliminado (soft) | 401 | 200: el login ignora `IsDeleted`/`IsActive` del tenant | ⚠️ |
 
-Bloqueante para demo de un solo tenant: no (ya corregido). Bloqueante para vender multi-tenant: sí mientras no exista onboarding del SuperAdmin de un tenant nuevo.
+Bloqueante para demo de un solo tenant: no (ya corregido). Bloqueante para vender multi-tenant: ya no — desde el 2026-09-18 el PlatformAdmin crea el tenant y su primer SuperAdmin (`POST /api/v1/platform/tenants` + `/{id}/bootstrap-admin`), y el gate `tests/e2e/tenant-isolation.spec.ts` crea sus tenants por ese camino.
 
 ## F04 · Pacientes
 
@@ -252,7 +252,7 @@ Bloqueante: no con 480 min de sesión. Sí si la demo se deja abierta de un día
 |---|---|---|---|
 | F01 Auth | ✅ | No | Esteticista puede listar emails de usuarios |
 | F02 Admin | ⚠️ | No | Admin no puede crear usuarios aunque la UI lo permita |
-| F03 Multi-tenant | ✅ tras fix | No (1 tenant) / Sí (multi) | Filtro corregido hoy; falta onboarding del SuperAdmin de un tenant nuevo |
+| F03 Multi-tenant | ✅ tras fix | No (1 tenant) / Sí (multi) | Filtro corregido; onboarding resuelto el 2026-09-18 con el nivel de plataforma |
 | F04 Pacientes | ✅ | No | `proximaCita` nunca se calcula |
 | F05 Historia clínica | ⚠️ | Sí si se quiere escribir en vivo | UI solo lectura; API completa |
 | F06 Procedimientos | ⚠️ | No | Select de "Nueva cita" muestra inactivos |
@@ -277,7 +277,7 @@ Estado de los datos demo tras la ejecución: los registros de prueba (paciente 1
 1. **Filtro de tenant fijado al primer request del proceso** (`AppDbContext.BuildFilterExpression`). Cualquier tenant veía los datos del primero que consultó tras el arranque. **Corregido hoy** (`bc4ead6`). Falta un test de integración que arranque la API con un tenant y consulte con otro.
 2. **La API rechazaba enums por nombre** y el frontend los envía así: cambiar estado de cita, registrar pago, crear producto y registrar entrada devolvían 400. **Corregido hoy** (`be5a5d1`).
 3. **Citas corridas 5 horas** por conversión UTC en un solo sentido. **Corregido hoy** (`dc64e2b`).
-4. **No hay forma de crear el SuperAdmin de un tenant nuevo.** `auth/register` toma el tenant del JWT; `auth/seed` solo funciona con la base vacía. Sin esto el producto no es multi-tenant operativamente.
+4. ✅ **Resuelto el 2026-09-18 (nivel de plataforma: `/platform` → Nuevo tenant → Crear admin).** ~~No hay forma de crear el SuperAdmin de un tenant nuevo.~~ `auth/register` toma el tenant del JWT; `auth/seed` solo funciona con la base vacía. Sin esto el producto no es multi-tenant operativamente.
 
 ### Altos
 

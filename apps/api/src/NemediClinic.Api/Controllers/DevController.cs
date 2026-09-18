@@ -273,7 +273,7 @@ public class DevController : ControllerBase
             var entry = new InventoryEntry
             {
                 ProductId = product.Id, Cantidad = cantidad, MotivoEntrada = EntryReason.Compra,
-                Observacion = "Compra inicial (datos demo)", UserId = superAdmin.Id, FechaEntrada = fecha
+                Observacion = DemoEntryMarker, UserId = superAdmin.Id, FechaEntrada = fecha
             };
             _db.InventoryEntries.Add(entry);
             product.StockActual = cantidad;
@@ -332,8 +332,42 @@ public class DevController : ControllerBase
         }
 
         await SeedHistoryAsync();
+        await ReanchorInventoryAsync();
         return days;
     }
+
+    /// <summary>
+    /// La compra inicial del seed se fecha 20 días antes de sembrar, así que con el tiempo queda fuera
+    /// del mes y el panel "Productos del mes" del Dashboard se vacía. Aquí se desplazan las entradas y
+    /// sus movimientos para que esa compra caiga 10 días atrás. No toca el stock: vive en Product.
+    /// </summary>
+    private async Task ReanchorInventoryAsync()
+    {
+        var oldest = await _db.InventoryEntries
+            .Where(e => e.Observacion == DemoEntryMarker)
+            .OrderBy(e => e.FechaEntrada)
+            .Select(e => (DateTime?)e.FechaEntrada)
+            .FirstOrDefaultAsync();
+        if (oldest is null)
+            return;
+
+        var days = (DateTime.Now.Date.AddDays(-10) - oldest.Value.Date).Days;
+        if (days == 0)
+            return;
+
+        await _db.InventoryEntries.ExecuteUpdateAsync(s => s
+            .SetProperty(e => e.FechaEntrada, e => e.FechaEntrada.AddDays(days)));
+        await _db.InventoryMovements.ExecuteUpdateAsync(s => s
+            .SetProperty(m => m.FechaMovimiento, m => m.FechaMovimiento.AddDays(days)));
+    }
+
+    private const string DemoEntryMarker = "Compra inicial (datos demo)";
+
+    private static readonly string[] DemoProcedureNames =
+    [
+        "Limpieza facial profunda", "Depilación láser piernas completas", "Radiofrecuencia facial",
+        "Masaje reductor", "Peeling químico", "Hidratación profunda"
+    ];
 
     private async Task SeedHistoryAsync()
     {
@@ -341,7 +375,8 @@ public class DevController : ControllerBase
             return;
 
         var patients = await _db.Patients.Where(p => p.Cedula.StartsWith("100000000")).OrderBy(p => p.Cedula).ToListAsync();
-        var procedures = await _db.Procedures.Where(p => p.Activo).OrderBy(p => p.Nombre).ToListAsync();
+        // Solo los procedimientos del seed: un procedimiento de prueba creado a mano no debe recibir historial demo
+        var procedures = await _db.Procedures.Where(p => p.Activo && DemoProcedureNames.Contains(p.Nombre)).OrderBy(p => p.Nombre).ToListAsync();
         var esteticistas = await _db.Users.Where(u => u.Rol == UserRole.Esteticista && u.IsActive).OrderBy(u => u.Email).ToListAsync();
         var branch = await _db.Branches.OrderBy(b => b.CreatedAt).FirstOrDefaultAsync();
         if (patients.Count == 0 || procedures.Count == 0 || esteticistas.Count == 0 || branch is null)

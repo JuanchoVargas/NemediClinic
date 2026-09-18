@@ -1,8 +1,10 @@
 // ============================================================
 // DashboardPage.tsx — Resumen de la clínica
 //
-// Una sola llamada (GET /api/v1/dashboard): KPIs con sparkline, citas por día,
-// top de procedimientos, agenda de hoy y alertas con enlace a donde se resuelven.
+// Una sola llamada (GET /api/v1/dashboard): KPIs con sparkline, citas por día
+// (alternable a dinero), top de procedimientos (alternable a productos), agenda de
+// hoy y alertas con enlace a donde se resuelven. Los alternadores recuerdan la
+// última opción en localStorage (preferencia de interfaz, no dato de negocio).
 // La esteticista ve su agenda y no recibe datos financieros; el SuperAdmin
 // puede filtrar las citas por sede.
 // ============================================================
@@ -32,7 +34,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AppointmentsAreaChart, Sparkline, TopProceduresChart } from "@/components/dashboard/DashboardCharts";
+import { AnimatePresence } from "motion/react";
+import {
+  AppointmentsAreaChart,
+  MoneyChart,
+  Sparkline,
+  TopProceduresChart,
+  TopProductsList,
+} from "@/components/dashboard/DashboardCharts";
+import { SegmentedControl } from "@/components/shared/SegmentedControl";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CountUp } from "@/components/shared/motion";
@@ -40,6 +50,8 @@ import { MotionDiv, MotionLi, staggerProps } from "@/components/shared/motion-el
 import { useBranches } from "@/api/branches.api";
 import { useDashboard } from "@/api/dashboard.api";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useStoredChoice } from "@/hooks/use-stored-choice";
+import { bogotaGreeting } from "@/lib/dates";
 import { formatCop } from "@/lib/format-platform";
 import { useAuthStore } from "@/stores/auth.store";
 import { APPOINTMENT_LABELS, type AppointmentStatus } from "@/types/appointment";
@@ -68,12 +80,22 @@ const STATUS_BADGE: Record<AppointmentStatus, "success" | "secondary" | "warning
 
 const ALL_BRANCHES = "all";
 
-function greeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Buenos días";
-  if (hour < 19) return "Buenas tardes";
-  return "Buenas noches";
-}
+const TREND_VIEWS = [
+  { value: "citas", label: "Citas" },
+  { value: "dinero", label: "Dinero" },
+] as const;
+const TOP_VIEWS = [
+  { value: "procedimientos", label: "Procedimientos" },
+  { value: "productos", label: "Productos" },
+] as const;
+
+/** Cambio de vista dentro de un panel: la anterior se desvanece y entra la nueva. */
+const PANEL_SWAP = {
+  initial: { opacity: 0, y: 6 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -6 },
+  transition: { duration: 0.18 },
+};
 
 export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -83,6 +105,8 @@ export function DashboardPage() {
   const [branch, setBranch] = useState(ALL_BRANCHES);
   const { data: branches } = useBranches(100, isSuperAdmin);
   const { data, isLoading } = useDashboard(branch === ALL_BRANCHES ? undefined : branch);
+  const [trendView, setTrendView] = useStoredChoice("dashboard.trend-view", ["citas", "dinero"], "citas");
+  const [topView, setTopView] = useStoredChoice("dashboard.top-view", ["procedimientos", "productos"], "procedimientos");
 
   const firstName = (user?.name ?? "").split(" ")[0];
   const todayLabel = new Date().toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" });
@@ -93,6 +117,8 @@ export function DashboardPage() {
   const dayProgress = activeToday === 0 ? 0 : Math.round((completedToday / activeToday) * 100);
   const own = data?.agendaPropia ?? false;
   const showFinance = data?.ingresosMes != null;
+  // La preferencia guardada puede ser "dinero" y quien entra ahora no ve finanzas (esteticista)
+  const money = showFinance && trendView === "dinero";
 
   const kpis: Kpi[] = [
     {
@@ -111,7 +137,7 @@ export function DashboardPage() {
           icon: Wallet,
           to: "/patients",
           format: formatCop,
-          spark: data?.ingresosPorDia ?? undefined,
+          spark: data?.ingresosPorDia?.map((d) => ({ fecha: d.fecha, valor: d.cobrado })),
         }
       : {
           label: "Citas de los últimos 14 días",
@@ -147,7 +173,7 @@ export function DashboardPage() {
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">
-            {greeting()}
+            {bogotaGreeting()}
             {firstName && `, ${firstName}`}
           </h1>
           <p className="text-muted-foreground first-letter:uppercase">{todayLabel}</p>
@@ -218,27 +244,56 @@ export function DashboardPage() {
       {/* ── Gráficas ─────────────────────────────────────── */}
       <div className="mt-6 grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <CardHeader>
-            <CardTitle>{own ? "Mis citas por día" : "Citas por día"}</CardTitle>
-            <CardDescription>Últimos 14 días · agendadas frente a completadas</CardDescription>
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>{money ? "Dinero por día" : own ? "Mis citas por día" : "Citas por día"}</CardTitle>
+              <CardDescription>
+                Últimos 14 días · {money ? "cobrado cada día y saldo pendiente acumulado" : "agendadas frente a completadas"}
+              </CardDescription>
+            </div>
+            {/* Sin datos financieros (esteticista) no hay nada que alternar */}
+            {showFinance && <SegmentedControl label="Ver citas o dinero" options={TREND_VIEWS} value={trendView} onChange={setTrendView} />}
           </CardHeader>
           <CardContent>
-            {isLoading || !data ? <Skeleton className="h-[260px] w-full" /> : <AppointmentsAreaChart data={data.citasPorDia} />}
+            {isLoading || !data ? (
+              <Skeleton className="h-[260px] w-full" />
+            ) : (
+              <AnimatePresence mode="wait" initial={false}>
+                <MotionDiv key={money ? "dinero" : "citas"} {...PANEL_SWAP}>
+                  {money ? <MoneyChart data={data.ingresosPorDia ?? []} /> : <AppointmentsAreaChart data={data.citasPorDia} />}
+                </MotionDiv>
+              </AnimatePresence>
+            )}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Procedimientos del mes</CardTitle>
-            <CardDescription>Los 5 más agendados</CardDescription>
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>{topView === "productos" ? "Productos del mes" : "Procedimientos del mes"}</CardTitle>
+              <CardDescription>{topView === "productos" ? "Los 5 con más unidades movidas" : "Los 5 más agendados"}</CardDescription>
+            </div>
+            <SegmentedControl label="Ver procedimientos o productos" options={TOP_VIEWS} value={topView} onChange={setTopView} />
           </CardHeader>
           <CardContent>
             {isLoading || !data ? (
               <Skeleton className="h-[220px] w-full" />
-            ) : data.topProcedimientos.length === 0 ? (
-              <p className="py-10 text-center text-sm text-muted-foreground">Aún no hay citas este mes.</p>
             ) : (
-              <TopProceduresChart data={data.topProcedimientos} />
+              <AnimatePresence mode="wait" initial={false}>
+                <MotionDiv key={topView} {...PANEL_SWAP}>
+                  {topView === "productos" ? (
+                    data.productosDelMes.length === 0 ? (
+                      <p className="py-10 text-center text-sm text-muted-foreground">Aún no hay movimientos de inventario este mes.</p>
+                    ) : (
+                      <TopProductsList data={data.productosDelMes} />
+                    )
+                  ) : data.topProcedimientos.length === 0 ? (
+                    <p className="py-10 text-center text-sm text-muted-foreground">Aún no hay citas este mes.</p>
+                  ) : (
+                    <TopProceduresChart data={data.topProcedimientos} />
+                  )}
+                </MotionDiv>
+              </AnimatePresence>
             )}
           </CardContent>
         </Card>

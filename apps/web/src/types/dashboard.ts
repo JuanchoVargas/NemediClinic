@@ -10,6 +10,31 @@ export interface SerieDia {
   valor: number;
 }
 
+/** Dinero de un día, ya calculado por el backend (PatientPayment + asignaciones). */
+export interface IngresoDia {
+  fecha: string;
+  /** Pagos recibidos ese día. */
+  cobrado: number;
+  /** Cambio de la cartera ese día (vendido a crédito − abonos a deuda); puede ser negativo. */
+  saldoGenerado: number;
+  /** Saldo pendiente total al cierre del día. */
+  saldoAcumulado: number;
+}
+
+/** Top de productos del periodo por unidades movidas (entradas + salidas). */
+export interface ProductoMovido {
+  productId: string;
+  nombre: string;
+  unidadMedida: string;
+  entradas: number;
+  salidas: number;
+  unidades: number;
+  stockActual: number;
+  stockMinimo: number;
+  /** StockStatus de types/inventory.ts: "Verde" | "Amarillo" | "Rojo". */
+  semaforo: string;
+}
+
 export interface CitasDia {
   fecha: string;
   total: number;
@@ -57,10 +82,11 @@ export interface Dashboard {
   pacientesActivos: number;
   pacientesNuevosPorDia: SerieDia[];
   ingresosMes: number | null;
-  ingresosPorDia: SerieDia[] | null;
+  ingresosPorDia: IngresoDia[] | null;
   saldoPendiente: number | null;
   paquetesPorVencer: PaquetePorVencer[] | null;
   stockEnAlerta: StockAlerta[];
   citasPorDia: CitasDia[];
   topProcedimientos: { procedureId: string; nombre: string; cantidad: number }[];
+  productosDelMes: ProductoMovido[];
 }

@@ -20,6 +20,19 @@ export function toLocalIso(date: Date): string {
 }
 
 /** "yyyy-MM-dd" en hora local. Para inputs type="date" y filtros por día. */
+/**
+ * Saludo según la hora de Bogotá (no la del dispositivo): "Buenos días" hasta las 12,
+ * "Buenas tardes" hasta las 19 y "Buenas noches" después.
+ */
+export function bogotaGreeting(now: Date = new Date()): string {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone: "America/Bogota" }).format(now),
+  );
+  if (hour < 12) return "Buenos días";
+  if (hour < 19) return "Buenas tardes";
+  return "Buenas noches";
+}
+
 export function toLocalDate(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }

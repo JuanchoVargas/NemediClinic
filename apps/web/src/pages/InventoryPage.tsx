@@ -87,6 +87,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
+import { SemaforoBadge } from "@/components/shared/SemaforoBadge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { MovementsTab } from "@/components/inventory/MovementsTab";
@@ -115,8 +116,6 @@ import {
   EntryReason,
   PRODUCT_TYPE_LABELS,
   ProductType,
-  STOCK_STATUS_COLORS,
-  STOCK_STATUS_LABELS,
   type Product,
   type StockStatus,
 } from "@/types/inventory";
@@ -363,11 +362,6 @@ function ProductsTab({
       )}
     </div>
   );
-}
-
-function SemaforoBadge({ estado }: { estado: StockStatus }) {
-  const variant = STOCK_STATUS_COLORS[estado] ?? "outline";
-  return <Badge variant={variant}>{estado}</Badge>;
 }
 
 function DeleteProductButton({ product }: { product: Product }) {
@@ -1030,8 +1024,6 @@ function AlertCard({
   const { can } = usePermissions();
   const canRegister = can("inventory.entries.create");
   const estado = product.semaforoStock as StockStatus;
-  const urgenciaLabel = estado === "Rojo" ? "Crítico" : STOCK_STATUS_LABELS[estado];
-  const variant = STOCK_STATUS_COLORS[estado];
 
   const pct =
     product.stockMinimo > 0
@@ -1039,19 +1031,19 @@ function AlertCard({
       : 0;
 
   return (
-    <Card className={cn("border-2", estado === "Rojo" ? "border-destructive/50" : "border-yellow-300")}>
+    <Card className={cn("border-2", estado === "Rojo" ? "border-destructive/50" : "border-sand/60")}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base flex items-center gap-2">
             <AlertTriangle
               className={cn(
                 "h-4 w-4",
-                estado === "Rojo" ? "text-destructive" : "text-yellow-600",
+                estado === "Rojo" ? "text-destructive" : "text-sand-foreground dark:text-sand",
               )}
             />
             {product.nombre}
           </CardTitle>
-          <Badge variant={variant}>{urgenciaLabel}</Badge>
+          <SemaforoBadge estado={estado} />
         </div>
         <CardDescription>
           {PRODUCT_TYPE_LABELS[product.tipoProducto as ProductType] ?? product.tipoProducto}

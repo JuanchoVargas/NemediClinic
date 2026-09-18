@@ -7,7 +7,7 @@ namespace NemediClinic.Api.Services;
 
 /// <summary>
 /// Números del Dashboard en una sola llamada. Todo pasa por el filtro global de tenant.
-///   · desde/hasta acotan lo "del mes" (ingresos, top de procedimientos); por defecto, del día 1 a hoy.
+///   · desde/hasta acotan lo "del mes" (ingresos, top de procedimientos y de productos); por defecto, del día 1 a hoy.
 ///   · branchId filtra lo que tiene sede: las citas. Pagos, paquetes, pacientes y stock son del
 ///     tenant completo (esas entidades no tienen sede).
 ///   · Una esteticista ve su propia agenda y no recibe los campos financieros.
@@ -119,25 +119,72 @@ public class DashboardService
             })
             .ToListAsync(ct);
 
+        // ── Top 5 productos del periodo por unidades movidas (InventoryMovement: entradas + salidas) ──
+        var movimientos = await _db.InventoryMovements.AsNoTracking()
+            .Where(m => m.FechaMovimiento >= periodoInicio && m.FechaMovimiento < periodoFin)
+            .GroupBy(m => new { m.ProductId, m.Product.Nombre, m.Product.UnidadMedida, m.Product.StockActual, m.Product.StockMinimo })
+            .Select(g => new ProductoMovidoDto
+            {
+                ProductId = g.Key.ProductId,
+                Nombre = g.Key.Nombre,
+                UnidadMedida = g.Key.UnidadMedida,
+                Entradas = g.Sum(m => m.TipoMovimiento == MovementType.Entrada ? m.Cantidad : 0m),
+                Salidas = g.Sum(m => m.TipoMovimiento == MovementType.Salida ? m.Cantidad : 0m),
+                Unidades = g.Sum(m => m.Cantidad),
+                StockActual = g.Key.StockActual,
+                StockMinimo = g.Key.StockMinimo
+            })
+            .OrderByDescending(x => x.Unidades)
+            .Take(5)
+            .ToListAsync(ct);
+        foreach (var producto in movimientos)
+            producto.Semaforo = Semaforo(producto.StockActual, producto.StockMinimo);
+        dto.ProductosDelMes = movimientos;
+
         if (!verFinanzas)
             return dto;
 
-        // ── Ingresos del periodo (PatientPayment) ──
+        // ── Dinero: todo sale de PatientPayment y de las asignaciones ──
+        // Se cargan las asignaciones vivas (no Vencido) con sus pagos: la cartera de un día cualquiera es
+        // Σ max(0, precio − pagado hasta ese día) de las asignaciones que ya existían ese día.
+        var asignaciones = await _db.PatientPackages.AsNoTracking()
+            .Where(pp => pp.Estado != PackageStatus.Vencido)
+            .Select(pp => new
+            {
+                pp.FechaInicio,
+                pp.PrecioAcordado,
+                Pagos = pp.Payments.Select(p => new { p.FechaPago, p.Monto }).ToList()
+            })
+            .ToListAsync(ct);
+
+        decimal CarteraAl(DateOnly dia) => asignaciones
+            .Where(a => a.FechaInicio <= dia)
+            .Sum(a => Math.Max(0m, a.PrecioAcordado - a.Pagos.Where(p => p.FechaPago <= dia).Sum(p => p.Monto)));
+
+        // Lo cobrado incluye los pagos de asignaciones Vencidas: el dinero entró igual
         var pagos = await _db.PatientPayments.AsNoTracking()
             .Where(p => p.FechaPago >= (from < serieDesde ? from : serieDesde) && p.FechaPago <= to)
             .Select(p => new { p.FechaPago, p.Monto })
             .ToListAsync(ct);
         dto.IngresosMes = pagos.Where(p => p.FechaPago >= from).Sum(p => p.Monto);
-        dto.IngresosPorDia = Dias(serieDesde, to)
-            .Select(d => new SerieDiaDto { Fecha = d, Valor = pagos.Where(p => p.FechaPago == d).Sum(p => p.Monto) })
-            .ToList();
 
-        // ── Saldo pendiente total: asignaciones vivas (no Vencido) con saldo a favor de la clínica ──
-        var saldos = await _db.PatientPackages.AsNoTracking()
-            .Where(pp => pp.Estado != PackageStatus.Vencido)
-            .Select(pp => pp.PrecioAcordado - pp.Payments.Sum(p => p.Monto))
-            .ToListAsync(ct);
-        dto.SaldoPendiente = saldos.Where(s => s > 0).Sum();
+        var carteraAnterior = CarteraAl(serieDesde.AddDays(-1));
+        dto.IngresosPorDia = [];
+        foreach (var dia in Dias(serieDesde, to))
+        {
+            var cartera = CarteraAl(dia);
+            dto.IngresosPorDia.Add(new IngresoDiaDto
+            {
+                Fecha = dia,
+                Cobrado = pagos.Where(p => p.FechaPago == dia).Sum(p => p.Monto),
+                SaldoGenerado = cartera - carteraAnterior,
+                SaldoAcumulado = cartera
+            });
+            carteraAnterior = cartera;
+        }
+
+        // ── Saldo pendiente total hoy: misma regla, con todos los pagos registrados ──
+        dto.SaldoPendiente = asignaciones.Sum(a => Math.Max(0m, a.PrecioAcordado - a.Pagos.Sum(p => p.Monto)));
 
         // ── Paquetes por vencer en 30 días ──
         var activos = await _db.PatientPackages.AsNoTracking()
@@ -172,6 +219,12 @@ public class DashboardService
 
         return dto;
     }
+
+    /// <summary>Misma regla que ProductsController: Rojo en 0 o bajo la mitad del mínimo; Amarillo bajo el mínimo.</summary>
+    private static string Semaforo(decimal stockActual, decimal stockMinimo) =>
+        stockActual == 0m || stockActual < stockMinimo * 0.5m ? "Rojo"
+        : stockActual < stockMinimo ? "Amarillo"
+        : "Verde";
 
     private static IEnumerable<DateOnly> Dias(DateOnly desde, DateOnly hasta)
     {

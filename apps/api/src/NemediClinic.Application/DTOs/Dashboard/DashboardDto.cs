@@ -1,8 +1,9 @@
 namespace NemediClinic.Application.DTOs.Dashboard;
 
 /// <summary>
-/// Respuesta de GET /api/v1/dashboard. Los campos financieros (IngresosMes, IngresosPorDia,
-/// SaldoPendiente, PaquetesPorVencer) van en null para el rol Esteticista, que tampoco puede
+/// Respuesta de GET /api/v1/dashboard. Todo llega calculado: la web solo pinta.
+/// Los campos financieros (IngresosMes, IngresosPorDia, SaldoPendiente, PaquetesPorVencer)
+/// van en null para el rol Esteticista, que tampoco puede
 /// leer paquetes ni pagos en el resto de la API; sus métricas de citas son las de SU agenda.
 /// </summary>
 public class DashboardDto
@@ -21,7 +22,8 @@ public class DashboardDto
     public List<SerieDiaDto> PacientesNuevosPorDia { get; set; } = [];
 
     public decimal? IngresosMes { get; set; }
-    public List<SerieDiaDto>? IngresosPorDia { get; set; }
+    /// <summary>Últimos 14 días terminando en Hasta: cobrado, saldo generado y saldo pendiente acumulado de cada día.</summary>
+    public List<IngresoDiaDto>? IngresosPorDia { get; set; }
     public decimal? SaldoPendiente { get; set; }
     public List<PaquetePorVencerDto>? PaquetesPorVencer { get; set; }
 
@@ -29,6 +31,38 @@ public class DashboardDto
     /// <summary>Últimos 14 días terminando en Hasta.</summary>
     public List<CitasDiaDto> CitasPorDia { get; set; } = [];
     public List<TopProcedimientoDto> TopProcedimientos { get; set; } = [];
+    /// <summary>Top 5 productos del periodo por unidades movidas (entradas + salidas de InventoryMovement).</summary>
+    public List<ProductoMovidoDto> ProductosDelMes { get; set; } = [];
+}
+
+/// <summary>Dinero de un día. Sale de PatientPayment y de las asignaciones (PatientPackage).</summary>
+public class IngresoDiaDto
+{
+    public DateOnly Fecha { get; set; }
+    /// <summary>Suma de los pagos con FechaPago = ese día.</summary>
+    public decimal Cobrado { get; set; }
+    /// <summary>
+    /// Cuánto cambió la cartera ese día: lo vendido a crédito menos lo abonado a deuda anterior
+    /// (= SaldoAcumulado de hoy − el de ayer). Negativo cuando se cobró más deuda de la que se generó.
+    /// </summary>
+    public decimal SaldoGenerado { get; set; }
+    /// <summary>Saldo pendiente total al cierre del día (misma regla que DashboardDto.SaldoPendiente).</summary>
+    public decimal SaldoAcumulado { get; set; }
+}
+
+public class ProductoMovidoDto
+{
+    public Guid ProductId { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public string UnidadMedida { get; set; } = string.Empty;
+    public decimal Entradas { get; set; }
+    public decimal Salidas { get; set; }
+    /// <summary>Entradas + Salidas.</summary>
+    public decimal Unidades { get; set; }
+    public decimal StockActual { get; set; }
+    public decimal StockMinimo { get; set; }
+    /// <summary>Semáforo ACTUAL del producto: "Verde" | "Amarillo" | "Rojo" (misma regla que ProductsController).</summary>
+    public string Semaforo { get; set; } = string.Empty;
 }
 
 public class EstadoCantidadDto

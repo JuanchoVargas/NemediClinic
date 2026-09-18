@@ -14,6 +14,8 @@ Fecha: 2026-09-15. Ejecutado contra la API local (`localhost:5055`, Development)
 | `bc4ead6` | Filtro global de tenant fijado al tenant de la primera request del proceso | Un JWT de otro tenant veía todos los datos del primero (F03) |
 | `be5a5d1` | La API solo aceptaba enums como entero y el frontend envía nombres | 400 al cambiar estado de cita, registrar pago, crear producto y registrar entrada |
 
+> **Actualización 2026-09-18.** Las tablas F01–F17 de abajo son la foto del 2026-09-15 y se conservan como histórico. Lo que cambió desde entonces (bugs cerrados, flujos nuevos F18–F22 y lo que sigue abierto) está en la sección **"Estado al 2026-09-18"**, al final. Desde el 2026-09-16 los flujos ya no se ejecutan con scripts sueltos sino con Playwright: `pnpm test` (aislamiento multi-tenant, gate de push), `pnpm test:ui` (recorrido por rol con capturas) y `pnpm test:mobile` (responsive a 390 px).
+
 ---
 
 ## F01 · Autenticación
@@ -282,26 +284,83 @@ Estado de los datos demo tras la ejecución: los registros de prueba (paciente 1
 ### Altos
 
 5. **Borrar un paquete del catálogo deja inaccesibles sus asignaciones** (`GET /patient-packages/{id}` → 404 por el filtro global sobre la relación requerida). Bloquear el borrado si hay asignaciones o proyectar sin depender del filtro.
-6. **Completar la última sesión desde una cita no cierra el paquete** (`AppointmentsController.UpdateStatus` no replica la regla de `PatientPackagesController.CompleteSession`). Mover la regla a un servicio compartido.
-7. **401 en mitad de la sesión no limpia ni redirige.** El segundo interceptor de `axios.ts` recibe un `ApiError` sin `response`. Unificar en un solo interceptor y redirigir a `/login`.
-8. **`GET /inventory/movements/product/{id}` responde 500** (`m.Product` sin `Include` en `MapToDto`).
-9. **Historia clínica solo lectura en la UI** aunque la API soporta editar antecedentes y crear notas.
+6. ✅ **Resuelto el 2026-09-18 (`b019ced`, `PatientPackageService.CompleteSessionAsync` compartido).** ~~Completar la última sesión desde una cita no cierra el paquete~~ (`AppointmentsController.UpdateStatus` no replica la regla de `PatientPackagesController.CompleteSession`). Mover la regla a un servicio compartido.
+7. ✅ **Resuelto (interceptor único: limpia la sesión, avisa y va a `/login?redirect=`).** ~~401 en mitad de la sesión no limpia ni redirige.~~ El segundo interceptor de `axios.ts` recibe un `ApiError` sin `response`. Unificar en un solo interceptor y redirigir a `/login`.
+8. ✅ **Resuelto el 2026-09-18 (`b019ced`; también el listado paginado) y con pestaña "Movimientos" en Inventario.** ~~`GET /inventory/movements/product/{id}` responde 500~~ (`m.Product` sin `Include` en `MapToDto`).
+9. ✅ **Resuelto el 2026-09-18 (`d621b98` notas con fotos, `b019ced` edición de antecedentes y nota desde la cita Completada).** ~~Historia clínica solo lectura en la UI~~ aunque la API soporta editar antecedentes y crear notas.
 10. **Login acepta usuarios de tenants eliminados o inactivos.**
 
 ### Medios
 
 11. Admin no puede crear usuarios: la ruta lo permite, `auth/register` exige SuperAdmin.
-12. Select de procedimiento en "Nueva cita" muestra inactivos.
+12. ✅ Resuelto (`b019ced`). ~~Select de procedimiento en "Nueva cita" muestra inactivos.~~
 13. Pagos aceptan sobrepago (saldo negativo).
-14. `proximaCita` nunca se calcula.
+14. ✅ Resuelto (`d621b98`: `PatientDto.ProximaCita`). ~~`proximaCita` nunca se calcula.~~
 15. No existe endpoint para quitar un procedimiento de un paquete.
-16. Vencimiento de paquetes y consumo de cabina no existen (F14, F15).
-17. Dashboard sin endpoint (F16).
+16. ⚠️ Mitad resuelto: el vencimiento existe desde `b019ced` (job Hangfire diario + alerta por `DiasAlertaVencimiento`). **El consumo de cabina (F14) sigue sin existir.**
+17. ✅ Resuelto (`b019ced`: `GET /api/v1/dashboard` + gráficas). ~~Dashboard sin endpoint (F16).~~
 18. `LoginResponse.expiration` informa 60 min aunque el JWT dure 480.
 19. El frontend descarta el `refreshToken`.
 
 ### Bajos
 
 20. Esteticista puede listar todos los usuarios con email.
-21. Flechas de navegación de la hoja del día sin `aria-label`; título con capitalización por palabra.
+21. ✅ Resuelto (`bdbf2d4`). ~~Flechas de navegación de la hoja del día sin `aria-label`; título con capitalización por palabra.~~
 22. Advertencia EF 10622 (`Package` filtrado, `PackageProcedure` requerido sin filtro): mismo mecanismo que el bug 5.
+
+---
+
+## Estado al 2026-09-18
+
+Cinco commits cerraron la mayor parte de lo anterior y agregaron cinco flujos. Todos se verificaron con los cuatro checks en 0 (`dotnet build`, `pnpm build`, `pnpm lint`, `pnpm test`) al cerrar cada uno.
+
+| Commit | Contenido |
+|---|---|
+| `2aaef5c` | Nivel de plataforma: PlatformAdmin, canales, oportunidades, liquidación, marca por dominio, 423 por mora |
+| `d621b98` | Adjuntos de imagen (URLs firmadas, Evolución Antes/Después) + rediseño visual completo |
+| `b019ced` | Dashboard real, cierre y vencimiento de paquetes, historia clínica editable, los ❌ del recorrido |
+| `c1659f3` | Contraseñas: cambio obligatorio, `change-password`, restablecimiento con clave temporal |
+| `a7fb14f` | Valoraciones (embudo y conversión) + consentimiento informado firmado en PDF |
+| `bdbf2d4` | Responsive a 390 px + PWA con la marca del canal |
+
+### Qué pasó con cada flujo
+
+| Flujo | Antes (09-15) | Ahora | Cómo se verifica |
+|---|---|---|---|
+| F03 Multi-tenant | ✅ tras fix, sin onboarding | ✅ El PlatformAdmin crea tenant + primer SuperAdmin; el PlatformAdmin recibe 403 en datos de clínica; los adjuntos de otro tenant dan 404 | `pnpm test` (gate de push) |
+| F04 Pacientes | ⚠️ `proximaCita` nula | ✅ Próxima cita calculada; foto de perfil con iniciales de respaldo | recorrido admin cap. 2 |
+| F05 Historia clínica | ⚠️ solo lectura | ✅ Editar antecedentes, nota con fotos Antes/Después, nota desde la cita Completada (queda ligada a la sesión del paquete), pestaña Evolución con comparador | recorrido esteticista cap. 4 |
+| F06 Procedimientos | ⚠️ inactivos en "Nueva cita" | ✅ Filtrados; switch Activo; tarjetas con imagen; "Requiere consentimiento" | recorrido superadmin |
+| F08/F09 Paquete y pagos | ✅ | ✅ + eliminar asignación y eliminar pago (soft, Admin) | API + ficha del paciente |
+| F11 Ciclo de cita | ⚠️ no cerraba el paquete | ✅ Cierra el paquete al completar la última sesión; 409 `consent_required` si falta el consentimiento | recorrido esteticista |
+| F12 Hoja del día | ⚠️ aria-label y título | ✅ Corregidos; diseño de tablet a 2 columnas; disponible sin conexión (24 h) | `pnpm test:mobile` + verificación offline manual |
+| F13 Inventario | ❌ movimientos 500 | ✅ Pestaña Movimientos | recorrido admin cap. 5 |
+| F15 Vencimiento | ❌ no existía | ✅ Job Hangfire 02:00 (`paquetes-vencimiento`), `PorVencer`/`DiasParaVencer` en el DTO, alerta en el dashboard. En Development se fuerza con `POST /dev/run-package-expiration` | API |
+| F16 Dashboard | ❌ placeholder | ✅ 8 indicadores, sparklines, área 14 días, top 5 procedimientos, alertas con enlace, filtro de sede para el dueño | recorrido superadmin cap. 1 |
+| F17 Sesión | ⚠️ 401 mal manejado | ✅ 401 limpia sesión y redirige. El refresh token sigue sin usarse | — |
+| F14 Consumo de cabina | ❌ | ❌ **Sigue sin existir** | — |
+
+### Flujos nuevos
+
+| Flujo | Pasos verificados | Estado |
+|---|---|---|
+| **F18 · Plataforma** | Login PlatformAdmin → `/platform`; crear tenant; "Crear admin" muestra la clave temporal una sola vez; canales (Nemedi no se borra); oportunidad con NIT protegido 90 días (409 si lo tiene otro canal); activar oportunidad crea el tenant; liquidación por mes con CSV; tenant Suspendido → 423 en escrituras y banner | ✅ |
+| **F19 · Contraseñas** | Usuario nuevo entra con clave temporal → solo puede ver `/change-password` (la API responde 403 `password_change_required` al resto) → cambia la clave (mín. 8, letra y número) → se invalidan los refresh tokens; restablecer desde Usuarios (SuperAdmin/Admin) y desde Plataforma; correo solo si hay `Smtp:*` configurado | ✅ (el correo no se probó contra un SMTP real) |
+| **F20 · Valoraciones** | Crear valoración de un prospecto sin cédula; fotos "Antes"; Rechazar con motivo; Convertir (Admin) crea el paciente si hace falta, asigna el paquete y mueve las fotos a la ficha; embudo y tasa de conversión | ✅ |
+| **F21 · Consentimiento** | Plantilla por procedimiento con `{{paciente}} {{cedula}} {{procedimiento}} {{fecha}}`; iniciar una cita sin consentimiento vigente (365 días) abre la firma; firma con el dedo → PDF (QuestPDF) guardado como adjunto; el PDF firmado no se puede borrar (409); pestaña Consentimientos en la ficha | ✅ |
+| **F22 · Móvil y PWA** | 390×844: cero scroll horizontal y cero elementos recortados en todas las rutas de los 4 roles + páginas públicas (50 capturas en `docs/manual/img/mobile/`); tablas como tarjetas; diálogos a pantalla completa; calendario en vista día; manifest con nombre y color del canal; hoja del día legible sin red; la copia offline se borra al cerrar sesión | ✅ (la instalación en un teléfono real y en iOS no se probó) |
+
+### Lo que sigue abierto
+
+| # | Pendiente | Prioridad |
+|---|---|---|
+| 5 / 22 | Borrar un paquete del catálogo deja inaccesibles sus asignaciones (warning EF 10622) | Alta |
+| 10 | Login acepta usuarios de tenants eliminados | Alta |
+| F14 | Consumo de cabina: ninguna ruta genera `Salida` de inventario | Alta si se promete |
+| 11 | Admin ve "Nuevo usuario" pero `auth/register` exige SuperAdmin (403) | Media |
+| 13 | Pagos aceptan sobrepago | Media |
+| 15 | No hay endpoint para quitar un procedimiento de un paquete | Media |
+| 18 / 19 | `LoginResponse.expiration` fijo en 60 min; el frontend descarta el refresh token | Media |
+| 20 | Esteticista puede listar usuarios con email | Baja |
+| — | Instalación de la PWA en iOS: Safari no emite `beforeinstallprompt`, no hay banner (se instala desde Compartir) | Baja |
+| — | Sin cola de escritura offline: sin red la app solo lee | Fuera de alcance |

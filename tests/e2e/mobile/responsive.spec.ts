@@ -101,7 +101,7 @@ test("dueño (SuperAdmin): todas sus rutas", async ({ page }) => {
     await page.locator("[role=tab]", { hasText: name }).click();
     await page.waitForTimeout(900);
     await expectNoHorizontalScroll(page, `superadmin ficha · ${name}`);
-    await page.screenshot({ path: `${SHOTS}/superadmin-ficha-${name.toLowerCase().normalize("NFD").replace(/[^a-z]+/g, "-")}.png` });
+    await page.screenshot({ path: `${SHOTS}/superadmin-ficha-${name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z]+/g, "-")}.png` });
   }
 
   // Menú lateral (panel deslizante en móvil)
@@ -147,6 +147,6 @@ test("plataforma (PlatformAdmin): /platform y sus pestañas", async ({ page }) =
     await page.locator("[role=tab]", { hasText: name }).click();
     await page.waitForTimeout(900);
     await expectNoHorizontalScroll(page, `platform · ${name}`);
-    await page.screenshot({ path: `${SHOTS}/platform-${name.toLowerCase().normalize("NFD").replace(/[^a-z]+/g, "-")}.png` });
+    await page.screenshot({ path: `${SHOTS}/platform-${name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z]+/g, "-")}.png` });
   }
 });

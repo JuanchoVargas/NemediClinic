@@ -22,12 +22,20 @@ test("Cap5 · Vista general (dueño)", async ({ page }) => {
     after: async () => { await expect(option(page, "Camila")).toBeVisible(); },
   });
 
+  // El calendario vuelve a pedir las citas con ?esteticistId=…: se comprueba esa respuesta (todas de
+  // Camila) y que el calendario pinta exactamente esas, sin depender de qué pacientes tenga el seed.
+  let filtered: Promise<{ esteticistNombre: string }[]> | null = null;
   await step(page, "Elige Camila Ruiz: el calendario muestra solo sus citas", option(page, "Camila"), {
+    before: async () => {
+      filtered = page
+        .waitForResponse((r) => /\/appointments\?/i.test(r.url()) && /esteticistId=/i.test(r.url()) && r.ok())
+        .then((r) => r.json());
+    },
     after: async () => {
-      await page.waitForTimeout(1200);
-      const texts = await page.locator(".fc-event").allInnerTexts();
-      expect(texts.length).toBeGreaterThan(0);
-      expect(texts.some((t) => /Santiago|Mariana/.test(t)), "solo deben quedar citas de Camila").toBe(false);
+      const items = await filtered!;
+      expect(items.length).toBeGreaterThan(0);
+      expect(items.every((a) => a.esteticistNombre.includes("Camila")), "solo deben llegar citas de Camila").toBe(true);
+      await expect(page.locator(".fc-event")).toHaveCount(items.length);
     },
   });
 

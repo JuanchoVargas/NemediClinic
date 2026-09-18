@@ -1,11 +1,11 @@
 ---
 title: "NemediClinic — Guía de uso"
-subtitle: "Versión 1.0 · Recorrido guiado por rol con pantallas reales"
-date: "15 de septiembre de 2026"
+subtitle: "Versión 1.1 · Recorrido guiado por rol con pantallas reales"
+date: "18 de septiembre de 2026"
 lang: es
 ---
 
-> **Cómo usar esta guía.** Cada paso tiene un número, una instrucción y la pantalla tal como la verás. En la imagen, el recuadro rojo con el número señala exactamente dónde hacer clic. Los pasos marcados como **Pendiente** corresponden a funciones que todavía están en desarrollo; están reunidos al final en "Funciones en desarrollo".
+> **Cómo usar esta guía.** Cada paso tiene un número, una instrucción y la pantalla tal como la verás. En la imagen, el recuadro rojo con el número señala exactamente dónde hacer clic. Al final encontrarás lo que cambió en esta versión ("Novedades"), cómo usar el sistema desde el celular y la tablet, y lo que todavía está en desarrollo.
 
 **Cuentas de ejemplo usadas en las pantallas**
 
@@ -111,9 +111,9 @@ Así se crea una persona de recepción. **Después verás** su correo en la list
 
 ![](img/superadmin/cap2-10-cambia-el-apellido-y-presiona-guardar-cambios.png)
 
-### 11. Desactivar un usuario — Pendiente {.pendiente}
+### 11. Vuelve a editar y apaga el interruptor Activo
 
-Hoy el formulario no tiene un interruptor para desactivar sin borrar. Si una persona deja de trabajar en la clínica, usa la papelera de su fila. Ver "Funciones en desarrollo".
+Úsalo cuando alguien deja de trabajar en la clínica: ya no podrá iniciar sesión, pero su historial (citas, notas) se conserva. Presiona Guardar cambios.
 
 ![](img/superadmin/cap2-11-vuelve-a-editar-y-apaga-el-interruptor-activo-pa.png)
 
@@ -165,9 +165,9 @@ Un servicio inactivo deja de ofrecerse sin perder su historial.
 
 ![](img/superadmin/cap3-07-presiona-guardar-cambios-el-procedimiento-queda-.png)
 
-### 8. El servicio inactivo no debería ofrecerse al agendar — Pendiente {.pendiente}
+### 8. El servicio inactivo ya no se ofrece al agendar
 
-Hoy, al crear una cita, la lista de procedimientos todavía incluye los inactivos. Ver "Funciones en desarrollo".
+Al crear una cita, la lista de procedimientos muestra solo los activos.
 
 ![](img/superadmin/cap3-08-en-el-calendario-haz-clic-en-un-espacio-libre-y-.png)
 
@@ -286,6 +286,10 @@ Un producto nuevo arranca con stock 0. **Después verás** que queda en Rojo has
 | Crear una sede | Administración → Sedes → Nueva sede |
 | Dar de alta a alguien del equipo | Administración → Usuarios → Nuevo usuario (elige el rol y la sede) |
 | Editar o eliminar un usuario | Administración → Usuarios → lápiz / papelera de la fila |
+| Desactivar a alguien sin borrarlo | Administración → Usuarios → lápiz → interruptor Activo |
+| Restablecer la contraseña de alguien | Administración → Usuarios → llave de la fila (muestra una clave temporal una sola vez) |
+| Pedir consentimiento para un servicio | Procedimientos → lápiz → "Requiere consentimiento" y edita la plantilla |
+| Ver cómo va el negocio | Dashboard (elige la sede arriba) |
 | Crear o editar un servicio | Procedimientos → Nuevo procedimiento / lápiz |
 | Retirar un servicio del catálogo | Procedimientos → lápiz → interruptor Activo |
 | Armar un paquete con descuento | Paquetes → Nuevo paquete → agrega procedimientos → escribe el precio |
@@ -328,9 +332,9 @@ Recepción administra pacientes, agenda, paquetes, pagos e inventario. No crea s
 
 ![](img/admin/cap1-05-si-escribes-la-direccion-de-mi-clinica-en-el-nav.png)
 
-### 6. Aviso de permisos — Pendiente {.pendiente}
+### 6. Y verás el aviso "No tienes permisos para acceder a esa sección"
 
-Al escribir la dirección directamente en el navegador, el sistema te devuelve al inicio pero todavía no muestra el aviso "No tienes permisos". Ver "Funciones en desarrollo".
+El aviso aparece arriba a la derecha y desaparece solo.
 
 ![](img/admin/cap1-06-y-deberia-mostrarse-el-aviso-no-tienes-permisos.png)
 
@@ -598,11 +602,11 @@ Abre la ficha del paciente y haz clic en Paquetes. **Después verás** el avance
 
 ![](img/admin/cap5-05-abre-la-pestana-productos-el-semaforo-quedo-en-v.png)
 
-### 6. Movimientos por producto — Pendiente {.pendiente}
+### 6. Haz clic en la pestaña Movimientos
 
-Todavía no existe una pantalla con el historial de movimientos (entradas y salidas) de un producto. Ver "Funciones en desarrollo".
+**Después verás** el historial de entradas y salidas, con fecha, producto, cantidad y quién lo registró.
 
-![](img/admin/cap5-06-movimientos-de-inventario-por-producto.png)
+![](img/admin/cap5-06-haz-clic-en-la-pestana-movimientos-para-ver-el-h.png)
 
 ## Guía rápida · Recepción {.capitulo}
 
@@ -618,6 +622,10 @@ Todavía no existe una pantalla con el historial de movimientos (entradas y sali
 | Vender un paquete | Paquetes → Ver → Asignar a paciente |
 | Registrar un pago | Pacientes → Ver → Pagos → Registrar pago |
 | Reponer stock | Inventario → Alertas → Registrar entrada |
+| Ver entradas y salidas | Inventario → Movimientos |
+| Registrar una valoración | Valoraciones → Nueva valoración |
+| Convertir una valoración en venta | Valoraciones → Convertir (crea el paciente si hace falta y asigna el paquete) |
+| Cambiar mi contraseña | Menú de usuario → Cambiar contraseña |
 
 # Parte 3 · Esteticista {.parte}
 
@@ -653,9 +661,7 @@ La esteticista trabaja sobre su propia agenda: ve solo sus citas, las atiende ca
 
 ![](img/esteticista/cap1-05-si-escribes-la-direccion-de-usuarios-en-el-naveg.png)
 
-### 6. Aviso de permisos — Pendiente {.pendiente}
-
-El aviso "No tienes permisos" todavía no se muestra al escribir la dirección directamente. Ver "Funciones en desarrollo".
+### 6. Y verás el aviso "No tienes permisos para acceder a esa sección"
 
 ![](img/esteticista/cap1-06-y-deberia-mostrarse-el-aviso-no-tienes-permisos.png)
 
@@ -663,7 +669,7 @@ El aviso "No tienes permisos" todavía no se muestra al escribir la dirección d
 
 ![](img/esteticista/cap1-07-si-escribes-la-direccion-de-paquetes-vuelves-al-.png)
 
-### 8. Aviso de permisos — Pendiente {.pendiente}
+### 8. Con el mismo aviso de permisos
 
 ![](img/esteticista/cap1-08-y-deberia-mostrarse-el-aviso-no-tienes-permisos.png)
 
@@ -836,16 +842,83 @@ Crear productos es tarea del dueño o de recepción.
 | Empezar a atender | Clic en la cita → Iniciar |
 | Terminar la sesión | Clic en la cita → Completar (descuenta la sesión del paquete) |
 | Registrar un paciente nuevo | Inicio → Ver pacientes → Nuevo paciente |
-| Consultar la historia clínica | Pacientes → Ver → Historia clínica |
+| Consultar o completar la historia clínica | Pacientes → Ver → Historia clínica → Editar |
+| Dejar la nota de la sesión con fotos | Pacientes → Ver → Historia clínica → Nueva nota (o desde la cita Completada) |
+| Comparar Antes y Después | Pacientes → Ver → Evolución |
+| Hacer firmar el consentimiento | Clic en la cita → Iniciar (si el servicio lo exige, se abre la firma) |
+| Registrar una valoración | Valoraciones → Nueva valoración |
 | Registrar una entrada de producto | Inventario → Entradas → Registrar entrada |
+
+# Novedades de la versión 1.1 {.parte}
+
+## Contraseña temporal y cambio obligatorio {.capitulo}
+
+Toda cuenta nueva nace con una **contraseña temporal** que el sistema muestra una sola vez a quien la crea (cópiala y entrégasela a la persona). En su primer ingreso, esa persona solo verá la pantalla **Cambiar contraseña**: debe escribir la temporal y una nueva de mínimo 8 caracteres, con al menos una letra y un número. Hasta que lo haga no puede entrar a ninguna otra pantalla.
+
+Si alguien olvida su clave, el dueño o recepción la restablecen desde Administración → Usuarios con el botón de la llave: aparece una nueva clave temporal, también una sola vez.
+
+![](img/mobile/superadmin-cambiar-contrasena.png){width=38%}
+
+## Dashboard {.capitulo}
+
+La primera pantalla muestra el día y el mes de la clínica: citas de hoy, ingresos del mes y saldo por cobrar, pacientes activos, productos en alerta, citas por día de las últimas dos semanas, los cinco procedimientos más agendados, la agenda de hoy y las alertas (paquetes por vencer y stock bajo) con un enlace para resolver cada una. El dueño puede filtrar por sede.
+
+## Valoraciones {.capitulo}
+
+En **Valoraciones** se registra la consulta inicial de una persona, aunque todavía no sea paciente (no pide cédula): quién la atendió, el diagnóstico, el tratamiento sugerido, el precio cotizado y las fotos del "Antes".
+
+1. Presiona **Nueva valoración**, completa los datos y guarda. Queda como **Pendiente**.
+2. Si la persona no acepta, presiona el botón de rechazar de su fila y escribe el motivo.
+3. Si acepta, presiona **Convertir** (dueño o recepción): el sistema crea el paciente si hace falta, le asigna el paquete elegido y pasa las fotos a su ficha.
+
+Arriba verás el embudo (pendientes, aceptadas, rechazadas) y la tasa de conversión.
+
+![](img/mobile/superadmin-valoraciones.png){width=38%}
+
+## Consentimiento informado {.capitulo}
+
+1. En **Procedimientos**, edita el servicio y enciende **Requiere consentimiento**. Desde la tarjeta del servicio puedes editar la plantilla del texto; las palabras `{{paciente}}`, `{{cedula}}`, `{{procedimiento}}` y `{{fecha}}` se reemplazan solas.
+2. Cuando la esteticista presiona **Iniciar** en una cita de ese servicio y la paciente no tiene un consentimiento firmado en el último año, se abre la pantalla de firma.
+3. La paciente lee el texto y **firma con el dedo o con un lápiz** en el recuadro (pensado para tablet). Al presionar **Firmar y guardar**, la cita se inicia.
+4. El sistema guarda un PDF con el texto y la firma. Se consulta en la ficha del paciente, pestaña **Consentimientos**. Un consentimiento firmado no se puede borrar.
+
+![](img/mobile/superadmin-ficha-consentimientos.png){width=38%}
+
+## Paquetes que se cierran y vencen solos {.capitulo}
+
+- Al completar la última sesión de un paquete, el paquete pasa a **Completado** sin que nadie tenga que hacerlo.
+- Cada noche el sistema marca como **Vencido** todo paquete cuya vigencia terminó. Los que están por vencer aparecen antes como alerta en el Dashboard y en la ficha del paciente.
+- Recepción puede eliminar una asignación o un pago registrado por error desde la ficha del paciente.
+
+# En el celular y la tablet {.parte}
+
+## Todo cabe en la pantalla {.capitulo}
+
+El sistema se adapta al ancho del teléfono: el menú se abre con el botón de arriba a la izquierda, las tablas se convierten en tarjetas, los formularios ocupan toda la pantalla y el calendario abre en la vista de **Día**.
+
+![](img/mobile/superadmin-menu.png){width=32%} ![](img/mobile/superadmin-pacientes.png){width=32%} ![](img/mobile/superadmin-dialogo-usuario.png){width=32%}
+
+![](img/mobile/esteticista-calendario.png){width=32%} ![](img/mobile/superadmin-ficha.png){width=32%} ![](img/mobile/superadmin-dashboard.png){width=32%}
+
+## Instalar la aplicación {.capitulo}
+
+1. Abre el sistema en **Chrome** (Android o computador). Abajo aparece el aviso **Instalar**: presiónalo y confirma.
+2. En **iPhone o iPad** (Safari) no aparece el aviso: presiona **Compartir** y luego **Añadir a pantalla de inicio**.
+3. La aplicación queda con el nombre y el color de tu marca y abre a pantalla completa, sin la barra del navegador.
+
+## Sin conexión {.capitulo}
+
+Si se cae el internet, la **Hoja del día**, las **citas** y las **fichas de pacientes** que ya habías abierto en las últimas 24 horas se siguen pudiendo consultar. Sin conexión no se puede guardar nada: espera a que vuelva la red para registrar cambios. Por seguridad, esa copia se borra al cerrar sesión.
+
+![](img/mobile/tablet-hoja-del-dia-offline.png){width=60%}
 
 # Funciones en desarrollo {.parte}
 
-Lo que el recorrido encontró pendiente. Está en el plan de trabajo.
+El recorrido automático de esta versión no encontró pasos rotos. Esto es lo que todavía no existe y está en el plan de trabajo:
 
-- **Desactivar un usuario sin borrarlo.** Pronto podrás apagar un interruptor "Activo" en el formulario de usuario para que alguien deje de ingresar sin perder su historial. (Dueño, capítulo 2, paso 11.)
-- **Servicios inactivos fuera del agendamiento.** Pronto, al crear una cita, la lista de procedimientos mostrará solo los activos. (Dueño, capítulo 3, paso 8.)
-- **Aviso claro al entrar donde no corresponde.** Pronto, si escribes una dirección que no es para tu rol, además de volver al inicio verás el aviso "No tienes permisos para acceder a esa sección". (Recepción, capítulo 1, paso 6; Esteticista, capítulo 1, pasos 6 y 8.)
-- **Historial de movimientos por producto.** Pronto podrás ver, producto por producto, todas sus entradas y salidas. (Recepción, capítulo 5, paso 6.)
-- **Editar la historia clínica y registrar notas de evolución desde la ficha.** Hoy la historia se consulta; pronto la esteticista podrá completar antecedentes y dejar la nota de cada sesión.
-- **Pausar o vencer un paquete.** Pronto podrás cambiar el estado de un paquete asignado desde la ficha del paciente.
+- **Descuento automático de inventario.** Pronto, al completar una cita, los productos usados en cabina se descontarán solos del inventario. Hoy el inventario solo registra entradas.
+- **Recepción crea usuarios.** Hoy solo el dueño puede crear cuentas; recepción puede editarlas y restablecer contraseñas.
+- **Quitar un procedimiento de un paquete ya creado.** Hoy se puede agregar, no quitar; si te equivocas, elimina el paquete y créalo de nuevo (solo si no se ha vendido).
+- **Aviso de sobrepago.** Hoy el sistema acepta un pago mayor al saldo; revisa el monto antes de registrar.
+- **Guardar cambios sin conexión.** Hoy sin internet solo se puede consultar.
+- **Recordatorios por WhatsApp.**

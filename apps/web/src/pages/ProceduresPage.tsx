@@ -477,6 +477,7 @@ function ProcedureSheet({
                       <Switch
                         checked={field.value}
                         onCheckedChange={field.onChange}
+                        aria-label="Activo"
                       />
                     </FormControl>
                   </FormItem>

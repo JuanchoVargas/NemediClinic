@@ -52,7 +52,7 @@ test("Cap3 · Catálogo (dueño)", async ({ page }) => {
     after: async () => { await expect(procRow()).toContainText("45 min"); },
   });
 
-  await step(page, "Vuelve a editar y apaga el interruptor Activo", d().locator("[role=switch]"), {
+  await step(page, "Vuelve a editar y apaga el interruptor Activo", d().locator('[role=switch][aria-label="Activo"]'), {
     before: async () => { await page.locator(`button[aria-label="Editar ${PROC}"]`).click(); },
   });
 

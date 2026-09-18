@@ -48,7 +48,7 @@ pnpm guide:pdf    # docs/manual/Guia_de_uso_NemediClinic.pdf
 ```
 
 ## Estado de la DB de desarrollo (2026-09-18)
-- 11 migraciones aplicadas: InitialClinicalEntities, AddClinicalEntities, AddAppointments, AddInventoryEntities, AddPlatformLevel (canales Nemedi e Infotex; el tenant existente quedó en Nemedi, plan Básico, Activo), AddAttachments (adjuntos, `ImagenId`, colores de Nemedi → #1F4E79/#D9A441), AddTenantLogo, AddMustChangePassword (las filas existentes quedan en `false`), AddValuationsAndConsents, AddPaymentTraceability (comprobante, referencia y quién registró el pago) y AddCabinConsumption (consumo de cabina, `PackageProcedure` con `TenantId` y copia del catálogo en la asignación; la migración rellena los datos existentes). Además Hangfire crea su propio esquema `HangFire` al arrancar.
+- 12 migraciones aplicadas: InitialClinicalEntities, AddClinicalEntities, AddAppointments, AddInventoryEntities, AddPlatformLevel (canales Nemedi e Infotex; el tenant existente quedó en Nemedi, plan Básico, Activo), AddAttachments (adjuntos, `ImagenId`, colores de Nemedi → #1F4E79/#D9A441), AddTenantLogo, AddMustChangePassword (las filas existentes quedan en `false`), AddValuationsAndConsents, AddPaymentTraceability (comprobante, referencia y quién registró el pago) y AddCabinConsumption (consumo de cabina, `PackageProcedure` con `TenantId` y copia del catálogo en la asignación; la migración rellena los datos existentes) y AddClinicalNoteDetails (zona tratada, parámetros, indicaciones, próxima sesión y evaluación de la paciente, todo opcional). Además Hangfire crea su propio esquema `HangFire` al arrancar.
 - 1 tenant y 1 sede ("Sede Principal"). Datos demo cargados con `POST /api/v1/dev/seed-demo` (solo Development, idempotente; ver `DevController.cs`).
 
 ## Credenciales de desarrollo (tras el seed demo)
@@ -87,9 +87,9 @@ Re-ancla la agenda demo a hoy (la cita más antigua queda en ayer) y siembra las
 - Mi clínica (el SuperAdmin edita solo su tenant; su logo alimenta el branding), Sedes, Usuarios (el dueño crea cualquier rol; recepción solo esteticistas).
 - Dashboard real (`GET /api/v1/dashboard`): citas de hoy por estado, pacientes activos, ingresos del mes, saldo pendiente, paquetes por vencer, stock en alerta, citas por día (14 d), top 5 procedimientos y top 5 productos; dos alternadores (citas/dinero y procedimientos/productos) que recuerdan la última opción; filtro de sede para el dueño.
 - Pacientes (foto de perfil, próxima cita, ficha con 6 pestañas: Información, Historia clínica, Evolución, Consentimientos, Paquetes, Pagos).
-- Historia clínica editable; notas con fotos Antes/Después; nota desde la cita Completada; pestaña Evolución con comparador y lightbox.
+- Historia clínica editable; notas con fotos Antes/Después y detalle de la sesión (zona, parámetros, indicaciones, evaluación, próxima sesión); nota desde la cita Completada; pestaña Evolución **agrupada por paquete**, con comparador, lightbox y botón Agendar que precarga el calendario.
 - Adjuntos (imágenes y PDF; URLs firmadas de 10 min; ver `CLAUDE.md` → "Image attachments").
-- Valoraciones (`/valoraciones`): prospecto sin cédula o paciente, fotos, cotización, Aceptó/Rechazó, "Convertir" a paquete, embudo y tasa de conversión.
+- Valoraciones (`/valoraciones`): prospecto sin cédula o paciente, fotos, cotización, Aceptó/Rechazó con motivo, "Convertir" a paquete, embudo y tasa de conversión. El seed trae 8 del mes en curso para que el embudo muestre algo real.
 - Consentimiento informado: plantilla por procedimiento, firma en pantalla, PDF firmado; bloquea "Iniciar" la cita si el procedimiento lo exige y no hay uno vigente (365 días).
 - Procedimientos (tarjetas con imagen), Paquetes (quitar un procedimiento mientras no se haya vendido), Paquetes de paciente (cierre automático al completar la última sesión, vencimiento por job diario, alerta "por vencer", eliminar asignación y pagos; la venta guarda su copia del catálogo, así que borrar el paquete no la afecta).
 - Pagos con trazabilidad: referencia, quién lo registró y comprobante (imagen o PDF); un pago nunca supera el saldo; barra de progreso con el porcentaje pagado.

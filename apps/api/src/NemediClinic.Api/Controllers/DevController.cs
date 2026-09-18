@@ -96,6 +96,7 @@ public class DevController : ControllerBase
         if (alreadySeeded)
         {
             await BackfillPaymentTraceabilityAsync(superAdmin.Id);
+            await LinkPhotoNotesToSessionsAsync();
             await BackfillEvolutionDetailAsync();
             await SeedValuationsAsync();
             await SeedCabinConsumptionAsync(superAdmin.Id);
@@ -307,6 +308,7 @@ public class DevController : ControllerBase
         }
 
         await _db.SaveChangesAsync();
+        await LinkPhotoNotesToSessionsAsync();
         await SeedValuationsAsync(laura.Id, camila.Id);
         await SeedCabinConsumptionAsync(superAdmin.Id);
         await _images.SeedAsync(superAdmin.Id);
@@ -618,6 +620,56 @@ public class DevController : ControllerBase
             var entidad = await _db.PatientPackageSessions.FirstAsync(s => s.Id == sesion.Id);
             entidad.ClinicalNoteId = nota.Id;
         }
+    }
+
+    /// <summary>
+    /// Las notas con fotos que siembra DemoImageSeeder no nacen ligadas a una sesión de paquete, así
+    /// que la pestaña Evolución las mostraría en "Sesiones sueltas" y el comparador Antes/Después
+    /// quedaría fuera del tratamiento. Aquí cada una se engancha a una sesión completada del mismo
+    /// paciente y procedimiento que aún no tenga nota. Idempotente: solo toca sesiones sin nota.
+    /// </summary>
+    private async Task LinkPhotoNotesToSessionsAsync()
+    {
+        var conFoto = await _db.Attachments
+            .Where(a => a.EntityType == AttachmentEntityType.ClinicalNote && a.EntityId != null)
+            .Select(a => a.EntityId!.Value)
+            .Distinct()
+            .ToListAsync();
+        if (conFoto.Count == 0)
+            return;
+
+        var yaLigadas = await _db.PatientPackageSessions
+            .Where(s => s.ClinicalNoteId != null)
+            .Select(s => s.ClinicalNoteId!.Value)
+            .ToListAsync();
+
+        var notas = await _db.ClinicalNotes
+            .Where(n => conFoto.Contains(n.Id) && !yaLigadas.Contains(n.Id))
+            .Select(n => new { n.Id, n.Procedimiento, n.FechaCreacion, PatientId = n.ClinicalRecord.PatientId })
+            .OrderBy(n => n.FechaCreacion)
+            .ToListAsync();
+        if (notas.Count == 0)
+            return;
+
+        var libres = await _db.PatientPackageSessions
+            .Where(s => s.Estado == SessionStatus.Completada && s.ClinicalNoteId == null)
+            .Select(s => new { s.Id, s.Numero, Procedimiento = s.Procedure.Nombre, s.PatientPackage.PatientId })
+            .OrderBy(s => s.Numero)
+            .ToListAsync();
+
+        var usadas = new HashSet<Guid>();
+        foreach (var nota in notas)
+        {
+            var sesion = libres.FirstOrDefault(s =>
+                !usadas.Contains(s.Id) && s.PatientId == nota.PatientId && s.Procedimiento == nota.Procedimiento);
+            if (sesion is null)
+                continue;
+
+            usadas.Add(sesion.Id);
+            var entidad = await _db.PatientPackageSessions.FirstAsync(s => s.Id == sesion.Id);
+            entidad.ClinicalNoteId = nota.Id;
+        }
+        await _db.SaveChangesAsync();
     }
 
     /// <summary>

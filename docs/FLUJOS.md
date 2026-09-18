@@ -325,6 +325,8 @@ Cinco commits cerraron la mayor parte de lo anterior y agregaron cinco flujos. T
 | `9dced81` | Pagos con trazabilidad: comprobante, referencia, quién lo registró, tope en el saldo |
 | `9073d29` | Dashboard con alternadores (citas/dinero, procedimientos/productos) |
 | `7ba8804` | Consumo de cabina + copia del catálogo en el paquete vendido + bugs altos |
+| `f332b26` | Evolución agrupada por paquete con el detalle de cada sesión |
+| `14397da` | Valoraciones con datos demo y trazabilidad hacia el paquete |
 
 ### Qué pasó con cada flujo
 
@@ -359,6 +361,8 @@ Cinco commits cerraron la mayor parte de lo anterior y agregaron cinco flujos. T
 |---|---|---|
 | **F23 · Pagos con trazabilidad** | El monto se propone con el saldo y no puede pasarse (422 con el saldo en el mensaje); referencia y comprobante (imagen o PDF) al registrar o después desde la fila; la tabla muestra quién lo registró; barra de progreso con el porcentaje y badge Pagado; eliminar un pago se lleva su comprobante | ✅ gate de push |
 | **F24 · Dashboard alternable** | Citas ↔ Dinero (cobrado por día y saldo acumulado, un eje por escala) y Procedimientos ↔ Productos (unidades movidas con semáforo); la elección se recuerda por dispositivo; saludo con la hora de Bogotá | ✅ recorrido dueño cap. 5 |
+| **F26 · Evolución agrupada** | La ficha agrupa las sesiones por el paquete que se pagó (estado, progreso, % pagado, rango de fechas); el paquete activo abre expandido y las notas sin paquete caen en "Sesiones sueltas". Cada sesión muestra zona, parámetros, productos, indicaciones, evaluación de 1 a 5 y la próxima sesión con botón Agendar que precarga el calendario. La esteticista no ve el % pagado | gate de push + recorrido esteticista cap. 4 |
+| **F27 · Valoración → venta** | Crear la valoración de un prospecto sin cédula, cotizarle un paquete, convertirla (crea el paciente y le asigna el paquete) y ver el enlace al paquete desde la lista. El embudo del mes y la tasa de conversión cuadran con los datos demo (3 de 8 = 37,5 %) | gate de push + recorrido recepción cap. 6 |
 | **F25 · Consumo de cabina** | Productos usados como lista en la nota; descuento solo con la cita Completada; salida ligada a cita y paciente; 400 sin stock; aviso al quedar bajo el mínimo; historial en la ficha del paciente y en los movimientos del producto | ✅ gate de push + recorrido esteticista cap. 4 |
 
 ### Lo que sigue abierto

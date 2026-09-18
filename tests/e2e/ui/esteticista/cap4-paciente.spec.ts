@@ -86,8 +86,11 @@ test("Cap4 · Pacientes (esteticista)", async ({ page }) => {
     },
   });
 
-  await step(page, "Haz clic en la pestaña Evolución: la sesión aparece con sus fotos y el comparador de antes y después", tab(page, "Evolución"), {
+  await step(page, "Haz clic en la pestaña Evolución: la sesión aparece agrupada, con sus fotos y el comparador", tab(page, "Evolución"), {
     after: async () => {
+      // La evolución se agrupa por paquete; una nota suelta cae en su propio grupo
+      await expect(activePanel(page).locator("button[aria-expanded=true]")).toBeVisible();
+      await expect(activePanel(page)).toContainText("Sesiones sueltas");
       await expect(activePanel(page)).toContainText("Sesión 1");
       await expect(activePanel(page)).toContainText("Desliza para comparar");
       await expect(activePanel(page).locator("ul[aria-label='Fotos de la sesión'] img")).toHaveCount(2);

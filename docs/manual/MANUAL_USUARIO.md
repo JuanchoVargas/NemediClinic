@@ -1,6 +1,6 @@
 ---
 title: "NemediClinic — Guía de uso"
-subtitle: "Versión 1.2 · Recorrido guiado por rol con pantallas reales"
+subtitle: "Versión 1.3 · Recorrido guiado por rol con pantallas reales"
 date: "18 de septiembre de 2026"
 lang: es
 ---
@@ -636,6 +636,52 @@ Abre la ficha del paciente y haz clic en Paquetes. **Después verás** el avance
 
 ![](img/admin/cap5-06-haz-clic-en-la-pestana-movimientos-para-ver-el-h.png)
 
+## Capítulo 6 · Valoraciones {.capitulo}
+
+**Qué vas a lograr:** cotizarle a alguien que aún no es paciente y, cuando acepte, convertirlo en paciente con su paquete ya asignado.
+
+### 1. Haz clic en Valoraciones en el menú lateral
+
+![](img/admin/cap6-01-haz-clic-en-valoraciones-en-el-menu-lateral.png)
+
+### 2. Mira el embudo del mes
+
+Arriba ves cuántas valoraciones hiciste, cuántas aceptaron, cuántas están pendientes y cuántas rechazaron, con la **tasa de conversión** y cuánto dinero representa.
+
+![](img/admin/cap6-02-arriba-ves-el-embudo-del-mes-y-la-tasa-de-conver.png)
+
+### 3. Haz clic en Nueva valoración
+
+![](img/admin/cap6-03-haz-clic-en-nueva-valoracion.png)
+
+### 4. Elige Prospecto y escribe su nombre y teléfono
+
+Si la persona **todavía no es paciente**, no necesitas su cédula: basta el nombre y el teléfono. Si ya es paciente, usa la pestaña "Ya es paciente" y búscala.
+
+![](img/admin/cap6-04-elige-prospecto-y-escribe-el-nombre-y-el-telefon.png)
+
+### 5. Escribe el diagnóstico, el paquete sugerido y el precio, y presiona Crear
+
+**Después verás** la valoración en la lista como **Pendiente**, con la etiqueta **Prospecto**.
+
+![](img/admin/cap6-05-escribe-el-diagnostico-elige-el-paquete-que-le-s.png)
+
+### 6. Cuando la persona acepte, presiona Convertir en su fila
+
+![](img/admin/cap6-06-cuando-la-persona-acepta-presiona-convertir-en-s.png)
+
+### 7. Escribe la cédula y presiona Convertir
+
+El sistema **crea el paciente, le asigna el paquete cotizado** y te lleva directo a su ficha.
+
+![](img/admin/cap6-07-escribe-la-cedula-y-presiona-convertir.png)
+
+### 8. Vuelve a Valoraciones
+
+La valoración quedó en **Aceptó**, la persona ya aparece como **Paciente** y su paquete es un enlace a la ficha: así queda registrado de dónde salió esa venta.
+
+![](img/admin/cap6-08-vuelve-a-valoraciones-quedo-como-acepto-ya-es-pa.png)
+
 ## Guía rápida · Recepción {.capitulo}
 
 | Acción | Dónde |
@@ -655,6 +701,7 @@ Abre la ficha del paciente y haz clic en Paquetes. **Después verás** el avance
 | Ver entradas y salidas | Inventario → Movimientos |
 | Registrar una valoración | Valoraciones → Nueva valoración |
 | Convertir una valoración en venta | Valoraciones → Convertir (crea el paciente si hace falta y asigna el paquete) |
+| Ver de dónde salió una venta | Valoraciones → el paquete de la fila aceptada lleva a la ficha |
 | Cambiar mi contraseña | Menú de usuario → Cambiar contraseña |
 
 # Parte 3 · Esteticista {.parte}
@@ -827,7 +874,11 @@ Elige el procedimiento, escribe las observaciones y agrega al menos una foto en 
 
 ### 9. Haz clic en la pestaña Evolución
 
-**Verás** las sesiones del paciente en orden, de la más antigua a la más reciente. Cada una muestra la fecha, el procedimiento, quién atendió, las observaciones y un comparador: desliza la barra para pasar de la foto de antes a la de después.
+**Verás** las sesiones **agrupadas por el paquete** que pagó la paciente. Cada grupo trae el estado del tratamiento, cuántas sesiones lleva, cuánto va pagado y el rango de fechas; el paquete en curso se abre solo y los demás quedan cerrados. Las notas que no pertenecen a un paquete van en un grupo final, **Sesiones sueltas**.
+
+Dentro del grupo, cada sesión muestra la fecha, el procedimiento, las observaciones, la zona tratada, los parámetros, los productos que se gastaron, las indicaciones que se le dieron a la paciente, cómo se sintió y la próxima sesión sugerida, con un botón **Agendar** que abre el calendario con todo puesto. Los campos que no llenaste no se muestran.
+
+A la izquierda está el comparador: desliza la barra para pasar de la foto de antes a la de después.
 
 ![](img/esteticista/cap4-09-haz-clic-en-la-pestana-evolucion-la-sesion-apare.png)
 
@@ -881,7 +932,9 @@ Crear productos es tarea del dueño o de recepción.
 | Consultar o completar la historia clínica | Pacientes → Ver → Historia clínica → Editar |
 | Dejar la nota de la sesión con fotos | Pacientes → Ver → Historia clínica → Nueva nota (o desde la cita Completada) |
 | Descontar los insumos que gastaste | En la nota: Productos usados → Agregar producto |
-| Comparar Antes y Después | Pacientes → Ver → Evolución |
+| Comparar Antes y Después | Pacientes → Ver → Evolución → abre el paquete |
+| Anotar zona, parámetros e indicaciones | En la nota: bloque "Detalle de la sesión" |
+| Agendar la próxima sesión sugerida | Evolución → botón Agendar de la sesión |
 | Hacer firmar el consentimiento | Clic en la cita → Iniciar (si el servicio lo exige, se abre la firma) |
 | Registrar una valoración | Valoraciones → Nueva valoración |
 | Registrar una entrada de producto | Inventario → Entradas → Registrar entrada |

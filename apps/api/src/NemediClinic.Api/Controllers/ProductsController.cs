@@ -17,11 +17,13 @@ public class ProductsController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly AttachmentService _attachments;
+    private readonly RegulatoryReportService _regulatory;
 
-    public ProductsController(AppDbContext db, AttachmentService attachments)
+    public ProductsController(AppDbContext db, AttachmentService attachments, RegulatoryReportService regulatory)
     {
         _db = db;
         _attachments = attachments;
+        _regulatory = regulatory;
     }
 
     // ── GET /api/v1/products?Page=&PageSize=&Search=&tipo=&semaforo= ──
@@ -29,9 +31,13 @@ public class ProductsController : ControllerBase
     public async Task<IActionResult> GetAll(
         [FromQuery] PagedRequest request,
         [FromQuery] ProductType? tipo,
-        [FromQuery] string? semaforo)
+        [FromQuery] string? semaforo,
+        [FromQuery] RegulatoryType? tipoRegulatorio)
     {
         var query = _db.Products.AsNoTracking();
+
+        if (tipoRegulatorio.HasValue)
+            query = query.Where(p => p.TipoRegulatorio == tipoRegulatorio.Value);
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
@@ -108,6 +114,11 @@ public class ProductsController : ControllerBase
             Descripcion = request.Descripcion ?? "",
             Referencia = request.Referencia,
             TipoProducto = request.TipoProducto,
+            TipoRegulatorio = request.TipoRegulatorio,
+            RegistroSanitarioInvima = request.RegistroSanitarioInvima,
+            PrincipioActivo = request.PrincipioActivo,
+            Concentracion = request.Concentracion,
+            RequiereCadenaFrio = request.RequiereCadenaFrio,
             UnidadMedida = request.UnidadMedida,
             StockActual = 0m,
             StockMinimo = request.StockMinimo,
@@ -198,6 +209,11 @@ public class ProductsController : ControllerBase
             Descripcion = p.Descripcion,
             Referencia = p.Referencia,
             TipoProducto = p.TipoProducto.ToString(),
+            TipoRegulatorio = p.TipoRegulatorio.ToString(),
+            RegistroSanitarioInvima = p.RegistroSanitarioInvima,
+            PrincipioActivo = p.PrincipioActivo,
+            Concentracion = p.Concentracion,
+            RequiereCadenaFrio = p.RequiereCadenaFrio,
             UnidadMedida = p.UnidadMedida,
             StockActual = p.StockActual,
             StockMinimo = p.StockMinimo,
@@ -214,6 +230,47 @@ public class ProductsController : ControllerBase
         };
     }
 
+    // ── GET /api/v1/products/{id}/lots ────────────────────────────────
+    /// <summary>Lotes del producto, del que vence antes al que vence después.</summary>
+    [HttpGet("{id:guid}/lots")]
+    public async Task<ActionResult<List<ProductLotDto>>> GetLots(Guid id, CancellationToken ct)
+    {
+        if (!await _db.Products.AnyAsync(p => p.Id == id, ct))
+            return NotFound(new { error = "Producto no encontrado." });
+
+        return Ok(await _regulatory.GetLotsAsync(id, ct));
+    }
+
+    // ── GET /api/v1/products/lot-alerts ───────────────────────────────
+    /// <summary>Lotes vencidos o por vencer (90 días o menos) con existencia. Para el tab de Alertas.</summary>
+    [HttpGet("lot-alerts")]
+    public async Task<ActionResult<List<LotAlertaDto>>> GetLotAlerts(CancellationToken ct) =>
+        Ok(await _regulatory.GetLotAlertsAsync(ct));
+
+    // ── GET /api/v1/products/regulatory-report?desde=&hasta=&tipo= ────
+    /// <summary>
+    /// Reporte para la Secretaría de Salud: por tipo regulatorio, cada producto con su registro
+    /// INVIMA, sus lotes con vencimiento, lo disponible y lo consumido en el periodo.
+    /// Con Accept: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet (o ?formato=xlsx)
+    /// se descarga en Excel.
+    /// </summary>
+    [HttpGet("regulatory-report")]
+    [Authorize(Policy = "Admin")]
+    public async Task<IActionResult> GetRegulatoryReport(
+        [FromQuery] DateOnly? desde, [FromQuery] DateOnly? hasta,
+        [FromQuery] RegulatoryType? tipo, [FromQuery] string? formato, CancellationToken ct)
+    {
+        var reporte = await _regulatory.BuildAsync(desde, hasta, tipo, ct);
+
+        if (!string.Equals(formato, "xlsx", StringComparison.OrdinalIgnoreCase))
+            return Ok(reporte);
+
+        var clinica = await _db.Tenants.Select(t => t.Nombre).FirstOrDefaultAsync(ct) ?? "Clínica";
+        var bytes = RegulatoryReportService.ToExcel(reporte, clinica);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"inventario-secretaria-salud-{reporte.Desde:yyyy-MM-dd}-a-{reporte.Hasta:yyyy-MM-dd}.xlsx");
+    }
+
     private static ProductDto ProjectToDto(Product p)
     {
         // Helper para uso dentro de .Select() — EF traduce a SQL.
@@ -224,6 +281,11 @@ public class ProductsController : ControllerBase
             Descripcion = p.Descripcion,
             Referencia = p.Referencia,
             TipoProducto = p.TipoProducto.ToString(),
+            TipoRegulatorio = p.TipoRegulatorio.ToString(),
+            RegistroSanitarioInvima = p.RegistroSanitarioInvima,
+            PrincipioActivo = p.PrincipioActivo,
+            Concentracion = p.Concentracion,
+            RequiereCadenaFrio = p.RequiereCadenaFrio,
             UnidadMedida = p.UnidadMedida,
             StockActual = p.StockActual,
             StockMinimo = p.StockMinimo,

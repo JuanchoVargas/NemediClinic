@@ -39,6 +39,7 @@ public class AppDbContext : DbContext
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<InventoryEntry> InventoryEntries => Set<InventoryEntry>();
+    public DbSet<ProductLot> ProductLots => Set<ProductLot>();
     public DbSet<InventoryMovement> InventoryMovements => Set<InventoryMovement>();
     public DbSet<Attachment> Attachments => Set<Attachment>();
     public DbSet<Valuation> Valuations => Set<Valuation>();
@@ -260,6 +261,41 @@ public class AppDbContext : DbContext
             n.Property(x => x.Parametros).HasMaxLength(300);
             n.Property(x => x.IndicacionesPost).HasMaxLength(1000);
         });
+
+        // ── Product (trazabilidad sanitaria) ────────────────
+        modelBuilder.Entity<Product>(p =>
+        {
+            p.Property(x => x.TipoRegulatorio).HasConversion<string>().HasMaxLength(20);
+            p.Property(x => x.RegistroSanitarioInvima).HasMaxLength(60);
+            p.Property(x => x.PrincipioActivo).HasMaxLength(150);
+            p.Property(x => x.Concentracion).HasMaxLength(60);
+        });
+
+        // ── ProductLot ──────────────────────────────────────
+        modelBuilder.Entity<ProductLot>(l =>
+        {
+            l.Property(x => x.NumeroLote).HasMaxLength(60);
+            l.Property(x => x.Proveedor).HasMaxLength(150);
+            l.Property(x => x.NumeroFactura).HasMaxLength(60);
+            l.Property(x => x.RegistroSanitario).HasMaxLength(60);
+            l.Property(x => x.CantidadInicial).HasPrecision(18, 4);
+            l.Property(x => x.CantidadDisponible).HasPrecision(18, 4);
+            l.HasOne(x => x.Product).WithMany(p => p.Lotes)
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+            // FEFO: la consulta ordena siempre por vencimiento dentro de un producto
+            l.HasIndex(x => new { x.ProductId, x.FechaVencimiento });
+        });
+
+        // Restrict en ambos: el lote es el respaldo de la trazabilidad y no se borra en cascada
+        modelBuilder.Entity<InventoryEntry>()
+            .HasOne(e => e.ProductLot).WithMany()
+            .HasForeignKey(e => e.ProductLotId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<InventoryMovement>()
+            .HasOne(m => m.ProductLot).WithMany()
+            .HasForeignKey(m => m.ProductLotId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         // ── ClinicalNoteProduct ─────────────────────────────
         modelBuilder.Entity<ClinicalNoteProduct>(cnp =>

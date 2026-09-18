@@ -27,4 +27,18 @@ public class CreateProductRequest
 
     /// <summary>Id de un Attachment (Kind=Producto) subido antes con POST /files.</summary>
     public Guid? ImagenId { get; set; }
+
+    // ── Trazabilidad sanitaria ──
+    public RegulatoryType TipoRegulatorio { get; set; } = RegulatoryType.Insumo;
+
+    [MaxLength(60)]
+    public string? RegistroSanitarioInvima { get; set; }
+
+    [MaxLength(150)]
+    public string? PrincipioActivo { get; set; }
+
+    [MaxLength(60)]
+    public string? Concentracion { get; set; }
+
+    public bool RequiereCadenaFrio { get; set; }
 }

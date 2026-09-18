@@ -96,6 +96,7 @@ public class DevController : ControllerBase
         if (alreadySeeded)
         {
             await BackfillPaymentTraceabilityAsync(superAdmin.Id);
+            await BackfillLotsAsync();
             await LinkPhotoNotesToSessionsAsync();
             await BackfillEvolutionDetailAsync();
             await SeedValuationsAsync();
@@ -282,13 +283,21 @@ public class DevController : ControllerBase
         // Rojo: stock 0 o < 50 % del mínimo. Amarillo: < mínimo. Verde: >= mínimo.
         var products = new (Product Product, decimal Entrada)[]
         {
-            (Prod("Crema hidratante facial 500 ml", "HID-500", ProductType.InsumoCabina, "unidad", min: 5, max: 30), 20m),      // verde
-            (Prod("Gel conductor radiofrecuencia 1 L", "GEL-RF-1L", ProductType.InsumoCabina, "litro", min: 4, max: 20), 12m),   // verde
-            (Prod("Ácido glicólico 30 % 250 ml", "AG30-250", ProductType.InsumoCabina, "unidad", min: 10, max: 40), 7m),        // amarillo
-            (Prod("Aceite reductor 1 L", "ACR-1L", ProductType.Ambos, "litro", min: 6, max: 24), 4m),                            // amarillo
-            (Prod("Mascarilla de colágeno", "MASC-COL", ProductType.Venta, "unidad", min: 20, max: 100), 5m),                    // rojo
-            (Prod("Guantes de nitrilo (caja x100)", "GNT-100", ProductType.InsumoCabina, "caja", min: 10, max: 50), 3m),         // rojo
+            // Registros INVIMA ficticios (formato real, números inventados): son datos de demo.
+            (Prod("Crema hidratante facial 500 ml", "HID-500", ProductType.InsumoCabina, "unidad", min: 5, max: 30,
+                RegulatoryType.Cosmetico, "NSOC12345-16CO"), 20m),                                                              // verde
+            (Prod("Gel conductor radiofrecuencia 1 L", "GEL-RF-1L", ProductType.InsumoCabina, "litro", min: 4, max: 20,
+                RegulatoryType.DispositivoMedico, "INVIMA 2021DM-0012345"), 12m),                                               // verde
+            (Prod("Ácido glicólico 30 % 250 ml", "AG30-250", ProductType.InsumoCabina, "unidad", min: 10, max: 40,
+                RegulatoryType.Medicamento, "INVIMA 2019M-0019876", principio: "Ácido glicólico", concentracion: "30 %"), 7m),  // amarillo
+            (Prod("Aceite reductor 1 L", "ACR-1L", ProductType.Ambos, "litro", min: 6, max: 24,
+                RegulatoryType.Cosmetico, "NSOC67890-16CO"), 4m),                                                               // amarillo
+            (Prod("Mascarilla de colágeno", "MASC-COL", ProductType.Venta, "unidad", min: 20, max: 100,
+                RegulatoryType.Cosmetico, "NSOC24680-16CO", cadenaFrio: true), 5m),                                             // rojo
+            (Prod("Guantes de nitrilo (caja x100)", "GNT-100", ProductType.InsumoCabina, "caja", min: 10, max: 50,
+                RegulatoryType.DispositivoMedico, "INVIMA 2020DM-0007788"), 3m),                                                // rojo
         };
+        var n = 0;
         foreach (var (product, cantidad) in products)
         {
             _db.Products.Add(product);
@@ -300,10 +309,16 @@ public class DevController : ControllerBase
             };
             _db.InventoryEntries.Add(entry);
             product.StockActual = cantidad;
+
+            var lote = LoteDemo(product, cantidad, fecha, indice: n++);
+            _db.ProductLots.Add(lote);
+            entry.ProductLotId = lote.Id;
+
             _db.InventoryMovements.Add(new InventoryMovement
             {
                 ProductId = product.Id, Cantidad = cantidad, TipoMovimiento = MovementType.Entrada,
-                Referencia = DemoEntryMarker, UserId = superAdmin.Id, FechaMovimiento = fecha
+                Referencia = DemoEntryMarker, UserId = superAdmin.Id, FechaMovimiento = fecha,
+                ProductLotId = lote.Id
             });
         }
 
@@ -497,10 +512,14 @@ public class DevController : ControllerBase
         Nombre = nombre, Apellido = apellido, Cedula = cedula, Telefono = telefono, Email = email, FechaNacimiento = nacimiento, IsActive = true
     };
 
-    private static Product Prod(string nombre, string referencia, ProductType tipo, string unidad, decimal min, decimal max) => new()
+    private static Product Prod(string nombre, string referencia, ProductType tipo, string unidad, decimal min, decimal max,
+        RegulatoryType regulatorio = RegulatoryType.Insumo, string? invima = null,
+        string? principio = null, string? concentracion = null, bool cadenaFrio = false) => new()
     {
         Nombre = nombre, Descripcion = nombre, Referencia = referencia, TipoProducto = tipo, UnidadMedida = unidad,
-        StockActual = 0m, StockMinimo = min, StockMaximo = max, Activo = true
+        StockActual = 0m, StockMinimo = min, StockMaximo = max, Activo = true,
+        TipoRegulatorio = regulatorio, RegistroSanitarioInvima = invima,
+        PrincipioActivo = principio, Concentracion = concentracion, RequiereCadenaFrio = cadenaFrio
     };
 
     private sealed class AssignedPackage
@@ -796,6 +815,78 @@ public class DevController : ControllerBase
         // Foto "Antes" en una de las pendientes, para que se vea el adjunto de la valoración
         var conFoto = valoraciones.First(v => v.Estado == ValuationEstado.Pendiente);
         await _images.SeedValuationPhotoAsync(conFoto.Id, esteticistas[0]);
+        await _db.SaveChangesAsync();
+    }
+
+    private const string DemoLotPrefix = "L-DEMO-";
+
+    /// <summary>
+    /// Lote demo con vencimientos repartidos a propósito para que el semáforo se vea completo:
+    /// dos vigentes, uno por vencer, uno crítico, uno vencido y uno sin vencimiento.
+    /// </summary>
+    private static ProductLot LoteDemo(Product product, decimal cantidad, DateTime fechaIngreso, int indice)
+    {
+        var hoy = DateOnly.FromDateTime(DateTime.Now);
+        DateOnly? vence = indice switch
+        {
+            0 => hoy.AddDays(210),  // Vigente
+            1 => hoy.AddDays(150),  // Vigente
+            2 => hoy.AddDays(62),   // PorVencer
+            3 => hoy.AddDays(18),   // Crítico
+            4 => hoy.AddDays(-9),   // Vencido
+            _ => null               // No vence (guantes)
+        };
+
+        return new ProductLot
+        {
+            ProductId = product.Id,
+            NumeroLote = $"{DemoLotPrefix}{(indice + 1) * 137:0000}",
+            FechaVencimiento = vence,
+            CantidadInicial = cantidad,
+            CantidadDisponible = cantidad,
+            FechaIngreso = fechaIngreso,
+            Proveedor = indice % 2 == 0 ? "Distribuciones Estética SAS" : "Insumos Médicos del Valle",
+            NumeroFactura = $"FV-{2026}-{(indice + 1) * 41:0000}",
+            RegistroSanitario = product.RegistroSanitarioInvima
+        };
+    }
+
+    /// <summary>
+    /// Una base sembrada antes de los lotes: cada producto demo recibe el suyo, con la cantidad que
+    /// ya tenía, y los productos reciben su clasificación INVIMA. Idempotente por el prefijo del lote.
+    /// </summary>
+    private async Task BackfillLotsAsync()
+    {
+        if (await _db.ProductLots.AnyAsync(l => l.NumeroLote!.StartsWith(DemoLotPrefix)))
+            return;
+
+        var regulatorio = new Dictionary<string, (RegulatoryType Tipo, string Invima, string? Principio, string? Concentracion, bool Frio)>
+        {
+            ["Crema hidratante facial 500 ml"] = (RegulatoryType.Cosmetico, "NSOC12345-16CO", null, null, false),
+            ["Gel conductor radiofrecuencia 1 L"] = (RegulatoryType.DispositivoMedico, "INVIMA 2021DM-0012345", null, null, false),
+            ["Ácido glicólico 30 % 250 ml"] = (RegulatoryType.Medicamento, "INVIMA 2019M-0019876", "Ácido glicólico", "30 %", false),
+            ["Aceite reductor 1 L"] = (RegulatoryType.Cosmetico, "NSOC67890-16CO", null, null, false),
+            ["Mascarilla de colágeno"] = (RegulatoryType.Cosmetico, "NSOC24680-16CO", null, null, true),
+            ["Guantes de nitrilo (caja x100)"] = (RegulatoryType.DispositivoMedico, "INVIMA 2020DM-0007788", null, null, false),
+        };
+
+        var productos = await _db.Products.OrderBy(p => p.CreatedAt).ToListAsync();
+        var n = 0;
+        foreach (var producto in productos)
+        {
+            if (regulatorio.TryGetValue(producto.Nombre, out var datos))
+            {
+                producto.TipoRegulatorio = datos.Tipo;
+                producto.RegistroSanitarioInvima ??= datos.Invima;
+                producto.PrincipioActivo ??= datos.Principio;
+                producto.Concentracion ??= datos.Concentracion;
+                producto.RequiereCadenaFrio = datos.Frio;
+            }
+
+            // El lote toma el stock que el producto ya tenía, para no inventar existencias
+            if (producto.StockActual > 0)
+                _db.ProductLots.Add(LoteDemo(producto, producto.StockActual, DateTime.Now.AddDays(-20), n++));
+        }
         await _db.SaveChangesAsync();
     }
 

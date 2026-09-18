@@ -19,4 +19,10 @@ public class RegisterEntryRequest
 
     /// <summary>Si no se envía, el backend usa DateTime.UtcNow.</summary>
     public DateTime? FechaEntrada { get; set; }
+
+    /// <summary>
+    /// Lote que crea esta entrada: número, vencimiento, proveedor y factura. Todo opcional, pero
+    /// un medicamento o un dispositivo médico sin lote ni vencimiento no se puede reportar.
+    /// </summary>
+    public LotInputRequest? Lote { get; set; }
 }

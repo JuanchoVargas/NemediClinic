@@ -13,5 +13,9 @@ public class InventoryMovementDto
     public Guid? PatientId { get; set; }
     /// <summary>Paciente de la sesión en la que se gastó (solo en las salidas por consumo de cabina).</summary>
     public string? PacienteNombre { get; set; }
+    /// <summary>De qué lote salió o entró. Null en movimientos anteriores a la trazabilidad por lote.</summary>
+    public Guid? ProductLotId { get; set; }
+    public string? NumeroLote { get; set; }
+    public DateOnly? FechaVencimientoLote { get; set; }
     public DateTime FechaMovimiento { get; set; }
 }

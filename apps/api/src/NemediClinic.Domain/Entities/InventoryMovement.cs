@@ -13,7 +13,10 @@ public class InventoryMovement : BaseEntity
     public Guid? PatientId { get; set; }
     public Guid UserId { get; set; }
     public DateTime FechaMovimiento { get; set; }
+    /// <summary>De qué lote entró o salió. Null en los movimientos anteriores a los lotes.</summary>
+    public Guid? ProductLotId { get; set; }
 
     public Product Product { get; set; } = null!;
+    public ProductLot? ProductLot { get; set; }
     public User Usuario { get; set; } = null!;
 }

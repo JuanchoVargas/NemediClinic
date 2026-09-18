@@ -92,6 +92,8 @@ builder.Services.AddSingleton<FileTokenService>();
 builder.Services.AddScoped<AttachmentService>();
 builder.Services.AddScoped<CabinConsumptionService>();
 builder.Services.AddScoped<EvolutionService>();
+builder.Services.AddScoped<ProductLotService>();
+builder.Services.AddScoped<RegulatoryReportService>();
 builder.Services.AddScoped<DemoImageSeeder>();
 
 // ── Dashboard y ciclo de vida de paquetes ───────────────────────

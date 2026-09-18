@@ -12,17 +12,24 @@ namespace NemediClinic.Api.Services;
 /// Reglas:
 ///   · Solo descuenta cuando la nota está ligada a una cita **Completada**. Una nota suelta o de una
 ///     cita que aún no terminó guarda la lista, pero no mueve inventario (se descuenta al completar).
-///   · Por cada producto se crea un InventoryMovement de tipo Salida con la cita y el paciente, para
-///     que el historial diga en qué sesión se gastó, y se resta de Product.StockActual.
+///   · Por cada producto se descuenta por **FEFO** (primero el lote que vence antes) y se crea un
+///     InventoryMovement de tipo Salida **por lote**, con la cita y el paciente: así el historial
+///     dice en qué sesión se gastó y de qué lote salió, que es lo que pide la Secretaría de Salud.
 ///   · El stock puede quedar en cero pero nunca negativo: si no alcanza, se rechaza (400) — un
-///     inventario negativo no significa nada y esconde el error de digitación.
+///     inventario negativo no significa nada y esconde el error de digitación. Un lote vencido no
+///     cuenta como existencia utilizable (422 desde ProductLotService).
 ///   · Devuelve los productos que quedaron bajo el mínimo para que la web avise en el momento.
 /// </summary>
 public class CabinConsumptionService
 {
     private readonly AppDbContext _db;
+    private readonly ProductLotService _lots;
 
-    public CabinConsumptionService(AppDbContext db) => _db = db;
+    public CabinConsumptionService(AppDbContext db, ProductLotService lots)
+    {
+        _db = db;
+        _lots = lots;
+    }
 
     /// <summary>
     /// Valida la lista, la enlaza a la nota y, si la cita está Completada, descuenta inventario.
@@ -52,8 +59,10 @@ public class CabinConsumptionService
         var descuenta = note.AppointmentId.HasValue
             && await _db.Appointments.AnyAsync(a => a.Id == note.AppointmentId.Value && a.Estado == AppointmentStatus.Completada, ct);
 
+        // Los productos sin lotes (anteriores a la trazabilidad) se validan contra su stock plano
+        var conLotes = await _db.ProductLots.Where(l => ids.Contains(l.ProductId)).Select(l => l.ProductId).Distinct().ToListAsync(ct);
         var sinStock = agrupados
-            .Where(p => descuenta && products[p.ProductId].StockActual < p.Cantidad)
+            .Where(p => descuenta && !conLotes.Contains(p.ProductId) && products[p.ProductId].StockActual < p.Cantidad)
             .Select(p => $"{products[p.ProductId].Nombre} (quedan {products[p.ProductId].StockActual:0.##})")
             .ToList();
         if (sinStock.Count > 0)
@@ -73,18 +82,18 @@ public class CabinConsumptionService
             if (!descuenta)
                 continue;
 
-            product.StockActual -= item.Cantidad;
-            _db.InventoryMovements.Add(new InventoryMovement
+            if (conLotes.Contains(product.Id))
             {
-                ProductId = product.Id,
-                Cantidad = item.Cantidad,
-                TipoMovimiento = MovementType.Salida,
-                Referencia = $"Consumo de cabina · {note.Procedimiento}",
-                AppointmentId = note.AppointmentId,
-                PatientId = patientId,
-                UserId = userId,
-                FechaMovimiento = DateTime.Now
-            });
+                // FEFO: un movimiento por lote, para que el historial diga de cuál salió
+                foreach (var (lote, cantidad) in await _lots.TakeFefoAsync(product, item.Cantidad, ct))
+                    AgregarSalida(note, product, lote.Id, cantidad, patientId, userId);
+                await _lots.RecalculateStockAsync(product.Id, ct);
+            }
+            else
+            {
+                product.StockActual -= item.Cantidad;
+                AgregarSalida(note, product, null, item.Cantidad, patientId, userId);
+            }
 
             if (product.StockActual < product.StockMinimo)
             {
@@ -102,6 +111,20 @@ public class CabinConsumptionService
 
         return alertas;
     }
+
+    private void AgregarSalida(ClinicalNote note, Product product, Guid? lotId, decimal cantidad, Guid patientId, Guid userId) =>
+        _db.InventoryMovements.Add(new InventoryMovement
+        {
+            ProductId = product.Id,
+            ProductLotId = lotId,
+            Cantidad = cantidad,
+            TipoMovimiento = MovementType.Salida,
+            Referencia = $"Consumo de cabina · {note.Procedimiento}",
+            AppointmentId = note.AppointmentId,
+            PatientId = patientId,
+            UserId = userId,
+            FechaMovimiento = DateTime.Now
+        });
 
     /// <summary>Consumo de cabina de un paciente: qué se gastó en cada una de sus sesiones.</summary>
     public async Task<List<PatientConsumptionDto>> GetByPatientAsync(Guid patientId, CancellationToken ct = default)

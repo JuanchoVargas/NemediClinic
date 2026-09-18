@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NemediClinic.Api.Services;
 using NemediClinic.Application.DTOs.Common;
 using NemediClinic.Application.DTOs.Inventory;
 using NemediClinic.Domain.Entities;
@@ -17,9 +18,12 @@ public class InventoryController : ControllerBase
 {
     private readonly AppDbContext _db;
 
-    public InventoryController(AppDbContext db)
+    private readonly ProductLotService _lots;
+
+    public InventoryController(AppDbContext db, ProductLotService lots)
     {
         _db = db;
+        _lots = lots;
     }
 
     // ── POST /api/v1/inventory/entries ────────────────────────────────
@@ -52,8 +56,10 @@ public class InventoryController : ControllerBase
         };
         _db.InventoryEntries.Add(entry);
 
-        // Stock actual sube
-        product.StockActual += request.Cantidad;
+        // Cada entrada crea un lote: es la unidad con la que se responde "de qué lote salió".
+        var lote = _lots.CreateLot(product, request.Cantidad, request.Lote?.NumeroLote,
+            request.Lote?.FechaVencimiento, request.Lote?.Proveedor, request.Lote?.NumeroFactura, fecha);
+        entry.ProductLotId = lote.Id;
 
         // Movimiento espejo (tipo Entrada)
         var movement = new InventoryMovement
@@ -65,10 +71,14 @@ public class InventoryController : ControllerBase
             AppointmentId = null,
             PatientId = null,
             UserId = userId,
-            FechaMovimiento = fecha
+            FechaMovimiento = fecha,
+            ProductLotId = lote.Id
         };
         _db.InventoryMovements.Add(movement);
 
+        await _db.SaveChangesAsync();
+        // El stock sale de los lotes no vencidos, nunca de una suma a mano
+        await _lots.RecalculateStockAsync(product.Id);
         await _db.SaveChangesAsync();
         await tx.CommitAsync();
 
@@ -109,7 +119,11 @@ public class InventoryController : ControllerBase
                 Observacion = e.Observacion,
                 FechaEntrada = e.FechaEntrada,
                 UserId = e.UserId,
-                UsuarioNombre = e.Usuario.Nombre + " " + e.Usuario.Apellido
+                UsuarioNombre = e.Usuario.Nombre + " " + e.Usuario.Apellido,
+                NumeroLote = e.ProductLot!.NumeroLote,
+                FechaVencimiento = e.ProductLot!.FechaVencimiento,
+                Proveedor = e.ProductLot!.Proveedor,
+                NumeroFactura = e.ProductLot!.NumeroFactura
             })
             .ToListAsync();
 
@@ -134,6 +148,7 @@ public class InventoryController : ControllerBase
         // llegaba null (500), igual que en movements/product/{id}.
         var rows = await query
             .Include(m => m.Product)
+            .Include(m => m.ProductLot)
             .OrderByDescending(m => m.FechaMovimiento)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
@@ -156,6 +171,7 @@ public class InventoryController : ControllerBase
         var rows = await _db.InventoryMovements
             .AsNoTracking()
             .Include(m => m.Product)
+            .Include(m => m.ProductLot)
             .Where(m => m.ProductId == productId)
             .OrderByDescending(m => m.FechaMovimiento)
             .ToListAsync();
@@ -191,6 +207,9 @@ public class InventoryController : ControllerBase
         new()
         {
             Id = m.Id,
+            ProductLotId = m.ProductLotId,
+            NumeroLote = m.ProductLot?.NumeroLote,
+            FechaVencimientoLote = m.ProductLot?.FechaVencimiento,
             ProductId = m.ProductId,
             ProductoNombre = m.Product.Nombre,
             UnidadMedida = m.Product.UnidadMedida,

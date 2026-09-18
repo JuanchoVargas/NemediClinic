@@ -15,5 +15,16 @@ public class ProductDto
     public Guid? ImagenId { get; set; }
     /// <summary>"Verde" | "Amarillo" | "Rojo"</summary>
     public string SemaforoStock { get; set; } = string.Empty;
+
+    // ── Trazabilidad sanitaria ──
+    public string TipoRegulatorio { get; set; } = string.Empty;
+    public string? RegistroSanitarioInvima { get; set; }
+    public string? PrincipioActivo { get; set; }
+    public string? Concentracion { get; set; }
+    public bool RequiereCadenaFrio { get; set; }
+    /// <summary>Peor estado entre sus lotes con existencia: null si el producto no maneja lotes.</summary>
+    public string? SemaforoLotes { get; set; }
+    public int LotesPorVencer { get; set; }
+    public int LotesVencidos { get; set; }
     public DateTime CreatedAt { get; set; }
 }

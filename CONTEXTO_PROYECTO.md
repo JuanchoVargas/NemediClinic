@@ -48,7 +48,7 @@ pnpm guide:pdf    # docs/manual/Guia_de_uso_NemediClinic.pdf
 ```
 
 ## Estado de la DB de desarrollo (2026-09-18)
-- 12 migraciones aplicadas: InitialClinicalEntities, AddClinicalEntities, AddAppointments, AddInventoryEntities, AddPlatformLevel (canales Nemedi e Infotex; el tenant existente quedó en Nemedi, plan Básico, Activo), AddAttachments (adjuntos, `ImagenId`, colores de Nemedi → #1F4E79/#D9A441), AddTenantLogo, AddMustChangePassword (las filas existentes quedan en `false`), AddValuationsAndConsents, AddPaymentTraceability (comprobante, referencia y quién registró el pago) y AddCabinConsumption (consumo de cabina, `PackageProcedure` con `TenantId` y copia del catálogo en la asignación; la migración rellena los datos existentes) y AddClinicalNoteDetails (zona tratada, parámetros, indicaciones, próxima sesión y evaluación de la paciente, todo opcional). Además Hangfire crea su propio esquema `HangFire` al arrancar.
+- 13 migraciones aplicadas: InitialClinicalEntities, AddClinicalEntities, AddAppointments, AddInventoryEntities, AddPlatformLevel (canales Nemedi e Infotex; el tenant existente quedó en Nemedi, plan Básico, Activo), AddAttachments (adjuntos, `ImagenId`, colores de Nemedi → #1F4E79/#D9A441), AddTenantLogo, AddMustChangePassword (las filas existentes quedan en `false`), AddValuationsAndConsents, AddPaymentTraceability (comprobante, referencia y quién registró el pago) y AddCabinConsumption (consumo de cabina, `PackageProcedure` con `TenantId` y copia del catálogo en la asignación; la migración rellena los datos existentes) AddClinicalNoteDetails (zona tratada, parámetros, indicaciones, próxima sesión y evaluación de la paciente, todo opcional) y AddProductLots (lotes de producto y clasificación INVIMA). Además Hangfire crea su propio esquema `HangFire` al arrancar.
 - 1 tenant y 1 sede ("Sede Principal"). Datos demo cargados con `POST /api/v1/dev/seed-demo` (solo Development, idempotente; ver `DevController.cs`).
 
 ## Credenciales de desarrollo (tras el seed demo)
@@ -94,7 +94,8 @@ Re-ancla la agenda demo a hoy (la cita más antigua queda en ayer) y siembra las
 - Procedimientos (tarjetas con imagen), Paquetes (quitar un procedimiento mientras no se haya vendido), Paquetes de paciente (cierre automático al completar la última sesión, vencimiento por job diario, alerta "por vencer", eliminar asignación y pagos; la venta guarda su copia del catálogo, así que borrar el paquete no la afecta).
 - Pagos con trazabilidad: referencia, quién lo registró y comprobante (imagen o PDF); un pago nunca supera el saldo; barra de progreso con el porcentaje pagado.
 - Citas + Calendario + Hoja del día.
-- Inventario (productos con imagen, entradas, alertas, movimientos) con **consumo de cabina**: la nota clínica declara qué insumos se gastaron y, al guardarla sobre una cita completada, salen del stock con su movimiento de Salida ligado a la cita y al paciente.
+- Inventario con **trazabilidad sanitaria**: cada producto tiene tipo regulatorio (medicamento, dispositivo médico, insumo, cosmético) y registro INVIMA; las entradas se hacen por lote con vencimiento, proveedor y factura; las salidas descuentan por FEFO y quedan ligadas a su lote; semáforo de vencimiento en la ficha y en Alertas; reporte para la Secretaría de Salud descargable en Excel.
+- Consumo de cabina: la nota clínica declara qué insumos se gastaron y, al guardarla sobre una cita completada, salen del stock ligados a la cita y al paciente.
 - Responsive + PWA: usable a 390 px en todas las rutas y roles; instalable con el nombre y color del canal; hoja del día, citas y fichas legibles sin conexión por 24 h.
 
 ## Pendiente

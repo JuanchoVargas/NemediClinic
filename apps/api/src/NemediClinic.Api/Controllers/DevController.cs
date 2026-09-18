@@ -97,14 +97,18 @@ public class DevController : ControllerBase
         {
             await BackfillPaymentTraceabilityAsync(superAdmin.Id);
             await BackfillLotsAsync();
-            await LinkPhotoNotesToSessionsAsync();
-            await BackfillEvolutionDetailAsync();
             await SeedValuationsAsync();
-            await SeedCabinConsumptionAsync(superAdmin.Id);
             await _db.SaveChangesAsync();
             // Las imágenes de muestra tienen su propia idempotencia: una base sembrada antes
             // de que existieran los adjuntos las recibe en la siguiente ejecución.
             var imagenesNuevas = await _images.SeedAsync(superAdmin.Id);
+            await _db.SaveChangesAsync();
+            // Después de las imágenes: las notas con fotos se enganchan a su sesión de paquete y
+            // solo entonces se rellena lo que quede suelto.
+            await LinkPhotoNotesToSessionsAsync();
+            await BackfillEvolutionDetailAsync();
+            await SeedCabinConsumptionAsync(superAdmin.Id);
+            await _db.SaveChangesAsync();
             var diasDesplazados = reanchor ? await ReanchorAgendaAsync() : 0;
             await tx.CommitAsync();
             return Ok(new
@@ -645,7 +649,10 @@ public class DevController : ControllerBase
     /// Las notas con fotos que siembra DemoImageSeeder no nacen ligadas a una sesión de paquete, así
     /// que la pestaña Evolución las mostraría en "Sesiones sueltas" y el comparador Antes/Después
     /// quedaría fuera del tratamiento. Aquí cada una se engancha a una sesión completada del mismo
-    /// paciente y procedimiento que aún no tenga nota. Idempotente: solo toca sesiones sin nota.
+    /// paciente que aún no tenga nota: primero se busca una del mismo procedimiento y, si no hay
+    /// (un paquete combina varios), se toma cualquiera libre y la nota adopta su procedimiento.
+    /// Es dato de demostración: lo que importa es que las fotos se vean dentro del tratamiento.
+    /// Idempotente: solo toca sesiones sin nota.
     /// </summary>
     private async Task LinkPhotoNotesToSessionsAsync()
     {
@@ -670,23 +677,41 @@ public class DevController : ControllerBase
         if (notas.Count == 0)
             return;
 
+        // Sesiones sin nota: primero las ya completadas y, si faltan, las pendientes (que se
+        // completan al engancharles la nota, como habría pasado de verdad al atender esa sesión).
         var libres = await _db.PatientPackageSessions
-            .Where(s => s.Estado == SessionStatus.Completada && s.ClinicalNoteId == null)
-            .Select(s => new { s.Id, s.Numero, Procedimiento = s.Procedure.Nombre, s.PatientPackage.PatientId })
-            .OrderBy(s => s.Numero)
+            .Where(s => s.ClinicalNoteId == null && s.Estado != SessionStatus.Cancelada)
+            .Select(s => new { s.Id, s.Numero, s.Estado, Procedimiento = s.Procedure.Nombre, s.PatientPackage.PatientId })
+            .OrderBy(s => s.Estado == SessionStatus.Completada ? 0 : 1)
+            .ThenBy(s => s.Numero)
             .ToListAsync();
 
         var usadas = new HashSet<Guid>();
         foreach (var nota in notas)
         {
-            var sesion = libres.FirstOrDefault(s =>
-                !usadas.Contains(s.Id) && s.PatientId == nota.PatientId && s.Procedimiento == nota.Procedimiento);
+            var delPaciente = libres.Where(s => !usadas.Contains(s.Id) && s.PatientId == nota.PatientId).ToList();
+            var sesion = delPaciente.FirstOrDefault(s => s.Procedimiento == nota.Procedimiento)
+                ?? delPaciente.FirstOrDefault();
             if (sesion is null)
                 continue;
 
             usadas.Add(sesion.Id);
-            var entidad = await _db.PatientPackageSessions.FirstAsync(s => s.Id == sesion.Id);
+            var entidad = await _db.PatientPackageSessions.Include(s => s.PatientPackage).FirstAsync(s => s.Id == sesion.Id);
             entidad.ClinicalNoteId = nota.Id;
+
+            if (entidad.Estado != SessionStatus.Completada)
+            {
+                entidad.Estado = SessionStatus.Completada;
+                entidad.FechaCompletada = nota.FechaCreacion;
+                entidad.PatientPackage.SesionesCompletadas++;
+            }
+
+            // La nota adopta el procedimiento de la sesión a la que se enganchó
+            if (sesion.Procedimiento != nota.Procedimiento)
+            {
+                var entidadNota = await _db.ClinicalNotes.FirstAsync(n => n.Id == nota.Id);
+                entidadNota.Procedimiento = sesion.Procedimiento;
+            }
         }
         await _db.SaveChangesAsync();
     }

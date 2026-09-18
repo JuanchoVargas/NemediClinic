@@ -156,7 +156,8 @@ public class RegulatoryReportService
             foreach (var producto in grupo.Productos)
             {
                 // Un producto sin lotes igual se reporta: la fila queda sin datos de lote
-                var filasLote = producto.Lotes.Count > 0 ? producto.Lotes : [null];
+                IReadOnlyList<ProductLotDto?> filasLote =
+                    producto.Lotes.Count > 0 ? producto.Lotes : [null];
                 foreach (var lote in filasLote)
                 {
                     hoja.Cell(fila, 1).Value = producto.Nombre;

@@ -93,7 +93,11 @@ public class InventoryController : ControllerBase
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to)
     {
-        var query = _db.InventoryEntries.AsNoTracking();
+        // Un producto eliminado se lleva su historial: hay que descartarlo ANTES de contar y paginar.
+        // Si no, el filtro global de Product recorta el join después de Take y la página sale con
+        // huecos (o vacía) mientras el total dice otra cosa.
+        var query = _db.InventoryEntries.AsNoTracking()
+            .Where(e => _db.Products.Any(p => p.Id == e.ProductId));
 
         if (productId.HasValue)
             query = query.Where(e => e.ProductId == productId.Value);
@@ -105,7 +109,10 @@ public class InventoryController : ControllerBase
         var totalCount = await query.CountAsync();
 
         var items = await query
+            // La fecha de entrada es un día sin hora: sin desempate, dos entradas del mismo día
+            // salen en orden arbitrario y la recién registrada no queda arriba.
             .OrderByDescending(e => e.FechaEntrada)
+            .ThenByDescending(e => e.CreatedAt)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(e => new InventoryEntryDto
@@ -140,7 +147,9 @@ public class InventoryController : ControllerBase
     [HttpGet("movements")]
     public async Task<IActionResult> GetMovements([FromQuery] PagedRequest request)
     {
-        var query = _db.InventoryMovements.AsNoTracking();
+        // Mismo motivo que en entries: el producto borrado sale de la lista antes de contar.
+        var query = _db.InventoryMovements.AsNoTracking()
+            .Where(m => _db.Products.Any(p => p.Id == m.ProductId));
 
         var totalCount = await query.CountAsync();
 
@@ -150,6 +159,7 @@ public class InventoryController : ControllerBase
             .Include(m => m.Product)
             .Include(m => m.ProductLot)
             .OrderByDescending(m => m.FechaMovimiento)
+            .ThenByDescending(m => m.CreatedAt)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .ToListAsync();

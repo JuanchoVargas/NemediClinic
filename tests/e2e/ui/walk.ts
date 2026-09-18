@@ -87,20 +87,42 @@ export async function closeDialog(page: Page) {
   await expect(dialog(page)).toBeHidden();
 }
 
-/** Selecciona un slot vacío del calendario (vista semana) por fecha y hora. */
+/**
+ * Selecciona un slot vacío del calendario (vista semana) por fecha y hora.
+ * Si esa hora ya tiene cita, FullCalendar ignora el arrastre (o abre el detalle de la cita):
+ * se recorren las demás horas del día, de la tarde hacia la mañana, hasta que abra "Nueva cita".
+ */
 export async function selectCalendarSlot(page: Page, date: string, time: string) {
   const col = page.locator(`.fc-timegrid-col.fc-day[data-date="${date}"]`).first();
-  const lane = page.locator(`.fc-timegrid-slot-lane[data-time="${time}"]`).first();
   const c = await col.boundingBox();
-  const l = await lane.boundingBox();
-  if (!c || !l) throw new Error(`slot no visible: ${date} ${time}`);
+  if (!c) throw new Error(`día no visible en el calendario: ${date}`);
   const x = c.x + c.width / 2;
-  const y = l.y + 4;
-  await page.mouse.move(x, y);
-  await page.mouse.down();
-  await page.mouse.move(x, y + 6);
-  await page.mouse.up();
-  await expect(dialog(page)).toBeVisible();
+
+  // Solo las horas en punto que la vista realmente pinta (07:00–19:00 según slotMaxTime).
+  const horas = await page
+    .locator('.fc-timegrid-slot-lane[data-time$=":00:00"]')
+    .evaluateAll((els) => els.map((e) => e.getAttribute("data-time") ?? "").filter(Boolean));
+  const candidatas = [time, ...horas.filter((h) => h !== time).reverse()];
+
+  for (const t of candidatas) {
+    const lane = page.locator(`.fc-timegrid-slot-lane[data-time="${t}"]`).first();
+    if (!(await lane.count())) continue;
+    const l = await lane.boundingBox();
+    if (!l) continue;
+    const y = l.y + 4;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y + 6);
+    await page.mouse.up();
+    const abrio = await dialog(page).waitFor({ state: "visible", timeout: 2500 }).then(() => true, () => false);
+    // Si el arrastre empezó encima de una cita, lo que se abre es su detalle: no sirve.
+    if (abrio && (await dialog(page).getByText("Nueva cita").count())) return;
+    if (abrio) {
+      await page.keyboard.press("Escape");
+      await expect(dialog(page)).toBeHidden();
+    }
+  }
+  throw new Error(`no hay hueco libre cerca de ${date} ${time}`);
 }
 
 /** Ir a la semana que contiene `date` en el calendario: vuelve a "Hoy" y avanza/retrocede. */

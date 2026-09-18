@@ -1,6 +1,6 @@
 ---
 title: "NemediClinic — Guía de uso"
-subtitle: "Versión 1.3 · Recorrido guiado por rol con pantallas reales"
+subtitle: "Versión 1.4 · Recorrido guiado por rol con pantallas reales"
 date: "18 de septiembre de 2026"
 lang: es
 ---
@@ -598,7 +598,7 @@ Abre la ficha del paciente y haz clic en Paquetes. **Después verás** el avance
 
 ## Capítulo 5 · Inventario {.capitulo}
 
-**Qué vas a lograr:** reponer los productos que están por debajo del mínimo y revisar el historial de entradas.
+**Qué vas a lograr:** reponer lo que está por debajo del mínimo, dejar cada compra registrada con su lote y su vencimiento, y sacar el reporte que pide la Secretaría de Salud.
 
 ### 1. Haz clic en Inventario y abre la pestaña Alertas
 
@@ -606,35 +606,69 @@ Abre la ficha del paciente y haz clic en Paquetes. **Después verás** el avance
 
 ![](img/admin/cap5-01-haz-clic-en-inventario-y-abre-la-pestana-alertas.png)
 
-### 2. Presiona Registrar entrada en la tarjeta del producto
+### 2. Arriba de todo, los lotes vencidos y los que están por vencer
+
+Antes del stock bajo mínimo aparecen dos bloques: **Lotes vencidos**, que hay que retirar del estante porque el sistema ya no deja usarlos, y **Lotes por vencer**, que conviene gastar primero. Cada tarjeta dice el producto, el número de lote, el registro INVIMA, cuánto queda y cuántos días faltan.
+
+![](img/admin/cap5-02-arriba-de-todo-estan-los-lotes-vencidos-y-los-qu.png)
+
+### 3. Presiona Registrar entrada en la tarjeta del producto
 
 **Después verás** el formulario con el producto ya elegido.
 
-![](img/admin/cap5-02-presiona-registrar-entrada-en-la-tarjeta-del-pro.png)
+![](img/admin/cap5-03-presiona-registrar-entrada-en-la-tarjeta-del-pro.png)
 
-### 3. Escribe la cantidad y presiona Registrar
+### 4. Escribe la cantidad y completa los datos del lote
+
+Copia de la caja el **número de lote** y la **fecha de vencimiento**, y escribe el proveedor y el número de factura. En un medicamento o un dispositivo médico el lote y el vencimiento son obligatorios: sin eso no se puede reportar. En un insumo o un cosmético son opcionales, pero si los anotas el sistema puede avisarte antes de que se venza.
+
+![](img/admin/cap5-04-escribe-la-cantidad-y-completa-el-lote-en-un-med.png)
+
+### 5. Presiona Registrar
 
 **Después verás** que el producto sale de Alertas.
 
-![](img/admin/cap5-03-escribe-200-como-cantidad-y-presiona-registrar-e.png)
+![](img/admin/cap5-05-presiona-registrar-el-producto-sale-de-alertas.png)
 
-### 4. Abre la pestaña Entradas
+### 6. Abre la pestaña Entradas
 
-**Después verás** cada reposición con fecha, cantidad, motivo y quién la registró.
+**Después verás** cada reposición con fecha, cantidad, motivo, lote y quién la registró.
 
-![](img/admin/cap5-04-abre-la-pestana-entradas-para-ver-el-historial.png)
+![](img/admin/cap5-06-abre-la-pestana-entradas-para-ver-el-historial.png)
 
-### 5. Abre la pestaña Productos
+### 7. Abre la pestaña Productos
 
-**Después verás** el semáforo del producto repuesto en Verde.
+**Después verás** el semáforo del producto repuesto en Óptimo.
 
-![](img/admin/cap5-05-abre-la-pestana-productos-el-semaforo-quedo-en-o.png)
+![](img/admin/cap5-07-abre-la-pestana-productos-el-semaforo-quedo-en-o.png)
 
-### 6. Haz clic en la pestaña Movimientos
+### 8. Filtra por Medicamentos
 
-**Después verás** el historial de entradas y salidas, con fecha, producto, cantidad y quién lo registró.
+Arriba de la lista hay una fila de pestañas: Todos, Insumos, Medicamentos, Dispositivos médicos y Cosméticos. Es la misma separación con la que piensa la Secretaría de Salud.
 
-![](img/admin/cap5-06-haz-clic-en-la-pestana-movimientos-para-ver-el-h.png)
+![](img/admin/cap5-08-filtra-por-medicamentos-el-catalogo-se-separa-po.png)
+
+### 9. Presiona el botón de lotes del producto
+
+**Después verás** todos sus lotes ordenados por vencimiento: el que vence primero arriba, que es el que el sistema saca primero. Los agotados quedan al final, en gris, porque siguen siendo parte del respaldo.
+
+![](img/admin/cap5-09-presiona-el-boton-de-lotes-del-producto.png)
+
+### 10. Cierra y presiona Reporte para Secretaría de Salud
+
+![](img/admin/cap5-10-cierra-la-ficha-de-lotes-y-presiona-reporte-para.png)
+
+### 11. Elige el rango y presiona Descargar Excel
+
+El archivo trae una hoja por tipo regulatorio, con el registro INVIMA, el principio activo, cada lote con su vencimiento y lo que se consumió en el periodo.
+
+![](img/admin/cap5-11-elige-el-rango-y-presiona-descargar-excel.png)
+
+### 12. Haz clic en la pestaña Movimientos
+
+**Después verás** el historial de entradas y salidas, con fecha, producto, cantidad, de qué lote salió, para qué paciente y quién lo registró.
+
+![](img/admin/cap5-12-haz-clic-en-la-pestana-movimientos-para-ver-el-h.png)
 
 ## Capítulo 6 · Valoraciones {.capitulo}
 
@@ -908,6 +942,8 @@ La información comercial no está disponible para la esteticista.
 
 ### 3. Busca el producto, escribe la cantidad y presiona Registrar
 
+Si la caja trae número de lote y fecha de vencimiento, anótalos en el recuadro **Lote**: así el sistema puede avisar cuando esté por vencerse y sacar primero el que vence antes.
+
 **Después verás** la entrada en el historial.
 
 ![](img/esteticista/cap5-03-busca-el-producto-escribe-la-cantidad-10-y-presi.png)
@@ -939,7 +975,28 @@ Crear productos es tarea del dueño o de recepción.
 | Registrar una valoración | Valoraciones → Nueva valoración |
 | Registrar una entrada de producto | Inventario → Entradas → Registrar entrada |
 
-# Novedades de la versión 1.1 {.parte}
+# Novedades {.parte}
+
+## Inventario con trazabilidad sanitaria {.capitulo}
+
+El inventario dejó de ser un número suelto: ahora cada compra entra como **lote**, con su número, su vencimiento, el proveedor y la factura.
+
+- En **medicamentos** y **dispositivos médicos** el número de lote y el vencimiento son obligatorios. En insumos y cosméticos son opcionales, pero conviene anotarlos.
+- Cada producto tiene su **tipo regulatorio** y su **registro INVIMA**, y el catálogo se puede filtrar por ese tipo.
+- Cuando se gasta un producto en cabina, el sistema **saca primero el lote que vence antes** y deja escrito de qué lote salió y para qué paciente.
+- Un **lote vencido no se puede usar**: el sistema rechaza la salida y te dice cuánto queda sin vencer.
+- En **Alertas** aparecen arriba los lotes vencidos y los que están por vencer, con un semáforo de días.
+- El botón **Reporte para Secretaría de Salud** descarga un Excel con una hoja por tipo regulatorio: registro INVIMA, principio activo, lotes, vencimientos, existencia y consumo del periodo.
+
+![](img/admin/cap5-02-arriba-de-todo-estan-los-lotes-vencidos-y-los-qu.png)
+
+## Consumo de cabina {.capitulo}
+
+Al guardar la nota clínica de una cita completada, la esteticista anota qué insumos gastó y el sistema los **descuenta solo** del inventario, dejando el movimiento ligado a la cita y al paciente.
+
+## Pagos con comprobante {.capitulo}
+
+Cada pago admite su **referencia** y la **foto o el PDF del comprobante**, y la ficha muestra una barra con el porcentaje pagado del paquete. El sistema ya no deja registrar un pago mayor al saldo pendiente.
 
 ## Contraseña temporal y cambio obligatorio {.capitulo}
 
@@ -1006,9 +1063,8 @@ Si se cae el internet, la **Hoja del día**, las **citas** y las **fichas de pac
 
 El recorrido automático de esta versión no encontró pasos rotos. Esto es lo que todavía no existe y está en el plan de trabajo:
 
-- **Descuento automático de inventario.** Pronto, al completar una cita, los productos usados en cabina se descontarán solos del inventario. Hoy el inventario solo registra entradas.
-- **Recepción crea usuarios.** Hoy solo el dueño puede crear cuentas; recepción puede editarlas y restablecer contraseñas.
+- **Dar de baja un lote vencido.** Hoy el lote vencido sigue apareciendo en Alertas hasta que alguien lo retire del estante; el sistema todavía no registra esa baja.
+- **Deshacer un consumo de cabina.** Si se anota un insumo de más, hoy hay que corregirlo con una entrada de ajuste: el movimiento no se revierte solo.
 - **Quitar un procedimiento de un paquete ya creado.** Hoy se puede agregar, no quitar; si te equivocas, elimina el paquete y créalo de nuevo (solo si no se ha vendido).
-- **Aviso de sobrepago.** Hoy el sistema acepta un pago mayor al saldo; revisa el monto antes de registrar.
 - **Guardar cambios sin conexión.** Hoy sin internet solo se puede consultar.
 - **Recordatorios por WhatsApp.**

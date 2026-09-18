@@ -19,20 +19,28 @@ public class DemoImageSeeder
     private const string Prefix = "demo-";
     private static readonly string[] PatientCedulas = ["1000000001", "1000000002", "1000000003"];
 
+    /// <summary>
+    /// Un plan por paciente, en el mismo orden que PatientCedulas. El procedimiento es el del
+    /// paquete que ese paciente tiene asignado: así la nota con fotos calza con una sesión del
+    /// paquete y la pestaña Evolución la muestra DENTRO del tratamiento, no en "Sesiones sueltas".
+    /// </summary>
     private static readonly (string Procedimiento, string Nota1, string Nota2, string Productos, string From, string To)[] Plans =
     [
+        // Valentina · Rostro Radiante
         ("Limpieza facial profunda",
             "Piel mixta con poros dilatados en zona T. Se realiza extracción y mascarilla calmante. Tolerancia buena.",
             "Poros visiblemente más cerrados y tono más uniforme. Se refuerza rutina de hidratación en casa.",
             "Gel limpiador, mascarilla de arcilla, sérum calmante", "#E8B4A0", "#F6D9C8"),
-        ("Hidratación profunda",
-            "Piel deshidratada con descamación leve en mejillas. Se aplica ácido hialurónico con aparatología.",
-            "Mejora clara de la textura y la luminosidad. La paciente refiere menos tirantez.",
-            "Ácido hialurónico, crema barrera", "#D9A441", "#F3DFB0"),
-        ("Radiofrecuencia facial",
-            "Flacidez leve en óvalo facial. Primera sesión a 40 °C, sin molestias.",
-            "Contorno más definido en mandíbula. Se programa la siguiente sesión en 15 días.",
-            "Gel conductor, sérum reafirmante", "#8FA8C8", "#DCE6F2"),
+        // Mariana · Piernas Láser
+        ("Depilación láser piernas completas",
+            "Vello grueso en piernas completas, fototipo IV. Primera sesión con parámetros conservadores.",
+            "Reducción visible de densidad y grosor del vello. Sin reacciones adversas entre sesiones.",
+            "Gel conductor, gel frío post láser", "#D9A441", "#F3DFB0"),
+        // Juliana · Cuerpo Firme
+        ("Masaje reductor",
+            "Retención marcada en abdomen y flancos. Primera sesión de drenaje con presión media.",
+            "Mejor respuesta del tejido y contorno más definido. Se mantiene la frecuencia semanal.",
+            "Aceite reductor, crema de contraste", "#8FA8C8", "#DCE6F2"),
     ];
 
     private readonly AppDbContext _db;

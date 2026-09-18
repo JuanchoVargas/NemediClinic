@@ -58,8 +58,10 @@ export default defineConfig({
       stderr: "pipe",
     },
     {
+      // VITE_HIDE_DEVTOOLS: sin el badge de TanStack, que si no sale en todas las capturas del manual
       command: "pnpm exec vite --port 5173 --strictPort",
       cwd: "apps/web",
+      env: { VITE_HIDE_DEVTOOLS: "1" },
       url: WEB_URL,
       reuseExistingServer: true,
       timeout: 120_000,

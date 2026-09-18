@@ -89,7 +89,22 @@ export async function step(page: Page, name: string, locator?: Locator | null, o
   const capture = async () => {
     if (captured) return;
     captured = true;
-    try { await page.screenshot({ path: img, fullPage: false }); } catch { /* página cerrada */ }
+    try {
+      // Los avisos que quedaron de un paso anterior (el "Bienvenido" del login, por ejemplo) tapan
+      // la esquina superior derecha. Se ocultan solo para la foto con una hoja de estilos propia:
+      // borrar los nodos rompería a Sonner, que es quien los controla, y dejaría de mostrar avisos.
+      await page.addStyleTag({ content: "[data-sonner-toaster]{opacity:0!important}" }).catch(() => undefined);
+      // Recharts dibuja la serie con una animación de ~1 s: sin esperarla, la foto sale con la
+      // línea a medio trazar y parece que no hubiera datos.
+      if (await page.locator(".recharts-wrapper").first().isVisible().catch(() => false))
+        await page.waitForTimeout(1200);
+      await page.screenshot({ path: img, fullPage: false });
+      await page.evaluate(() => {
+        document.querySelectorAll("style").forEach((s) => {
+          if (s.textContent?.includes("data-sonner-toaster")) s.remove();
+        });
+      }).catch(() => undefined);
+    } catch { /* página cerrada */ }
   };
 
   try {

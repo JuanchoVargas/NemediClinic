@@ -24,6 +24,7 @@ import {
   redirect,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
+import { SHOW_DEVTOOLS } from "@/lib/devtools";
 import { z } from "zod";
 
 import { RootLayout } from "@/components/layout/RootLayout";
@@ -66,7 +67,7 @@ const rootRoute = createRootRoute({
   component: () => (
     <>
       <RootLayout />
-      {import.meta.env.DEV && <TanStackRouterDevtools position="bottom-right" />}
+      {SHOW_DEVTOOLS && <TanStackRouterDevtools position="bottom-right" />}
     </>
   ),
 });

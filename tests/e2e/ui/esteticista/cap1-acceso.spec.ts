@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { startChapter, step, endChapter } from "../helpers/guide";
-import { headerLink, lastToast } from "../walk";
+import { headerLink, lastToast, sidebar } from "../walk";
 import { CREDS } from "../api";
 
 test.describe.configure({ mode: "serial" });
@@ -16,13 +16,13 @@ test("Cap1 · Entrar y qué puedes hacer (esteticista)", async ({ page }) => {
     },
     after: async () => {
       await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
-      await expect(page.locator("header")).toContainText(CREDS.esteticista.email);
+      await expect(sidebar(page)).toContainText(CREDS.esteticista.email);
     },
   });
 
   await step(page, "Revisa el menú: no aparecen Administración ni Paquetes", null, {
     after: async () => {
-      const nav = await page.locator("header nav").innerText();
+      const nav = await sidebar(page).locator("nav").innerText();
       expect(nav).not.toMatch(/Administraci/);
       expect(nav).not.toMatch(/Paquetes/);
     },
@@ -30,7 +30,7 @@ test("Cap1 · Entrar y qué puedes hacer (esteticista)", async ({ page }) => {
 
   await step(page, "Haz clic en Procedimientos: puedes consultar, no crear ni editar", headerLink(page, "Procedimientos"), {
     after: async () => {
-      await expect(page.locator("main table")).toContainText("Limpieza facial profunda");
+      await expect(page.locator("main")).toContainText("Limpieza facial profunda");
       await expect(page.locator("main button", { hasText: "Nuevo procedimiento" })).toHaveCount(0);
       await expect(page.locator('main button[aria-label^="Editar"]')).toHaveCount(0);
       await expect(page.locator('main button[aria-label^="Eliminar"]')).toHaveCount(0);

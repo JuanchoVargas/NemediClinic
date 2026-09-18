@@ -2,7 +2,7 @@
 #   docker compose --env-file .env up -d --build   (desde deploy/)
 #
 #   caddy  :80/:443 → /api/* → api:8080 · resto → web:80
-#   api    ASP.NET Core 8 (aplica migraciones al arrancar)
+#   api    ASP.NET Core 8 (aplica migraciones al arrancar; imágenes en el volumen uploads_data)
 #   web    Vite build servido por nginx
 #   mssql  SQL Server 2022 con volumen persistente y backups en ./backups
 name: nemedi-clinic
@@ -38,6 +38,10 @@ services:
       # Primer administrador de plataforma (solo se crea si la tabla PlatformAdmins está vacía)
       Platform__AdminEmail: ${Platform__AdminEmail:?Define Platform__AdminEmail en deploy/.env}
       Platform__AdminPassword: ${Platform__AdminPassword:?Define Platform__AdminPassword en deploy/.env}
+      Storage__UploadsPath: /data/uploads
+    volumes:
+      # Fotos de pacientes, productos y procedimientos. Inclúyelo en los backups (ver README).
+      - uploads_data:/data/uploads
     depends_on:
       mssql:
         condition: service_healthy
@@ -80,5 +84,6 @@ services:
 
 volumes:
   mssql_data:
+  uploads_data:
   caddy_data:
   caddy_config:

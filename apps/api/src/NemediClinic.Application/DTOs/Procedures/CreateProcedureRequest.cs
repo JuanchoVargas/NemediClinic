@@ -18,4 +18,7 @@ public class CreateProcedureRequest
 
     [Required, MaxLength(100)]
     public string AreaCorporal { get; set; } = string.Empty;
+
+    /// <summary>Id de un Attachment (Kind=Procedimiento) subido antes con POST /files.</summary>
+    public Guid? ImagenId { get; set; }
 }

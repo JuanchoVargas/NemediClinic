@@ -16,7 +16,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import esLocale from "@fullcalendar/core/locales/es";
 import type { DateSelectArg, DatesSetArg, EventClickArg } from "@fullcalendar/core";
-import { Link } from "@tanstack/react-router";
+import { Link, useSearch } from "@tanstack/react-router";
 import { Check, ChevronsUpDown, ListChecks } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -55,7 +55,7 @@ import {
 } from "@/api/appointments.api";
 import { useProcedures, type ProcedureDto } from "@/api/procedures.api";
 import { useEsteticistas } from "@/api/users.api";
-import { usePatients } from "@/api/patients.api";
+import { usePatient, usePatients } from "@/api/patients.api";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToastStore } from "@/stores/toast.store";
@@ -99,12 +99,22 @@ export function CalendarPage() {
   });
   const [esteticistFilter, setEsteticistFilter] = useState<string>("all");
 
+  // /calendar?patientId=… (botón "Agendar" de la ficha del paciente): abre el diálogo de
+  // nueva cita con ese paciente ya elegido y la próxima hora en punto.
+  const { patientId: presetPatientId } = useSearch({ strict: false }) as { patientId?: string };
+
   // Estado de diálogos. `seq` remonta el formulario de creación en cada apertura.
   const [createSheet, setCreateSheet] = useState<{
     open: boolean;
     defaultStart?: Date;
+    defaultPatientId?: string;
     seq: number;
-  }>({ open: false, seq: 0 });
+  }>(() => {
+    if (!presetPatientId) return { open: false, seq: 0 };
+    const nextHour = new Date();
+    nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+    return { open: true, defaultStart: nextHour, defaultPatientId: presetPatientId, seq: 0 };
+  });
   const [detailSheetId, setDetailSheetId] = useState<string | undefined>();
 
   const { data: appointments, isLoading } = useAppointments(
@@ -241,6 +251,7 @@ export function CalendarPage() {
         key={createSheet.seq}
         open={createSheet.open}
         defaultStart={createSheet.defaultStart}
+        defaultPatientId={createSheet.defaultPatientId}
         onClose={() => setCreateSheet((s) => ({ ...s, open: false }))}
       />
       <AppointmentDetailSheet
@@ -257,10 +268,12 @@ export function CalendarPage() {
 function CreateAppointmentSheet({
   open,
   defaultStart,
+  defaultPatientId,
   onClose,
 }: {
   open: boolean;
   defaultStart?: Date;
+  defaultPatientId?: string;
   onClose: () => void;
 }) {
   const create = useCreateAppointment();
@@ -274,14 +287,17 @@ function CreateAppointmentSheet({
   // Estado inicial por render: el padre remonta este componente (key) en cada apertura,
   // así no hace falta un useEffect para resetear.
   const initialFecha = defaultStart ? toLocalDateTimeInput(defaultStart) : "";
-  const [patient, setPatient] = useState<PatientSummary | null>(null);
+  // undefined = el usuario aún no tocó el selector → vale el paciente precargado por la URL
+  const { data: presetPatient } = usePatient(defaultPatientId);
+  const [pickedPatient, setPatient] = useState<PatientSummary | null | undefined>(undefined);
+  const patient: PatientSummary | null = pickedPatient === undefined ? (presetPatient ?? null) : pickedPatient;
   const [procedureId, setProcedureId] = useState<string>("");
   const [esteticistId, setEsteticistId] = useState<string>(lockedToSelf ? userId : "");
   const [fechaInicio, setFechaInicio] = useState<string>(initialFecha);
   const [notas, setNotas] = useState<string>("");
 
   const createDirty =
-    !!patient ||
+    !!pickedPatient ||
     !!procedureId ||
     !!notas ||
     fechaInicio !== initialFecha ||

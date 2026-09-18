@@ -20,12 +20,12 @@ test("Cap3 · Catálogo (dueño)", async ({ page }) => {
   startChapter(page, "superadmin", 3);
   await uiLogin(page, CREDS.superadmin.email, CREDS.superadmin.password);
   const d = () => dialog(page);
-  const procRow = () => page.locator("main table tr", { hasText: PROC });
+  const procRow = () => page.locator("main [data-slot=card]", { hasText: PROC });
   const procPicker = () => page.locator("button[role=combobox]", { hasText: "Buscar procedimiento" });
   const sesiones = () => page.locator('div:has(> label:text-is("Sesiones")) input[type=number]');
 
   await step(page, "Haz clic en Procedimientos", headerLink(page, "Procedimientos"), {
-    after: async () => { await expect(page.locator("main table")).toContainText("Limpieza facial profunda"); },
+    after: async () => { await expect(page.locator("main")).toContainText("Limpieza facial profunda"); },
   });
 
   await step(page, "Haz clic en Nuevo procedimiento", page.locator("main button", { hasText: "Nuevo procedimiento" }), {

@@ -8,6 +8,7 @@ public class Procedure : BaseEntity
     public int DuracionMinutos { get; set; }
     public string AreaCorporal { get; set; } = string.Empty;
     public bool Activo { get; set; } = true;
+    public Guid? ImagenId { get; set; }
 
     public ICollection<PackageProcedure> PackageProcedures { get; set; } = [];
 }

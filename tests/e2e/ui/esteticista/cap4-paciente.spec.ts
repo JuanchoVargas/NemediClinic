@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { startChapter, step, endChapter } from "../helpers/guide";
-import { uiLogin, tab, activePanel, headerLink } from "../walk";
+import { uiLogin, tab, activePanel, headerLink, dialog, option } from "../walk";
+import { samplePng } from "../helpers/sample-image";
 import { apiLogin, CREDS, findPatient, safeDelete } from "../api";
 
 test.describe.configure({ mode: "serial" });
@@ -18,8 +19,7 @@ test("Cap4 · Pacientes (esteticista)", async ({ page }) => {
   await uiLogin(page, CREDS.esteticista.email, CREDS.esteticista.password);
   const la = await apiLogin(CREDS.esteticista.email, CREDS.esteticista.password);
 
-  await step(page, "Haz clic en Inicio y luego en la tarjeta Pacientes", page.locator('main a[href="/patients"]').first(), {
-    before: async () => { await headerLink(page, /^Inicio$/).click(); },
+  await step(page, "Haz clic en Pacientes, en el menú lateral", headerLink(page, "Pacientes"), {
     after: async () => { await expect(page).toHaveURL(/\/patients$/); },
   });
 
@@ -55,9 +55,45 @@ test("Cap4 · Pacientes (esteticista)", async ({ page }) => {
     after: async () => { await expect(activePanel(page)).toContainText("Antecedentes"); },
   });
 
+  await step(page, "Presiona Nueva nota para registrar la sesión de hoy", activePanel(page).locator("button", { hasText: "Nueva nota" }).first(), {
+    after: async () => { await expect(dialog(page)).toContainText("Nueva nota clínica"); },
+  });
+
+  await step(page, "Elige el procedimiento, escribe las observaciones, agrega una foto en Antes y otra en Después, y presiona Guardar nota", dialog(page).locator("button[form=clinical-note-form]"), {
+    before: async () => {
+      await dialog(page).locator("button[role=combobox]").first().click();
+      await option(page, "Limpieza facial profunda").click();
+      await dialog(page).locator("textarea[name=observaciones]").fill("Piel mixta. Se realiza limpieza profunda con buena tolerancia.");
+      await dialog(page).locator('input[aria-label="Agregar fotos Antes"]').setInputFiles({ name: "antes.png", mimeType: "image/png", buffer: samplePng([214, 150, 130], [240, 200, 185], 60) });
+      await expect(dialog(page).locator('img[alt="Foto Antes"]')).toBeVisible();
+      await dialog(page).locator('input[aria-label="Agregar fotos Después"]').setInputFiles({ name: "despues.png", mimeType: "image/png", buffer: samplePng([232, 190, 172], [250, 228, 216], 8) });
+      await expect(dialog(page).locator('img[alt="Foto Después"]')).toBeVisible();
+    },
+    after: async () => {
+      await expect(dialog(page)).toBeHidden();
+      await expect(activePanel(page)).toContainText("Limpieza facial profunda");
+    },
+  });
+
+  await step(page, "Haz clic en la pestaña Evolución: la sesión aparece con sus fotos y el comparador de antes y después", tab(page, "Evolución"), {
+    after: async () => {
+      await expect(activePanel(page)).toContainText("Sesión 1");
+      await expect(activePanel(page)).toContainText("Desliza para comparar");
+      await expect(activePanel(page).locator("ul[aria-label='Fotos de la sesión'] img")).toHaveCount(2);
+    },
+  });
+
+  await step(page, "Haz clic en una foto para verla en grande; cierra con Escape", activePanel(page).locator("ul[aria-label='Fotos de la sesión'] img").first(), {
+    after: async () => {
+      await expect(page.locator(".yarl__container")).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(page.locator(".yarl__container")).toBeHidden();
+    },
+  });
+
   await step(page, "Observa que no existen las pestañas Paquetes ni Pagos", null, {
     after: async () => {
-      await expect(page.locator("[role=tab]")).toHaveCount(2);
+      await expect(page.locator("[role=tab]")).toHaveCount(3);
       await expect(tab(page, "Paquetes")).toHaveCount(0);
       await expect(tab(page, "Pagos")).toHaveCount(0);
     },

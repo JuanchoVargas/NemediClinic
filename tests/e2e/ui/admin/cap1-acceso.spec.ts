@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { startChapter, step, endChapter } from "../helpers/guide";
-import { headerMenu, openHeaderMenu, menuItem, lastToast } from "../walk";
+import { headerMenu, openHeaderMenu, menuItem, lastToast, sidebar } from "../walk";
 import { CREDS } from "../api";
 
 test.describe.configure({ mode: "serial" });
@@ -16,13 +16,13 @@ test("Cap1 · Entrar y qué puedes hacer (recepción)", async ({ page }) => {
     },
     after: async () => {
       await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
-      await expect(page.locator("header")).toContainText(CREDS.admin.email);
+      await expect(sidebar(page)).toContainText(CREDS.admin.email);
     },
   });
 
   await step(page, "Haz clic en Administración: verás Usuarios y Sedes", headerMenu(page, "Administración"), {
     after: async () => {
-      const items = page.locator("[role=menuitem]");
+      const items = page.locator("[data-sidebar=menu-sub-button]");
       await expect(items.filter({ hasText: "Usuarios" })).toHaveCount(1);
       await expect(items.filter({ hasText: "Sedes" })).toHaveCount(1);
       await expect(items.filter({ hasText: "Mi clínica" })).toHaveCount(0);

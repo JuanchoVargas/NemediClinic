@@ -146,6 +146,8 @@ const daySheetRoute = createRoute({
 const calendarRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/calendar",
+  // ?patientId= abre "Nueva cita" con el paciente elegido (acción rápida de la ficha)
+  validateSearch: z.object({ patientId: z.string().optional() }),
   component: CalendarPage,
 });
 

@@ -412,7 +412,7 @@ export function PackageFormPage() {
                         <p
                           className={cn(
                             "text-xs mt-1 rounded-md px-2 py-1 inline-block",
-                            "bg-yellow-50 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-100",
+                            "bg-sand-soft text-sand-foreground dark:text-sand",
                           )}
                         >
                           Este paquete tiene un descuento de $

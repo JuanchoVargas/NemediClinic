@@ -43,10 +43,10 @@
 - Importar siempre con alias `@/`.
 
 ### Personalización por proyecto/cliente
-- Colores de marca → `src/styles/tokens.css` (sobrescribir variables HSL).
+- Sistema visual (colores, tipografía, radios, sombras, modo oscuro) → `src/styles/tokens.css`. El primario se deriva de `--brand-primary`, que llega del canal (GET /branding).
 - Nombre de app → variable `VITE_APP_NAME` en `.env`.
 - URL del backend → variable `VITE_API_URL` en `.env`.
-- Logo → reemplazar en `Header.tsx`.
+- Logo y nombre comercial → los entrega el canal (GET /branding) y se pintan en `AppSidebar.tsx` y `LoginPage.tsx`.
 
 ### Reemplazar el login mock por backend real
 Cuando exista backend, en `src/api/auth.api.ts`:

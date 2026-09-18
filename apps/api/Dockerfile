@@ -24,6 +24,10 @@ ENV ASPNETCORE_ENVIRONMENT=Production \
 
 EXPOSE 8080
 
+# Imágenes subidas (LocalFileStorage → Storage__UploadsPath). En Compose es un volumen;
+# la carpeta se crea aquí con dueño "app" para que el volumen herede el permiso de escritura.
+RUN mkdir -p /data/uploads && chown -R app:app /data
+
 # Usuario no root que trae la imagen oficial (uid 1654)
 USER app
 

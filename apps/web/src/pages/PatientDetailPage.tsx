@@ -1,7 +1,8 @@
 // ============================================================
 // PatientDetailPage.tsx — Detalle de paciente con tabs
 //
-// Tabs: Información, Historia Clínica, Paquetes, Pagos.
+// Cabecera (PatientHeader) con foto, badges y acciones rápidas.
+// Tabs: Información, Historia Clínica, Evolución (fotos por sesión), Paquetes, Pagos.
 // Cada tab tiene su propio query independiente (lazy: solo cuando
 // el usuario abre el tab, TanStack Query lo cachea por 5min).
 // ============================================================
@@ -11,7 +12,7 @@ import { Link, useParams } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Pencil, Plus, ArrowLeft } from "lucide-react";
+import { Plus, ArrowLeft } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,11 @@ import { FormDialog } from "@/components/shared/FormDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { SecureImage } from "@/components/shared/SecureImage";
+import { PatientHeader } from "@/components/patient/PatientHeader";
+import { EvolutionTab } from "@/components/patient/EvolutionTab";
+import { ClinicalNoteDialog } from "@/components/patient/ClinicalNoteDialog";
 import { usePermissions } from "@/hooks/use-permissions";
 
 import { usePatient } from "@/api/patients.api";
@@ -68,6 +74,10 @@ export function PatientDetailPage() {
   const { data: patient, isLoading } = usePatient(id);
   const { can } = usePermissions();
   const canReadPackages = can("patientPackages.read");
+  const canCreateNote = can("clinical.note.create");
+  // Tabs controlados: las acciones rápidas de la cabecera cambian de pestaña
+  const [tab, setTab] = useState("info");
+  const [noteOpen, setNoteOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -95,51 +105,21 @@ export function PatientDetailPage() {
     );
   }
 
-  const avatarUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
-    `${patient.nombre} ${patient.apellido}`,
-  )}`;
-
   return (
     <PageContainer>
-      {/* ── Header ─────────────────────────────────────────── */}
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <img
-            src={avatarUrl}
-            alt={`${patient.nombre} ${patient.apellido}`}
-            className="h-16 w-16 rounded-full border bg-muted"
-          />
-          <div>
-            <h1 className="text-3xl font-bold">
-              {patient.nombre} {patient.apellido}
-            </h1>
-            <p className="text-muted-foreground">Cédula: {patient.cedula}</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link to="/patients"><ArrowLeft className="mr-2 h-4 w-4" />Volver</Link>
-          </Button>
-          {can("patients.update") && (
-            <Button asChild>
-              <Link
-                to="/patients/$id/edit"
-                params={{ id: patient.id }}
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Editar
-              </Link>
-            </Button>
-          )}
-        </div>
-      </div>
+      <PatientHeader
+        patient={patient}
+        onRegisterPayment={() => setTab("payments")}
+        onNewNote={() => setNoteOpen(true)}
+      />
 
       {/* ── Tabs ───────────────────────────────────────────── */}
       {/* Paquetes y pagos: PatientPackagesController es policy Admin → ocultos para Esteticista */}
-      <Tabs defaultValue="info">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="info">Información</TabsTrigger>
           <TabsTrigger value="clinical">Historia clínica</TabsTrigger>
+          <TabsTrigger value="evolution">Evolución</TabsTrigger>
           {canReadPackages && <TabsTrigger value="packages">Paquetes</TabsTrigger>}
           {canReadPackages && <TabsTrigger value="payments">Pagos</TabsTrigger>}
         </TabsList>
@@ -148,7 +128,10 @@ export function PatientDetailPage() {
           <InfoTab patient={patient} />
         </TabsContent>
         <TabsContent value="clinical" className="mt-4">
-          <ClinicalTab patientId={patient.id} />
+          <ClinicalTab patientId={patient.id} onNewNote={canCreateNote ? () => setNoteOpen(true) : undefined} />
+        </TabsContent>
+        <TabsContent value="evolution" className="mt-4">
+          <EvolutionTab patientId={patient.id} onNewNote={canCreateNote ? () => setNoteOpen(true) : undefined} />
         </TabsContent>
         {canReadPackages && (
           <TabsContent value="packages" className="mt-4">
@@ -161,6 +144,8 @@ export function PatientDetailPage() {
           </TabsContent>
         )}
       </Tabs>
+
+      {noteOpen && <ClinicalNoteDialog patientId={patient.id} onClose={() => setNoteOpen(false)} />}
     </PageContainer>
   );
 }
@@ -206,7 +191,7 @@ function Field({ label, value }: { label: string; value: string }) {
 // ────────────────────────────────────────────────────────────
 // Tab: Historia clínica
 // ────────────────────────────────────────────────────────────
-function ClinicalTab({ patientId }: { patientId: string }) {
+function ClinicalTab({ patientId, onNewNote }: { patientId: string; onNewNote?: () => void }) {
   const { data: record, isLoading: loadingRecord } = useClinicalRecord(patientId);
   const [notesPage, setNotesPage] = useState(1);
   const { data: notes, isLoading: loadingNotes } = useClinicalNotes(
@@ -243,16 +228,36 @@ function ClinicalTab({ patientId }: { patientId: string }) {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Notas clínicas</CardTitle>
-          <CardDescription>
-            Registro de cada sesión / consulta. Más recientes primero.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle>Notas clínicas</CardTitle>
+            <CardDescription>
+              Registro de cada sesión / consulta. Más recientes primero.
+            </CardDescription>
+          </div>
+          {onNewNote && (
+            <Button size="sm" onClick={onNewNote}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Nueva nota
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {loadingNotes && <Skeleton className="h-24 w-full" />}
           {notes && notes.items.length === 0 && (
-            <p className="text-sm text-muted-foreground">Aún no hay notas clínicas.</p>
+            <EmptyState
+              illustration="generic"
+              title="Aún no hay notas clínicas"
+              description="Registra cada sesión con sus observaciones y fotos de antes y después."
+              action={
+                onNewNote && (
+                  <Button onClick={onNewNote}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nueva nota
+                  </Button>
+                )
+              }
+            />
           )}
           {notes && notes.items.length > 0 && (
             <ul className="space-y-3">
@@ -271,6 +276,19 @@ function ClinicalTab({ patientId }: { patientId: string }) {
                   )}
                   {n.observaciones && (
                     <p className="text-sm whitespace-pre-wrap">{n.observaciones}</p>
+                  )}
+                  {n.fotos.length > 0 && (
+                    <ul className="mt-2 flex flex-wrap gap-2" aria-label="Fotos de la nota">
+                      {n.fotos.map((foto) => (
+                        <li key={foto.id}>
+                          <SecureImage
+                            id={foto.id}
+                            alt={foto.kind === "Antes" ? "Antes" : "Después"}
+                            className="h-14 w-14 rounded-md border"
+                          />
+                        </li>
+                      ))}
+                    </ul>
                   )}
                 </li>
               ))}
@@ -464,8 +482,8 @@ function PackagePaymentsSection({ pkg }: { pkg: PatientPackage }) {
           className={cn(
             "rounded-md px-3 py-2 grid grid-cols-3 gap-2 text-sm",
             saldoCero
-              ? "bg-green-50 text-green-800 dark:bg-green-900/30 dark:text-green-100"
-              : "bg-yellow-50 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-100",
+              ? "bg-success-soft text-success"
+              : "bg-sand-soft text-sand-foreground dark:text-sand",
           )}
         >
           <div>

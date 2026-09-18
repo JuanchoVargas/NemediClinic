@@ -17,8 +17,8 @@ export const DEFAULT_BRANDING: Branding = {
   canal: "nemedi",
   nombreComercial: import.meta.env.VITE_APP_NAME || "NemediClinic",
   logoUrl: null,
-  colorPrimario: "#171717",
-  colorSecundario: "#737373",
+  colorPrimario: "#1F4E79",
+  colorSecundario: "#D9A441",
   dominio: "",
 };
 

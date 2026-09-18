@@ -13,8 +13,8 @@ public class Channel
     // Branding (marca blanca por dominio)
     public string NombreComercial { get; set; } = string.Empty;
     public string? LogoUrl { get; set; }
-    public string ColorPrimario { get; set; } = "#171717";
-    public string ColorSecundario { get; set; } = "#737373";
+    public string ColorPrimario { get; set; } = "#1F4E79";
+    public string ColorSecundario { get; set; } = "#D9A441";
     public string Dominio { get; set; } = string.Empty;
 
     /// <summary>Participación del canal sobre lo facturado, entre 0 y 1 (0.50 = 50 %).</summary>

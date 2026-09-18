@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NemediClinic.Api.Services;
 using NemediClinic.Application.DTOs.Common;
+using NemediClinic.Application.DTOs.Files;
 using NemediClinic.Application.DTOs.Patients;
 using NemediClinic.Domain.Entities;
 using NemediClinic.Domain.Enums;
@@ -15,10 +17,12 @@ namespace NemediClinic.Api.Controllers;
 public class PatientsController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly AttachmentService _attachments;
 
-    public PatientsController(AppDbContext db)
+    public PatientsController(AppDbContext db, AttachmentService attachments)
     {
         _db = db;
+        _attachments = attachments;
     }
 
     [HttpGet]
@@ -48,6 +52,7 @@ public class PatientsController : ControllerBase
                 Apellido = p.Apellido,
                 Cedula = p.Cedula,
                 Telefono = p.Telefono,
+                ImagenId = p.ImagenId,
                 PaqueteActivo = p.PatientPackages
                     .Where(pp => pp.Estado == PackageStatus.Activo)
                     .Select(pp => pp.Package.Nombre)
@@ -80,10 +85,12 @@ public class PatientsController : ControllerBase
             Email = request.Email,
             FechaNacimiento = request.FechaNacimiento,
             FotoUrl = request.FotoUrl,
+            ImagenId = request.ImagenId,
             NotasGenerales = request.NotasGenerales
         };
 
         _db.Patients.Add(patient);
+        await _attachments.AssignImageAsync(AttachmentEntityType.Patient, patient.Id, request.ImagenId, null);
 
         // Create empty clinical record automatically
         var clinicalRecord = new ClinicalRecord
@@ -104,6 +111,7 @@ public class PatientsController : ControllerBase
             Email = patient.Email,
             FechaNacimiento = patient.FechaNacimiento,
             FotoUrl = patient.FotoUrl,
+            ImagenId = patient.ImagenId,
             NotasGenerales = patient.NotasGenerales,
             IsActive = patient.IsActive,
             CreatedAt = patient.CreatedAt
@@ -122,8 +130,18 @@ public class PatientsController : ControllerBase
         if (patient is null)
             return NotFound(new { error = "Paciente no encontrado." });
 
+        var ahora = DateTime.Now;
+        var proximaCita = await _db.Appointments
+            .AsNoTracking()
+            .Where(a => a.PatientId == id && a.FechaInicio >= ahora
+                && (a.Estado == AppointmentStatus.Agendada || a.Estado == AppointmentStatus.Confirmada))
+            .OrderBy(a => a.FechaInicio)
+            .Select(a => (DateTime?)a.FechaInicio)
+            .FirstOrDefaultAsync();
+
         return Ok(new PatientDto
         {
+            ProximaCita = proximaCita,
             Id = patient.Id,
             Nombre = patient.Nombre,
             Apellido = patient.Apellido,
@@ -132,6 +150,7 @@ public class PatientsController : ControllerBase
             Email = patient.Email,
             FechaNacimiento = patient.FechaNacimiento,
             FotoUrl = patient.FotoUrl,
+            ImagenId = patient.ImagenId,
             NotasGenerales = patient.NotasGenerales,
             IsActive = patient.IsActive,
             CreatedAt = patient.CreatedAt,
@@ -167,6 +186,12 @@ public class PatientsController : ControllerBase
         if (request.Email is not null) patient.Email = request.Email;
         if (request.FechaNacimiento.HasValue) patient.FechaNacimiento = request.FechaNacimiento;
         if (request.FotoUrl is not null) patient.FotoUrl = request.FotoUrl;
+        if (request.ImagenId.HasValue)
+        {
+            // Quitar la foto se hace con DELETE /files/{id}, que también limpia ImagenId.
+            await _attachments.AssignImageAsync(AttachmentEntityType.Patient, patient.Id, request.ImagenId, patient.ImagenId);
+            patient.ImagenId = request.ImagenId;
+        }
         if (request.NotasGenerales is not null) patient.NotasGenerales = request.NotasGenerales;
         if (request.IsActive.HasValue) patient.IsActive = request.IsActive.Value;
 

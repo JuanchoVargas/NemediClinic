@@ -15,8 +15,12 @@ export async function uiLogin(page: Page, email: string, password: string) {
   await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
 }
 
+/** Botón del menú de usuario (arriba a la derecha): ahí viven el tema y "Cerrar sesión". */
+export const userMenu = (page: Page) => page.locator('header button[aria-label="Menú de usuario"]');
+
 export async function uiLogout(page: Page) {
-  await page.locator("header button", { hasText: "Cerrar sesión" }).click();
+  await userMenu(page).click();
+  await menuItem(page, "Cerrar sesión").click();
   await page.waitForURL(/\/login/);
 }
 
@@ -50,21 +54,27 @@ export async function lastToast(page: Page, pattern?: string | RegExp) {
 export const dialog = (page: Page) => page.locator("[role=dialog]");
 export const alertDialog = (page: Page) => page.locator("[role=alertdialog]");
 export const option = (page: Page, text: string | RegExp) => page.locator("[role=option]", { hasText: text }).first();
-export const menuItem = (page: Page, text: string | RegExp) => page.locator("[role=menuitem]", { hasText: text }).first();
-export const headerLink = (page: Page, text: string | RegExp) => page.locator("header nav a", { hasText: text }).first();
-export const headerMenu = (page: Page, text: string | RegExp) => page.locator("header nav button", { hasText: text }).first();
+// La navegación vive en el sidebar. Se conservan los nombres header* para no tocar cada spec:
+//   headerLink  → enlace directo del menú lateral (Pacientes, Procedimientos, Inventario…)
+//   headerMenu  → grupo desplegable del menú lateral (Calendario, Administración)
+//   menuItem    → opción de un grupo desplegable, o de un menú flotante (menú de usuario)
+export const sidebar = (page: Page) => page.locator("[data-slot=sidebar]").first();
+export const menuItem = (page: Page, text: string | RegExp) =>
+  page.locator("[role=menuitem], [data-sidebar=menu-sub-button]", { hasText: text }).first();
+export const headerLink = (page: Page, text: string | RegExp) =>
+  page.locator("[data-sidebar=menu-button][href]", { hasText: text }).first();
+export const headerMenu = (page: Page, text: string | RegExp) =>
+  page.locator("button[data-sidebar=menu-button]", { hasText: text }).first();
 
 /** Abre un menú desplegable del header y espera a ver sus opciones (reintenta: tras navegar
  *  por una opción, Radix puede ignorar el primer clic sobre el trigger). */
 export async function openHeaderMenu(page: Page, text: string | RegExp) {
-  for (let i = 0; i < 3; i++) {
-    await headerMenu(page, text).click();
-    const items = page.locator("[role=menuitem]");
-    try { await items.first().waitFor({ state: "visible", timeout: 1500 }); return; } catch { /* reintenta */ }
-    await page.keyboard.press("Escape");
-    await page.waitForTimeout(300);
-  }
-  throw new Error(`no se pudo abrir el menú ${String(text)}`);
+  const trigger = headerMenu(page, text);
+  await trigger.waitFor({ state: "visible" });
+  // El grupo ya está abierto si la ruta actual está dentro: un clic lo cerraría
+  if ((await trigger.getAttribute("aria-expanded")) === "true") return;
+  await trigger.click();
+  await page.locator("[data-sidebar=menu-sub-button]").first().waitFor({ state: "visible", timeout: 3000 });
 }
 
 /** Cierra un diálogo abierto descartando cambios si los hay. */

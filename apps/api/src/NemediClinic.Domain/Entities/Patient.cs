@@ -9,6 +9,8 @@ public class Patient : BaseEntity
     public string? Email { get; set; }
     public DateOnly? FechaNacimiento { get; set; }
     public string? FotoUrl { get; set; }
+    /// <summary>Foto de perfil (Attachment Kind=Perfil). FotoUrl queda como campo legado sin uso en la web.</summary>
+    public Guid? ImagenId { get; set; }
     public string? NotasGenerales { get; set; }
     public bool IsActive { get; set; } = true;
 

@@ -25,8 +25,7 @@ test("Cap2 · Pacientes (recepción)", async ({ page }) => {
     await page.locator("input[name=telefono]").fill(data.telefono);
   };
 
-  await step(page, "Haz clic en Inicio y luego en la tarjeta Pacientes", page.locator('main a[href="/patients"]').first(), {
-    before: async () => { await headerLink(page, /^Inicio$/).click(); },
+  await step(page, "Haz clic en Pacientes, en el menú lateral", headerLink(page, "Pacientes"), {
     after: async () => { await expect(page).toHaveURL(/\/patients$/); },
   });
 
@@ -66,7 +65,7 @@ test("Cap2 · Pacientes (recepción)", async ({ page }) => {
   await step(page, "Busca a Valentina y haz clic en Ver", page.locator("main table tr", { hasText: "Valentina" }).locator("button", { hasText: "Ver" }), {
     before: async () => { await search().fill("Valentina"); await expect(page.locator("main table tbody tr")).toHaveCount(1); },
     after: async () => {
-      await expect(page.locator("[role=tab]")).toHaveCount(4);
+      await expect(page.locator("[role=tab]")).toHaveCount(5); // Información, Historia clínica, Evolución, Paquetes, Pagos
       await expect(activePanel(page)).toContainText("Datos personales");
     },
   });
@@ -113,6 +112,21 @@ test("Cap2 · Pacientes (recepción)", async ({ page }) => {
     after: async () => {
       await expect(page.locator("main table")).toContainText("Sin resultados");
       await expect(page.locator("main table tbody tr", { hasText: PAT.apellido })).toHaveCount(0);
+    },
+  });
+
+  // Al final del capítulo para no renumerar las capturas anteriores
+  await step(page, "En la ficha de Valentina, haz clic en la pestaña Evolución: cada sesión muestra sus fotos de antes y después", tab(page, "Evolución"), {
+    before: async () => {
+      const valentina = await findPatient(ad.token, "1000000001");
+      await page.goto(`/patients/${valentina!.id}`);
+      await expect(page.locator("main h1")).toContainText("Valentina");
+    },
+    after: async () => {
+      await expect(activePanel(page)).toContainText("Sesión 2");
+      await expect(activePanel(page)).toContainText("Desliza para comparar");
+      // las imágenes cargan con URL firmada: se espera a que la primera tenga tamaño real
+      await expect.poll(async () => activePanel(page).locator("figure img").first().evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
     },
   });
 

@@ -74,6 +74,8 @@ export interface Product {
   activo: boolean;
   semaforoStock: string; // StockStatus serializado
   createdAt?: string;
+  /** Id del Attachment con la imagen (se sube antes con POST /files). */
+  imagenId?: string | null;
 }
 
 /** Alias por compatibilidad con la spec (ProductDto). */
@@ -87,6 +89,8 @@ export interface CreateProductRequest {
   unidadMedida: string;
   stockMinimo: number;
   stockMaximo?: number | null;
+  /** Id del Attachment con la imagen (se sube antes con POST /files). */
+  imagenId?: string | null;
 }
 
 export interface UpdateProductRequest {
@@ -98,6 +102,8 @@ export interface UpdateProductRequest {
   stockMinimo?: number;
   stockMaximo?: number | null;
   activo?: boolean;
+  /** Id del Attachment con la imagen (se sube antes con POST /files). */
+  imagenId?: string | null;
 }
 
 export interface InventoryEntry {

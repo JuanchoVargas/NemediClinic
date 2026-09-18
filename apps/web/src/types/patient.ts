@@ -18,6 +18,10 @@ export interface Patient {
   email?: string | null;
   fechaNacimiento?: string | null; // ISO 8601
   fotoUrl?: string | null;
+  /** Id del Attachment (Kind=Perfil) con la foto de perfil. */
+  imagenId?: string | null;
+  /** Próxima cita Agendada o Confirmada (hora local). */
+  proximaCita?: string | null;
   notasGenerales?: string | null;
   isActive: boolean;
   createdAt: string;
@@ -34,6 +38,7 @@ export interface PatientSummary {
   apellido: string;
   cedula: string;
   telefono: string;
+  imagenId?: string | null;
   /** Nombre del paquete activo si existe; sino undefined. */
   paqueteActivo?: string | null;
   /** TODO: el backend aún no lo expone; queda como placeholder. */
@@ -60,6 +65,8 @@ export interface CreatePatientRequest {
   fechaNacimiento?: string;
   fotoUrl?: string;
   notasGenerales?: string;
+  /** Id del Attachment con la imagen (se sube antes con POST /files). */
+  imagenId?: string | null;
 }
 
 /**
@@ -76,4 +83,6 @@ export interface UpdatePatientRequest {
   fotoUrl?: string;
   notasGenerales?: string;
   isActive?: boolean;
+  /** Id del Attachment con la imagen (se sube antes con POST /files). */
+  imagenId?: string | null;
 }

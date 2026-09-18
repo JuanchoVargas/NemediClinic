@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NemediClinic.Api.Services;
 using NemediClinic.Application.DTOs.ClinicalRecords;
 using NemediClinic.Application.DTOs.Common;
+using NemediClinic.Application.DTOs.Files;
 using NemediClinic.Domain.Entities;
+using NemediClinic.Domain.Enums;
 using NemediClinic.Infrastructure.Persistence;
 
 namespace NemediClinic.Api.Controllers;
@@ -14,10 +17,12 @@ namespace NemediClinic.Api.Controllers;
 public class ClinicalRecordsController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly AttachmentService _attachments;
 
-    public ClinicalRecordsController(AppDbContext db)
+    public ClinicalRecordsController(AppDbContext db, AttachmentService attachments)
     {
         _db = db;
+        _attachments = attachments;
     }
 
     [HttpGet]
@@ -89,10 +94,13 @@ public class ClinicalRecordsController : ControllerBase
                 Procedimiento = n.Procedimiento,
                 Observaciones = n.Observaciones,
                 ProductosUsados = n.ProductosUsados,
-                FotoEvolucionUrl = n.FotoEvolucionUrl,
                 FechaCreacion = n.FechaCreacion
             })
             .ToListAsync();
+
+        var fotos = await LoadPhotosAsync(notes.Select(n => n.Id).ToList());
+        foreach (var note in notes)
+            note.Fotos = fotos.GetValueOrDefault(note.Id, []);
 
         return Ok(new PagedResponse<ClinicalNoteDto>
         {
@@ -124,12 +132,15 @@ public class ClinicalRecordsController : ControllerBase
             Procedimiento = request.Procedimiento,
             Observaciones = request.Observaciones,
             ProductosUsados = request.ProductosUsados,
-            FotoEvolucionUrl = request.FotoEvolucionUrl,
             FechaCreacion = DateTime.Now
         };
 
         _db.ClinicalNotes.Add(note);
+        // Las fotos se subieron antes como pendientes; la nota las reclama en el mismo SaveChanges.
+        await _attachments.ClaimForNoteAsync(request.AdjuntoIds, note.Id);
         await _db.SaveChangesAsync();
+
+        var fotos = await LoadPhotosAsync([note.Id]);
 
         return Created($"api/v1/patients/{patientId}/clinical-record/notes", new ClinicalNoteDto
         {
@@ -139,8 +150,67 @@ public class ClinicalRecordsController : ControllerBase
             Procedimiento = note.Procedimiento,
             Observaciones = note.Observaciones,
             ProductosUsados = note.ProductosUsados,
-            FotoEvolucionUrl = note.FotoEvolucionUrl,
+            Fotos = fotos.GetValueOrDefault(note.Id, []),
             FechaCreacion = note.FechaCreacion
         });
+    }
+
+    /// <summary>
+    /// Evolución del paciente: sus sesiones (notas clínicas) en orden cronológico, cada una con
+    /// sus fotos Antes/Después. Las fotos van como ids: la web pide la URL firmada de cada una.
+    /// </summary>
+    [HttpGet("/api/v1/patients/{patientId:guid}/evolution")]
+    public async Task<IActionResult> GetEvolution(Guid patientId)
+    {
+        var record = await _db.ClinicalRecords
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.PatientId == patientId);
+
+        if (record is null)
+            return NotFound(new { error = "Historia clínica no encontrada." });
+
+        var sessions = await _db.ClinicalNotes
+            .AsNoTracking()
+            .Where(n => n.ClinicalRecordId == record.Id)
+            .OrderBy(n => n.FechaCreacion)
+            .Select(n => new EvolutionSessionDto
+            {
+                NoteId = n.Id,
+                AppointmentId = n.AppointmentId,
+                Fecha = n.FechaCreacion,
+                Procedimiento = n.Procedimiento,
+                Esteticista = n.Esteticist.Nombre + " " + n.Esteticist.Apellido,
+                Observaciones = n.Observaciones,
+                ProductosUsados = n.ProductosUsados
+            })
+            .ToListAsync();
+
+        var fotos = await LoadPhotosAsync(sessions.Select(s => s.NoteId).ToList());
+        foreach (var session in sessions)
+            session.Fotos = fotos.GetValueOrDefault(session.NoteId, []);
+
+        return Ok(sessions);
+    }
+
+    /// <summary>Fotos por nota, "Antes" primero. Una sola consulta para todas las notas.</summary>
+    private async Task<Dictionary<Guid, List<EvolutionPhotoDto>>> LoadPhotosAsync(List<Guid> noteIds)
+    {
+        if (noteIds.Count == 0)
+            return [];
+
+        var rows = await _db.Attachments
+            .AsNoTracking()
+            .Where(a => a.EntityType == AttachmentEntityType.ClinicalNote && a.EntityId != null && noteIds.Contains(a.EntityId.Value))
+            .OrderBy(a => a.CreatedAt)
+            .Select(a => new { NoteId = a.EntityId!.Value, a.Id, a.Kind, a.FileName })
+            .ToListAsync();
+
+        return rows
+            .GroupBy(r => r.NoteId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderBy(r => r.Kind == AttachmentKind.Antes ? 0 : 1)
+                    .Select(r => new EvolutionPhotoDto { Id = r.Id, Kind = r.Kind.ToString(), FileName = r.FileName })
+                    .ToList());
     }
 }

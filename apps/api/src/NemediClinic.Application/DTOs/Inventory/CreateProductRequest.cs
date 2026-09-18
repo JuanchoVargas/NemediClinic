@@ -24,4 +24,7 @@ public class CreateProductRequest
     public decimal StockMinimo { get; set; } = 0m;
 
     public decimal? StockMaximo { get; set; }
+
+    /// <summary>Id de un Attachment (Kind=Producto) subido antes con POST /files.</summary>
+    public Guid? ImagenId { get; set; }
 }

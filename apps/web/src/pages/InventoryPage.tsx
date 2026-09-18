@@ -22,6 +22,7 @@ import {
   Plus,
   Search,
   Trash2,
+  Package2,
 } from "lucide-react";
 
 import {
@@ -87,6 +88,10 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { ImageUpload } from "@/components/shared/ImageUpload";
+import { SecureImage } from "@/components/shared/SecureImage";
+import { MotionTableRow, staggerProps } from "@/components/shared/motion-elements";
 
 import {
   useCreateProduct,
@@ -276,15 +281,36 @@ function ProductsTab({
 
             {showEmpty && (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                  Sin productos con esos filtros.
+                <TableCell colSpan={7}>
+                  <EmptyState
+                    illustration="inventory"
+                    title="Sin productos con esos filtros"
+                    description="Ajusta la búsqueda o crea el primer producto del inventario."
+                  />
                 </TableCell>
               </TableRow>
             )}
 
-            {data?.items.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell className="font-medium">{p.nombre}</TableCell>
+            {data?.items.map((p, i) => (
+              <MotionTableRow key={p.id} {...staggerProps(i)}>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-3">
+                    <SecureImage
+                      id={p.imagenId}
+                      alt=""
+                      className="h-10 w-10 shrink-0 rounded-lg border"
+                      fallback={
+                        <span
+                          aria-hidden
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-muted text-muted-foreground"
+                        >
+                          <Package2 className="h-4 w-4" />
+                        </span>
+                      }
+                    />
+                    {p.nombre}
+                  </div>
+                </TableCell>
                 <TableCell className="text-muted-foreground">{p.referencia ?? "—"}</TableCell>
                 <TableCell>
                   <Badge variant="outline">
@@ -308,7 +334,7 @@ function ProductsTab({
                     {can("products.delete") && <DeleteProductButton product={p} />}
                   </div>
                 </TableCell>
-              </TableRow>
+              </MotionTableRow>
             ))}
           </TableBody>
         </Table>
@@ -397,6 +423,7 @@ const productSchema = z.object({
   stockMinimo: z.number(),
   stockMaximo: z.number().optional().nullable(),
   activo: z.boolean(),
+  imagenId: z.string().nullable(),
 });
 type ProductFormValues = z.infer<typeof productSchema>;
 const EMPTY: ProductFormValues = {
@@ -408,6 +435,7 @@ const EMPTY: ProductFormValues = {
   stockMinimo: 0,
   stockMaximo: null,
   activo: true,
+  imagenId: null,
 };
 
 function ProductSheet({
@@ -442,6 +470,7 @@ function ProductSheet({
               stockMinimo: editing.stockMinimo,
               stockMaximo: editing.stockMaximo ?? null,
               activo: editing.activo,
+              imagenId: editing.imagenId ?? null,
             }
           : EMPTY,
       );
@@ -457,6 +486,7 @@ function ProductSheet({
       unidadMedida: values.unidadMedida,
       stockMinimo: values.stockMinimo,
       stockMaximo: values.stockMaximo ?? null,
+      imagenId: values.imagenId,
     };
     try {
       if (isEdit && editing) {
@@ -493,6 +523,20 @@ function ProductSheet({
         <div className="pt-1">
           <Form {...form}>
             <form id="product-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="imagenId"
+                render={({ field }) => (
+                  <ImageUpload
+                    entityType="Product"
+                    kind="Producto"
+                    entityId={editing?.id}
+                    value={field.value}
+                    onChange={field.onChange}
+                    label="Imagen del producto"
+                  />
+                )}
+              />
               <FormField
                 control={form.control}
                 name="nombre"
@@ -1020,7 +1064,7 @@ function AlertCard({
             <div
               className={cn(
                 "h-2 rounded-full transition-all",
-                estado === "Rojo" ? "bg-destructive" : "bg-yellow-500",
+                estado === "Rojo" ? "bg-destructive" : "bg-sand",
               )}
               style={{ width: `${pct}%` }}
             />

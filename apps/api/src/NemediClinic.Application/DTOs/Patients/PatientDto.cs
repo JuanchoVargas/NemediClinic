@@ -10,6 +10,9 @@ public class PatientDto
     public string? Email { get; set; }
     public DateOnly? FechaNacimiento { get; set; }
     public string? FotoUrl { get; set; }
+    public Guid? ImagenId { get; set; }
+    /// <summary>Próxima cita Agendada o Confirmada, para la cabecera de la ficha.</summary>
+    public DateTime? ProximaCita { get; set; }
     public string? NotasGenerales { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }

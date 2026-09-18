@@ -42,7 +42,7 @@ pnpm lint       # hoy falla: 14 errores
 ```
 
 ## Estado de la DB de desarrollo (2026-09-15)
-- 5 migraciones aplicadas: InitialClinicalEntities, AddClinicalEntities, AddAppointments, AddInventoryEntities, AddPlatformLevel (canales Nemedi e Infotex sembrados; el tenant existente quedó en el canal Nemedi, plan Básico, estado Activo).
+- 6 migraciones aplicadas (la última, AddAttachments: adjuntos de imagen, ImagenId en paciente/producto/procedimiento, colores del canal Nemedi → #1F4E79/#D9A441). Las 5 anteriores: InitialClinicalEntities, AddClinicalEntities, AddAppointments, AddInventoryEntities, AddPlatformLevel (canales Nemedi e Infotex sembrados; el tenant existente quedó en el canal Nemedi, plan Básico, estado Activo).
 - 1 tenant y 1 sede ("Sede Principal"). Datos demo cargados con `POST /api/v1/dev/seed-demo` (solo Development, idempotente; ver `DevController.cs`).
 
 ## Credenciales de desarrollo (tras el seed demo)
@@ -63,12 +63,16 @@ pnpm lint       # hoy falla: 14 errores
 - Repo local en `main`, primer commit `8fcf8cb chore: snapshot septiembre 2026`. Sin remote.
 - `.gitignore` ignora `bin/`, `obj/`, `node_modules/`, `dist/`, `.env*` (salvo `.env.example`) y `.claude/settings.local.json`.
 
+## Antes de una demo
+`curl -X POST "http://localhost:5055/api/v1/dev/seed-demo?reanchor=true"` → re-ancla la agenda demo a hoy (la cita más antigua queda en ayer) y siembra las imágenes de muestra si faltan. Sin esto el Dashboard y la Hoja del día salen vacíos, porque el seed fija las fechas al día en que se ejecutó por primera vez.
+
 ## Módulos con backend + frontend
 - Auth + JWT + roles (frontend no usa el refresh token)
 - Plataforma (`/platform`, solo PlatformAdmin): tenants con canal/plan/IPS/estado + creación del primer SuperAdmin con clave temporal, canales, oportunidades, liquidación con CSV
 - Mi clínica (el SuperAdmin ve y edita solo su tenant), Sedes, Usuarios (Admin no puede crear usuarios: `register` exige SuperAdmin)
-- Pacientes (`ProximaCita` nunca se calcula)
-- Historia clínica (UI solo lectura; falta editar antecedentes y crear notas)
+- Pacientes (foto de perfil; la ficha muestra paquete activo y próxima cita; en el listado `ProximaCita` sigue sin calcularse)
+- Historia clínica (crear notas con fotos Antes/Después; pestaña Evolución con comparador y lightbox; falta editar antecedentes desde la UI)
+- Adjuntos de imagen (paciente, nota clínica, producto, procedimiento; URLs firmadas de 10 min; ver `CLAUDE.md` → "Image attachments")
 - Procedimientos, Paquetes, Paquetes de paciente (falta cambiar estado y completar sesión desde UI)
 - Citas + Calendario + Hoja del día (no descuenta inventario; no elimina citas desde UI)
 - Inventario (productos, entradas, alertas; no hay salidas ni consumo)
@@ -79,10 +83,11 @@ pnpm lint       # hoy falla: 14 errores
 - Los canales no tienen usuarios propios: oportunidades y liquidación las opera el PlatformAdmin
 - Borrar un paquete del catálogo deja inaccesibles sus asignaciones; completar la última sesión desde una cita no cierra el paquete
 - `GET /inventory/movements/product/{id}` responde 500
-- Dashboard con KPIs reales (`GET /api/v1/dashboard` no existe)
+- `GET /api/v1/dashboard` no existe: el Dashboard arma sus KPIs con endpoints existentes (sin ingresos del mes ni paquetes por vencer)
 - Descuento de inventario al completar cita
 - Job de vencimiento de paquetes (`Vencido`)
-- Header responsive (bloqueante para móvil)
+- Storage S3/R2 para los adjuntos (hoy disco local detrás de `IFileStorage`); el logo del tenant se puede subir pero aún no se usa en el branding
+- Revisión responsive de las tablas en teléfono (el layout ya colapsa el sidebar a un panel lateral)
 - Tests unitarios (hoy 0; sí hay e2e: gate de aislamiento multi-tenant y recorrido UI por rol)
 - WhatsApp Meta Cloud API
 - App móvil

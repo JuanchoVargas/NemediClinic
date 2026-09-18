@@ -9,6 +9,6 @@ public class ClinicalNoteDto
     public string Procedimiento { get; set; } = string.Empty;
     public string Observaciones { get; set; } = string.Empty;
     public string? ProductosUsados { get; set; }
-    public string? FotoEvolucionUrl { get; set; }
+    public List<NemediClinic.Application.DTOs.Files.EvolutionPhotoDto> Fotos { get; set; } = [];
     public DateTime FechaCreacion { get; set; }
 }

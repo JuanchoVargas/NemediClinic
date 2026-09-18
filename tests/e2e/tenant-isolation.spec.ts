@@ -17,6 +17,7 @@
 // el SuperAdmin del seed demo y `sqlcmd` con autenticación de Windows.
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { hardDeleteTenants, lit, scalar, sql } from "./sql";
+import { samplePng } from "./ui/helpers/sample-image";
 
 const ADMIN_EMAIL = process.env.E2E_SUPERADMIN_EMAIL ?? "juandiegov2002@gmail.com";
 const ADMIN_PASSWORD = process.env.E2E_SUPERADMIN_PASSWORD ?? "Admin2026!";
@@ -37,6 +38,7 @@ type TenantData = {
   packageId: string;
   patientPackageId: string;
   appointmentId: string;
+  fileId: string;
 };
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -114,7 +116,21 @@ async function seedTenant(api: APIRequestContext, label: string, base: { tenantI
   const appointment = await postJson(api, t, "/api/v1/appointments", {
     patientId: patient.id, esteticistId: base.userId, procedureId: procedure.id, branchId: branch.id, fechaInicio: localIso(start),
   });
+  // Foto de perfil del paciente (adjunto privado del tenant)
+  const upload = await api.post("/api/v1/files", {
+    ...auth(t),
+    multipart: {
+      file: { name: `perfil-${label}.png`, mimeType: "image/png", buffer: samplePng([31, 78, 121], [217, 164, 65], 0, 64) },
+      entityType: "Patient",
+      kind: "Perfil",
+      entityId: patient.id,
+    },
+  });
+  expect(upload.status(), `POST /files → ${await upload.text()}`).toBe(201);
+  const file = (await upload.json()) as { id: string };
+
   return {
+    fileId: file.id,
     name: label, tenantId: base.tenantId, token: t, userId: base.userId, branchId: branch.id,
     procedureId: procedure.id, productId: product.id, patientId: patient.id, packageId: pkg.id,
     patientPackageId: pp.id, appointmentId: appointment.id,
@@ -174,6 +190,17 @@ async function expectNoCrossAccess(api: APIRequestContext, viewer: TenantData, o
     const res = await api.get(url, auth(viewer.token));
     expect(res.status(), `${viewer.name} GET ${name} ajeno debe ser 404`).toBe(404);
   }
+
+  // Adjuntos: la URL firmada de un archivo ajeno no se puede pedir ni borrar, y el token de un
+  // archivo propio no sirve para descargar el ajeno (va atado al adjunto y a su tenant).
+  expect((await api.get(`/api/v1/files/${other.fileId}/url`, auth(viewer.token))).status(), `${viewer.name} URL firmada de archivo ajeno`).toBe(404);
+  expect((await api.delete(`/api/v1/files/${other.fileId}`, auth(viewer.token))).status(), `${viewer.name} DELETE archivo ajeno`).toBe(404);
+  const ownUrl = await api.get(`/api/v1/files/${viewer.fileId}/url`, auth(viewer.token));
+  expect(ownUrl.status()).toBe(200);
+  const signed = ((await ownUrl.json()) as { url: string }).url;
+  expect((await api.get(signed)).status(), "descarga anónima con token válido").toBe(200);
+  expect((await api.get(signed.replace(viewer.fileId, other.fileId))).status(), "token propio sobre archivo ajeno").toBe(404);
+  expect((await api.get(`/api/v1/files/${viewer.fileId}`)).status(), "descarga sin token").toBe(404);
 
   // Lista de paquetes de un paciente ajeno: vacía o 404, nunca con datos
   const foreignPp = await api.get(`/api/v1/patient-packages/patient/${other.patientId}`, auth(viewer.token));

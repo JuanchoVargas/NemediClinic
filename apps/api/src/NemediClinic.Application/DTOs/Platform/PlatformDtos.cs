@@ -42,10 +42,10 @@ public class SaveChannelRequest
     public string? LogoUrl { get; set; }
 
     [Required, RegularExpression("^#[0-9A-Fa-f]{6}$", ErrorMessage = "Color en formato #RRGGBB.")]
-    public string ColorPrimario { get; set; } = "#171717";
+    public string ColorPrimario { get; set; } = "#1F4E79";
 
     [Required, RegularExpression("^#[0-9A-Fa-f]{6}$", ErrorMessage = "Color en formato #RRGGBB.")]
-    public string ColorSecundario { get; set; } = "#737373";
+    public string ColorSecundario { get; set; } = "#D9A441";
 
     [Required, MaxLength(200)]
     public string Dominio { get; set; } = string.Empty;

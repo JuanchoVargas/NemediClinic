@@ -51,6 +51,8 @@ export function hardDeleteTenants(tenantIds: string[]): void {
   const inList = tenantIds.map(lit).join(",");
   const byTenant = (table: string) => `DELETE FROM ${table} WHERE TenantId IN (${inList});`;
   const statements = [
+    // Los archivos físicos quedan en App_Data/uploads/<tenantId> (carpeta ignorada por git)
+    byTenant("Attachments"),
     byTenant("InventoryMovements"),
     byTenant("InventoryEntries"),
     byTenant("Products"),

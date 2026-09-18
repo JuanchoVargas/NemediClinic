@@ -79,6 +79,14 @@ builder.Services.AddScoped<ChannelService>();
 builder.Services.AddScoped<LeadService>();
 builder.Services.AddScoped<LiquidacionService>();
 
+// ── Adjuntos de imagen ──────────────────────────────────────────
+// IFileStorage es el punto de cambio a S3/R2: basta registrar otra implementación aquí.
+builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
+builder.Services.AddSingleton<FileTokenService>();
+builder.Services.AddScoped<AttachmentService>();
+builder.Services.AddScoped<DemoImageSeeder>();
+builder.Services.AddHostedService<AttachmentCleanupService>();
+
 // ── Swagger ─────────────────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>

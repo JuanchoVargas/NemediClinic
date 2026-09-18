@@ -14,6 +14,7 @@ public class Product : BaseEntity
     public decimal StockMinimo { get; set; } = 0m;
     public decimal? StockMaximo { get; set; }
     public bool Activo { get; set; } = true;
+    public Guid? ImagenId { get; set; }
 
     /// <summary>
     /// Estado de stock calculado, NO mapeado en DB.

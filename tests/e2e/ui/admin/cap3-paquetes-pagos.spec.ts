@@ -68,7 +68,7 @@ test("Cap3 · Vender un paquete y registrar pagos (recepción)", async ({ page }
       await lastToast(page, /Pago registrado/);
       await expect(d()).toBeHidden();
       await expect(summary()).toContainText("$120.000");
-      await expect(summary()).toHaveClass(/bg-yellow-50/);
+      await expect(summary()).toHaveClass(/bg-sand-soft/);
     },
   });
 
@@ -81,7 +81,7 @@ test("Cap3 · Vender un paquete y registrar pagos (recepción)", async ({ page }
       await lastToast(page, /Pago registrado/);
       await expect(d()).toBeHidden();
       await expect(summary()).toContainText("$0");
-      await expect(summary()).toHaveClass(/bg-green-50/);
+      await expect(summary()).toHaveClass(/bg-success-soft/);
     },
   });
 

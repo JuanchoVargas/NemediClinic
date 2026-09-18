@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NemediClinic.Api.Services;
 using NemediClinic.Application.DTOs.Common;
 using NemediClinic.Application.DTOs.Procedures;
 using NemediClinic.Domain.Entities;
+using NemediClinic.Domain.Enums;
 using NemediClinic.Infrastructure.Persistence;
 
 namespace NemediClinic.Api.Controllers;
@@ -14,10 +16,12 @@ namespace NemediClinic.Api.Controllers;
 public class ProceduresController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly AttachmentService _attachments;
 
-    public ProceduresController(AppDbContext db)
+    public ProceduresController(AppDbContext db, AttachmentService attachments)
     {
         _db = db;
+        _attachments = attachments;
     }
 
     [HttpGet]
@@ -48,6 +52,7 @@ public class ProceduresController : ControllerBase
                 DuracionMinutos = p.DuracionMinutos,
                 AreaCorporal = p.AreaCorporal,
                 Activo = p.Activo,
+                ImagenId = p.ImagenId,
                 CreatedAt = p.CreatedAt
             })
             .ToListAsync();
@@ -76,6 +81,7 @@ public class ProceduresController : ControllerBase
                 DuracionMinutos = p.DuracionMinutos,
                 AreaCorporal = p.AreaCorporal,
                 Activo = p.Activo,
+                ImagenId = p.ImagenId,
                 CreatedAt = p.CreatedAt
             })
             .FirstOrDefaultAsync();
@@ -96,10 +102,12 @@ public class ProceduresController : ControllerBase
             Descripcion = request.Descripcion,
             PrecioBase = request.PrecioBase,
             DuracionMinutos = request.DuracionMinutos,
-            AreaCorporal = request.AreaCorporal
+            AreaCorporal = request.AreaCorporal,
+            ImagenId = request.ImagenId
         };
 
         _db.Procedures.Add(procedure);
+        await _attachments.AssignImageAsync(AttachmentEntityType.Procedure, procedure.Id, request.ImagenId, null);
         await _db.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetById), new { id = procedure.Id }, new ProcedureDto
@@ -111,6 +119,7 @@ public class ProceduresController : ControllerBase
             DuracionMinutos = procedure.DuracionMinutos,
             AreaCorporal = procedure.AreaCorporal,
             Activo = procedure.Activo,
+            ImagenId = procedure.ImagenId,
             CreatedAt = procedure.CreatedAt
         });
     }
@@ -129,6 +138,11 @@ public class ProceduresController : ControllerBase
         if (request.DuracionMinutos.HasValue) procedure.DuracionMinutos = request.DuracionMinutos.Value;
         if (request.AreaCorporal is not null) procedure.AreaCorporal = request.AreaCorporal;
         if (request.Activo.HasValue) procedure.Activo = request.Activo.Value;
+        if (request.ImagenId.HasValue)
+        {
+            await _attachments.AssignImageAsync(AttachmentEntityType.Procedure, procedure.Id, request.ImagenId, procedure.ImagenId);
+            procedure.ImagenId = request.ImagenId;
+        }
 
         await _db.SaveChangesAsync();
         return NoContent();

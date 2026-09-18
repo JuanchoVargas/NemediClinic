@@ -60,7 +60,7 @@ function statusBadge(estado: string) {
       return <Badge variant="destructive">{label}</Badge>;
     case "NoConfirmo":
       return (
-        <Badge className="bg-orange-100 text-orange-800 border-orange-200">
+        <Badge variant="warning">
           {label}
         </Badge>
       );

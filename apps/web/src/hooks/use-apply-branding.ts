@@ -1,9 +1,11 @@
 // ============================================================
 // use-apply-branding.ts — Aplica la marca del canal a la app
 //
-// Pide GET /branding una vez por carga y escribe los colores como CSS
-// tokens en <html> (ganan a globals.css/tokens.css, en claro y oscuro),
-// además del título de la pestaña. Se monta UNA vez, en RootLayout.
+// Pide GET /branding una vez por carga y escribe la marca del canal en <html>:
+// --brand-primary, --brand-primary-foreground y --brand-secondary. tokens.css
+// DERIVA de ahí --primary, --ring y el hover (y su versión aclarada en modo
+// oscuro), así el canal sobreescribe el primario sin romper el tema.
+// También pone el título de la pestaña. Se monta UNA vez, en RootLayout.
 //
 // EQUIVALENTE A: un watch() en App.vue que pinta las variables del tema
 // ============================================================
@@ -20,10 +22,8 @@ export function useApplyBranding() {
 
     const root = document.documentElement.style;
     if (isHexColor(branding.colorPrimario)) {
-      root.setProperty("--primary", branding.colorPrimario);
-      root.setProperty("--primary-foreground", readableOn(branding.colorPrimario));
-      root.setProperty("--ring", branding.colorPrimario);
       root.setProperty("--brand-primary", branding.colorPrimario);
+      root.setProperty("--brand-primary-foreground", readableOn(branding.colorPrimario));
     }
     if (isHexColor(branding.colorSecundario)) {
       root.setProperty("--brand-secondary", branding.colorSecundario);

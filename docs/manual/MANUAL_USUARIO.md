@@ -31,15 +31,15 @@ Escribe la dirección de NemediClinic en tu navegador. **Después verás** el fo
 
 ### 2. Escribe tu correo y contraseña y presiona Ingresar
 
-**Después verás** el Dashboard. Arriba a la derecha aparece tu correo y, en el menú, la opción Administración, que solo ven el dueño y recepción.
+**Después verás** el Dashboard con el resumen del día. A la izquierda está el menú lateral: abajo aparece tu nombre y correo, y entre las opciones está Administración, que solo ven el dueño y recepción. El botón junto al título de la página encoge el menú a solo iconos, y con Ctrl + K abres el buscador de pacientes, citas de hoy y productos.
 
 ![](img/superadmin/cap1-02-escribe-tu-correo-y-contrasena-y-presiona-ingres.png)
 
-### 3. Presiona Cerrar sesión
+### 3. Abre el menú de usuario y presiona Cerrar sesión
 
-Está en la esquina superior derecha. **Después verás** de nuevo la pantalla de ingreso.
+El menú de usuario es el círculo con tu inicial, en la esquina superior derecha. Ahí también cambias entre modo claro y modo oscuro. **Después verás** de nuevo la pantalla de ingreso.
 
-![](img/superadmin/cap1-03-presiona-cerrar-sesion.png)
+![](img/superadmin/cap1-03-abre-el-menu-de-usuario-arriba-a-la-derecha-y-pr.png)
 
 ### 4. Sin sesión no se puede entrar
 
@@ -338,11 +338,11 @@ Al escribir la dirección directamente en el navegador, el sistema te devuelve a
 
 **Qué vas a lograr:** registrar un paciente, encontrarlo, revisar su ficha completa, corregir sus datos y eliminarlo.
 
-### 1. Haz clic en Inicio y luego en Ver pacientes
+### 1. Haz clic en Pacientes, en el menú lateral
 
-**Después verás** la lista de pacientes con su buscador.
+**Después verás** la lista de pacientes con su buscador. Cada fila muestra la foto del paciente o sus iniciales.
 
-![](img/admin/cap2-01-haz-clic-en-inicio-y-luego-en-la-tarjeta-pacient.png)
+![](img/admin/cap2-01-haz-clic-en-pacientes-en-el-menu-lateral.png)
 
 ### 2. Haz clic en Nuevo paciente
 
@@ -415,6 +415,12 @@ También puedes buscar por cédula completa.
 **Después verás** que el paciente ya no aparece en las búsquedas.
 
 ![](img/admin/cap2-14-confirma-con-eliminar.png)
+
+### 15. Revisa la evolución de un paciente
+
+Abre la ficha de un paciente con sesiones registradas y haz clic en la pestaña **Evolución**. **Verás** cada sesión en orden, con la fecha, el procedimiento, quién atendió y sus fotos. Desliza la barra del comparador para pasar de la foto de antes a la de después, y haz clic en una foto para verla en grande.
+
+![](img/admin/cap2-15-en-la-ficha-de-valentina-haz-clic-en-la-pestana-.png)
 
 ## Capítulo 3 · Vender un paquete y registrar pagos {.capitulo}
 
@@ -739,11 +745,11 @@ Por eso no puedes cambiar el estado de una cita ajena.
 
 ## Capítulo 4 · Pacientes {.capitulo}
 
-**Qué vas a lograr:** registrar un paciente nuevo y consultar su ficha e historia clínica.
+**Qué vas a lograr:** registrar un paciente nuevo, consultar su ficha e historia clínica, registrar una sesión con fotos de antes y después y ver su evolución.
 
-### 1. Haz clic en Inicio y luego en Ver pacientes
+### 1. Haz clic en Pacientes, en el menú lateral
 
-![](img/esteticista/cap4-01-haz-clic-en-inicio-y-luego-en-la-tarjeta-pacient.png)
+![](img/esteticista/cap4-01-haz-clic-en-pacientes-en-el-menu-lateral.png)
 
 ### 2. Haz clic en Nuevo paciente
 
@@ -755,7 +761,7 @@ Por eso no puedes cambiar el estado de una cita ajena.
 
 ### 4. Abre la ficha del paciente
 
-**Verás** la pestaña Información con sus datos.
+**Verás** la cabecera con su foto (o sus iniciales), su paquete activo, su próxima cita y los botones Agendar y Nueva nota. Debajo, la pestaña Información con sus datos.
 
 ![](img/esteticista/cap4-04-abre-la-ficha-del-paciente-pestana-informacion.png)
 
@@ -765,11 +771,35 @@ Por eso no puedes cambiar el estado de una cita ajena.
 
 ![](img/esteticista/cap4-05-haz-clic-en-la-pestana-historia-clinica.png)
 
-### 6. No hay pestañas de Paquetes ni Pagos
+### 6. Presiona Nueva nota para registrar la sesión de hoy
+
+**Después verás** el formulario de la nota clínica.
+
+![](img/esteticista/cap4-06-presiona-nueva-nota-para-registrar-la-sesion-de-.png)
+
+### 7. Completa la nota y agrega las fotos
+
+Elige el procedimiento, escribe las observaciones y agrega al menos una foto en **Antes** y otra en **Después**: arrástralas al recuadro o haz clic en Agregar. Las fotos se optimizan solas antes de subir. Presiona Guardar nota. **Después verás** la nota en la lista, con sus fotos.
+
+![](img/esteticista/cap4-07-elige-el-procedimiento-escribe-las-observaciones.png)
+
+### 8. Haz clic en la pestaña Evolución
+
+**Verás** las sesiones del paciente en orden, de la más antigua a la más reciente. Cada una muestra la fecha, el procedimiento, quién atendió, las observaciones y un comparador: desliza la barra para pasar de la foto de antes a la de después.
+
+![](img/esteticista/cap4-08-haz-clic-en-la-pestana-evolucion-la-sesion-apare.png)
+
+### 9. Haz clic en una foto para verla en grande
+
+Se abre a pantalla completa. Cierra con la tecla Escape o con la X.
+
+![](img/esteticista/cap4-09-haz-clic-en-una-foto-para-verla-en-grande-cierra.png)
+
+### 10. No hay pestañas de Paquetes ni Pagos
 
 La información comercial no está disponible para la esteticista.
 
-![](img/esteticista/cap4-06-observa-que-no-existen-las-pestanas-paquetes-ni-.png)
+![](img/esteticista/cap4-10-observa-que-no-existen-las-pestanas-paquetes-ni-.png)
 
 ## Capítulo 5 · Inventario {.capitulo}
 

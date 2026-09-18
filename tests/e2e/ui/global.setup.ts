@@ -8,7 +8,7 @@ import { apiLogin, CREDS, listAll, req, localIso, dayAt } from "./api";
 import { IMG_DIR, RESULTS_DIR } from "./walk";
 
 setup("seed demo + usuario de recepción", async () => {
-  const seed = await req("POST", "/api/v1/dev/seed-demo");
+  const seed = await req("POST", "/api/v1/dev/seed-demo?reanchor=true");
   expect(seed.status, `seed-demo → ${seed.text}`).toBe(200);
 
   const sa = await apiLogin(CREDS.superadmin.email, CREDS.superadmin.password);

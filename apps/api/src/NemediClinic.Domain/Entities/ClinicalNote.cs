@@ -1,5 +1,6 @@
 namespace NemediClinic.Domain.Entities;
 
+/// <summary>Las fotos de la sesión son Attachments (EntityType=ClinicalNote, Kind Antes/Despues), no una URL.</summary>
 public class ClinicalNote : BaseEntity
 {
     public Guid ClinicalRecordId { get; set; }
@@ -8,7 +9,6 @@ public class ClinicalNote : BaseEntity
     public string Procedimiento { get; set; } = string.Empty;
     public string Observaciones { get; set; } = string.Empty;
     public string? ProductosUsados { get; set; }
-    public string? FotoEvolucionUrl { get; set; }
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
     public ClinicalRecord ClinicalRecord { get; set; } = null!;

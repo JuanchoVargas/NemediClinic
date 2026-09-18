@@ -20,4 +20,7 @@ public class UpdateProcedureRequest
     public string? AreaCorporal { get; set; }
 
     public bool? Activo { get; set; }
+
+    /// <summary>Id de un Attachment (Kind=Procedimiento) subido antes con POST /files.</summary>
+    public Guid? ImagenId { get; set; }
 }

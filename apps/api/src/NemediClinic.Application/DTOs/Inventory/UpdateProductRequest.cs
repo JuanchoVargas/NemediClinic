@@ -12,4 +12,5 @@ public class UpdateProductRequest
     public decimal? StockMinimo { get; set; }
     public decimal? StockMaximo { get; set; }
     public bool? Activo { get; set; }
+    public Guid? ImagenId { get; set; }
 }

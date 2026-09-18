@@ -38,6 +38,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { PatientAvatar } from "@/components/shared/PatientAvatar";
+import { MotionTableRow, staggerProps } from "@/components/shared/motion-elements";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePermissions } from "@/hooks/use-permissions";
 import { usePageReset } from "@/hooks/use-page-reset";
@@ -114,18 +117,40 @@ export function PatientsPage() {
 
             {showEmpty && (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                  {search
-                    ? `Sin resultados para "${search}".`
-                    : "Aún no hay pacientes registrados."}
+                <TableCell colSpan={5}>
+                  <EmptyState
+                    illustration={search ? "search" : "patients"}
+                    title={search ? `Sin resultados para "${search}"` : "Aún no hay pacientes"}
+                    description={
+                      search
+                        ? "Revisa el nombre o busca por número de cédula."
+                        : "Registra el primer paciente para abrir su historia clínica y agendarle citas."
+                    }
+                    action={
+                      !search &&
+                      can("patients.create") && (
+                        <Button asChild>
+                          <Link to="/patients/new">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Nuevo paciente
+                          </Link>
+                        </Button>
+                      )
+                    }
+                  />
                 </TableCell>
               </TableRow>
             )}
 
-            {data?.items.map((p) => (
-              <TableRow key={p.id}>
+            {data?.items.map((p, i) => (
+              <MotionTableRow key={p.id} {...staggerProps(i)}>
                 <TableCell className="font-medium">
-                  {p.nombre} {p.apellido}
+                  <div className="flex items-center gap-3">
+                    <PatientAvatar nombre={p.nombre} apellido={p.apellido} imagenId={p.imagenId} className="h-9 w-9 text-xs" />
+                    <span>
+                      {p.nombre} {p.apellido}
+                    </span>
+                  </div>
                 </TableCell>
                 <TableCell>{p.cedula}</TableCell>
                 <TableCell>{p.telefono}</TableCell>
@@ -145,7 +170,7 @@ export function PatientsPage() {
                     {can("patients.delete") && <DeletePatientButton patient={p} />}
                   </div>
                 </TableCell>
-              </TableRow>
+              </MotionTableRow>
             ))}
           </TableBody>
         </Table>

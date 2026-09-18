@@ -30,10 +30,10 @@ import { ApiError } from "@/types/api";
 // VITE_API_URL="/" = mismo origen (producción detrás de Caddy). Es lo que permite el branding
 // por dominio: cada dominio de canal llama a SU propio /api y el backend resuelve la marca por Host.
 const configuredUrl = import.meta.env.VITE_API_URL;
-const baseURL = configuredUrl === "/" ? "" : configuredUrl || "http://localhost:5055";
+export const API_BASE_URL = configuredUrl === "/" ? "" : configuredUrl || "http://localhost:5055";
 
 export const api = axios.create({
-  baseURL,
+  baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },

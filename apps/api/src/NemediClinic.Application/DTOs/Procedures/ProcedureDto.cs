@@ -9,5 +9,6 @@ public class ProcedureDto
     public int DuracionMinutos { get; set; }
     public string AreaCorporal { get; set; } = string.Empty;
     public bool Activo { get; set; }
+    public Guid? ImagenId { get; set; }
     public DateTime CreatedAt { get; set; }
 }

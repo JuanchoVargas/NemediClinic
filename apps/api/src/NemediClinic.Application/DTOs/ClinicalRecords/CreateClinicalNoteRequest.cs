@@ -17,5 +17,7 @@ public class CreateClinicalNoteRequest
 
     public string? ProductosUsados { get; set; }
 
-    public string? FotoEvolucionUrl { get; set; }
+    /// <summary>Ids de Attachments (Kind Antes/Despues) subidos antes con POST /files, sin entityId.</summary>
+    [MaxLength(12)]
+    public List<Guid> AdjuntoIds { get; set; } = [];
 }

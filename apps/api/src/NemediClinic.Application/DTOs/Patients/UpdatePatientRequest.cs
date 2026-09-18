@@ -23,6 +23,9 @@ public class UpdatePatientRequest
 
     public string? FotoUrl { get; set; }
 
+    /// <summary>Id de un Attachment (Kind=Perfil) subido antes con POST /files.</summary>
+    public Guid? ImagenId { get; set; }
+
     [MaxLength(2000)]
     public string? NotasGenerales { get; set; }
 

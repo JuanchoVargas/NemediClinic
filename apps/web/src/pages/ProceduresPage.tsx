@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Pencil, Plus, Search, Trash2, Clock, Stethoscope } from "lucide-react";
 
 import {
   AlertDialog,
@@ -38,15 +38,12 @@ import { Label } from "@/components/ui/label";
 import { FormDialog } from "@/components/shared/FormDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { ImageUpload } from "@/components/shared/ImageUpload";
+import { SecureImage } from "@/components/shared/SecureImage";
+import { MotionDiv, staggerProps } from "@/components/shared/motion-elements";
 
 import {
   useCreateProcedure,
@@ -72,6 +69,7 @@ const procedureSchema = z.object({
   duracionMinutos: z.number(),
   areaCorporal: z.string().min(1, "Requerido"),
   activo: z.boolean(),
+  imagenId: z.string().nullable(),
 });
 
 type ProcedureFormValues = z.infer<typeof procedureSchema>;
@@ -83,6 +81,7 @@ const EMPTY: ProcedureFormValues = {
   duracionMinutos: 30,
   areaCorporal: "",
   activo: true,
+  imagenId: null,
 };
 
 export function ProceduresPage() {
@@ -129,53 +128,74 @@ export function ProceduresPage() {
         />
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Área corporal</TableHead>
-              <TableHead>Duración</TableHead>
-              <TableHead>Precio base</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="w-[140px] text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading &&
-              Array.from({ length: 6 }).map((_, i) => (
-                <TableRow key={`skel-${i}`}>
-                  {Array.from({ length: 6 }).map((__, j) => (
-                    <TableCell key={j}><Skeleton className="h-4 w-24" /></TableCell>
-                  ))}
-                </TableRow>
-              ))}
+      {isLoading && (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={`skel-${i}`} className="h-64 w-full rounded-xl" />
+          ))}
+        </div>
+      )}
 
-            {showEmpty && (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                  {search
-                    ? `Sin resultados para "${search}".`
-                    : "Aún no hay procedimientos registrados."}
-                </TableCell>
-              </TableRow>
-            )}
+      {showEmpty && (
+        <Card>
+          <CardContent>
+            <EmptyState
+              illustration={search ? "search" : "generic"}
+              title={search ? `Sin resultados para "${search}"` : "Aún no hay procedimientos"}
+              description={
+                search
+                  ? "Prueba con otro nombre o área corporal."
+                  : "Crea el catálogo de procedimientos para poder agendar citas y armar paquetes."
+              }
+              action={
+                !search &&
+                can("procedures.create") && (
+                  <Button onClick={() => setSheetState({ open: true })}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nuevo procedimiento
+                  </Button>
+                )
+              }
+            />
+          </CardContent>
+        </Card>
+      )}
 
-            {data?.items.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell className="font-medium">{p.nombre}</TableCell>
-                <TableCell className="text-muted-foreground">{p.areaCorporal}</TableCell>
-                <TableCell>{p.duracionMinutos} min</TableCell>
-                <TableCell>${p.precioBase.toLocaleString("es-CO")}</TableCell>
-                <TableCell>
-                  {p.activo ? (
-                    <Badge variant="success">Activo</Badge>
-                  ) : (
-                    <Badge variant="secondary">Inactivo</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {data?.items.map((p, i) => (
+          <MotionDiv key={p.id} {...staggerProps(i)}>
+            <Card className="card-lift h-full gap-0 py-0">
+              <SecureImage
+                id={p.imagenId}
+                alt=""
+                className="aspect-video w-full"
+                fallback={
+                  <div
+                    aria-hidden
+                    className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-primary/15 to-sand/20 text-primary"
+                  >
+                    <Stethoscope className="h-8 w-8 opacity-60" />
+                  </div>
+                }
+              />
+              <CardContent className="flex flex-1 flex-col gap-3 p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h2 className="truncate text-base font-semibold">{p.nombre}</h2>
+                    <p className="text-sm text-muted-foreground">{p.areaCorporal}</p>
+                  </div>
+                  {p.activo ? <Badge variant="success">Activo</Badge> : <Badge variant="secondary">Inactivo</Badge>}
+                </div>
+                {p.descripcion && <p className="line-clamp-2 text-sm text-muted-foreground">{p.descripcion}</p>}
+                <div className="mt-auto flex items-end justify-between gap-2 pt-1">
+                  <div>
+                    <p className="font-heading text-xl font-bold">${p.precioBase.toLocaleString("es-CO")}</p>
+                    <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" aria-hidden />
+                      {p.duracionMinutos} min
+                    </p>
+                  </div>
+                  <div className="flex gap-1">
                     {can("procedures.update") && (
                       <Button
                         variant="outline"
@@ -188,11 +208,11 @@ export function ProceduresPage() {
                     )}
                     {can("procedures.delete") && <DeleteProcedureButton procedure={p} />}
                   </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </MotionDiv>
+        ))}
       </div>
 
       {data && data.totalCount > 0 && (
@@ -253,6 +273,7 @@ function ProcedureSheet({
               duracionMinutos: editing.duracionMinutos,
               areaCorporal: editing.areaCorporal,
               activo: editing.activo,
+              imagenId: editing.imagenId ?? null,
             }
           : EMPTY,
       );
@@ -266,6 +287,7 @@ function ProcedureSheet({
       precioBase: values.precioBase,
       duracionMinutos: values.duracionMinutos,
       areaCorporal: values.areaCorporal,
+      imagenId: values.imagenId,
     };
     try {
       if (isEdit && editing) {
@@ -302,6 +324,21 @@ function ProcedureSheet({
         <div className="pt-1">
           <Form {...form}>
             <form id="procedure-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="imagenId"
+                render={({ field }) => (
+                  <ImageUpload
+                    entityType="Procedure"
+                    kind="Procedimiento"
+                    entityId={editing?.id}
+                    value={field.value}
+                    onChange={field.onChange}
+                    shape="wide"
+                    label="Imagen del procedimiento (opcional)"
+                  />
+                )}
+              />
               <FormField
                 control={form.control}
                 name="nombre"

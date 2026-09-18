@@ -4,10 +4,14 @@
 // Backend: /api/v1/patients/{patientId}/clinical-record(/notes)
 // ============================================================
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/axios";
 import type { PagedResponse } from "@/types/api";
-import type { ClinicalNote, ClinicalRecord } from "@/types/clinical-record";
+import type {
+  ClinicalNote,
+  ClinicalRecord,
+  CreateClinicalNoteRequest,
+} from "@/types/clinical-record";
 
 export function useClinicalRecord(patientId: string | undefined) {
   return useQuery({
@@ -38,5 +42,23 @@ export function useClinicalNotes(
     },
     enabled: !!patientId,
     placeholderData: (prev) => prev,
+  });
+}
+
+/** Crea la nota de una sesión. Las fotos ya subidas viajan como adjuntoIds. */
+export function useCreateClinicalNote(patientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: CreateClinicalNoteRequest) => {
+      const { data } = await api.post<ClinicalNote>(
+        `/api/v1/patients/${patientId}/clinical-record/notes`,
+        body,
+      );
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["clinical-notes", patientId] });
+      qc.invalidateQueries({ queryKey: ["patients", patientId, "evolution"] });
+    },
   });
 }

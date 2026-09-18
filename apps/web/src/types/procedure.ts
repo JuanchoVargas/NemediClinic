@@ -14,6 +14,8 @@ export interface Procedure {
   areaCorporal: string;
   activo: boolean;
   createdAt?: string;
+  /** Id del Attachment con la imagen (se sube antes con POST /files). */
+  imagenId?: string | null;
 }
 
 export interface CreateProcedureRequest {
@@ -22,6 +24,8 @@ export interface CreateProcedureRequest {
   precioBase: number;
   duracionMinutos: number;
   areaCorporal: string;
+  /** Id del Attachment con la imagen (se sube antes con POST /files). */
+  imagenId?: string | null;
 }
 
 export interface UpdateProcedureRequest {
@@ -31,4 +35,6 @@ export interface UpdateProcedureRequest {
   duracionMinutos?: number;
   areaCorporal?: string;
   activo?: boolean;
+  /** Id del Attachment con la imagen (se sube antes con POST /files). */
+  imagenId?: string | null;
 }

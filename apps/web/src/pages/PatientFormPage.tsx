@@ -42,6 +42,7 @@ import {
   usePatient,
   useUpdatePatient,
 } from "@/api/patients.api";
+import { ImageUpload } from "@/components/shared/ImageUpload";
 import { useToastStore } from "@/stores/toast.store";
 
 const patientSchema = z.object({
@@ -56,6 +57,7 @@ const patientSchema = z.object({
     .or(z.literal("")),
   fechaNacimiento: z.string().optional().or(z.literal("")),
   notasGenerales: z.string().optional().or(z.literal("")),
+  imagenId: z.string().nullable(),
 });
 
 type PatientFormValues = z.infer<typeof patientSchema>;
@@ -68,6 +70,7 @@ const EMPTY_FORM: PatientFormValues = {
   email: "",
   fechaNacimiento: "",
   notasGenerales: "",
+  imagenId: null,
 };
 
 export function PatientFormPage() {
@@ -101,6 +104,7 @@ export function PatientFormPage() {
           ? existing.fechaNacimiento.slice(0, 10) // ISO → YYYY-MM-DD
           : "",
         notasGenerales: existing.notasGenerales ?? "",
+        imagenId: existing.imagenId ?? null,
       });
     }
   }, [existing, form]);
@@ -115,6 +119,7 @@ export function PatientFormPage() {
       email: values.email || undefined,
       fechaNacimiento: values.fechaNacimiento || undefined,
       notasGenerales: values.notasGenerales || undefined,
+      imagenId: values.imagenId,
     };
 
     try {
@@ -158,6 +163,21 @@ export function PatientFormPage() {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="imagenId"
+                  render={({ field }) => (
+                    <ImageUpload
+                      entityType="Patient"
+                      kind="Perfil"
+                      entityId={isEdit ? params.id : undefined}
+                      value={field.value}
+                      onChange={field.onChange}
+                      shape="circle"
+                      label="Foto de perfil"
+                    />
+                  )}
+                />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}

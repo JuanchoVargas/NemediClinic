@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NemediClinic.Api.Services;
 using NemediClinic.Application.DTOs.Common;
 using NemediClinic.Application.DTOs.Inventory;
 using NemediClinic.Domain.Entities;
@@ -15,10 +16,12 @@ namespace NemediClinic.Api.Controllers;
 public class ProductsController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly AttachmentService _attachments;
 
-    public ProductsController(AppDbContext db)
+    public ProductsController(AppDbContext db, AttachmentService attachments)
     {
         _db = db;
+        _attachments = attachments;
     }
 
     // ── GET /api/v1/products?Page=&PageSize=&Search=&tipo=&semaforo= ──
@@ -108,10 +111,12 @@ public class ProductsController : ControllerBase
             UnidadMedida = request.UnidadMedida,
             StockActual = 0m,
             StockMinimo = request.StockMinimo,
-            StockMaximo = request.StockMaximo
+            StockMaximo = request.StockMaximo,
+            ImagenId = request.ImagenId
         };
 
         _db.Products.Add(product);
+        await _attachments.AssignImageAsync(AttachmentEntityType.Product, product.Id, request.ImagenId, null);
         await _db.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetById), new { id = product.Id },
@@ -135,6 +140,11 @@ public class ProductsController : ControllerBase
         if (request.StockMinimo.HasValue) product.StockMinimo = request.StockMinimo.Value;
         if (request.StockMaximo.HasValue) product.StockMaximo = request.StockMaximo;
         if (request.Activo.HasValue) product.Activo = request.Activo.Value;
+        if (request.ImagenId.HasValue)
+        {
+            await _attachments.AssignImageAsync(AttachmentEntityType.Product, product.Id, request.ImagenId, product.ImagenId);
+            product.ImagenId = request.ImagenId;
+        }
 
         await _db.SaveChangesAsync();
         return NoContent();
@@ -193,6 +203,7 @@ public class ProductsController : ControllerBase
             StockMinimo = p.StockMinimo,
             StockMaximo = p.StockMaximo,
             Activo = p.Activo,
+            ImagenId = p.ImagenId,
             SemaforoStock =
                 p.StockActual == 0m || p.StockActual < p.StockMinimo * 0.5m
                     ? "Rojo"
@@ -218,6 +229,7 @@ public class ProductsController : ControllerBase
             StockMinimo = p.StockMinimo,
             StockMaximo = p.StockMaximo,
             Activo = p.Activo,
+            ImagenId = p.ImagenId,
             SemaforoStock =
                 p.StockActual == 0m || p.StockActual < p.StockMinimo * 0.5m
                     ? "Rojo"

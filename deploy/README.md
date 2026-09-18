@@ -115,6 +115,12 @@ chmod +x /opt/nemedi-clinic/deploy/backup.sh
 (crontab -l 2>/dev/null; echo "15 3 * * * /opt/nemedi-clinic/deploy/backup.sh >> /var/log/nemedi-backup.log 2>&1") | crontab -
 ```
 
+Las **imágenes** (fotos de pacientes, productos, procedimientos) no están en la base sino en el volumen `uploads_data`. Respáldalo junto al `.bak`:
+
+```bash
+docker run --rm -v nemedi-clinic_uploads_data:/data -v /opt/nemedi-clinic/deploy/backups:/out alpine   tar czf /out/uploads_$(date +%F).tgz -C /data .
+```
+
 Copia periódicamente esa carpeta fuera del VPS (rclone, scp, el snapshot del proveedor): un backup en el mismo disco no protege contra la pérdida del servidor.
 
 ### Restaurar

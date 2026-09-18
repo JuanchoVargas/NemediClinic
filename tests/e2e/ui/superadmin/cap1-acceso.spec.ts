@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { startChapter, step, endChapter } from "../helpers/guide";
+import { menuItem, sidebar, userMenu } from "../walk";
 import { CREDS } from "../api";
 
 test.describe.configure({ mode: "serial" });
@@ -19,12 +20,13 @@ test("Cap1 · Entrar y salir (dueño)", async ({ page }) => {
     },
     after: async () => {
       await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
-      await expect(page.locator("header")).toContainText(CREDS.superadmin.email);
-      await expect(page.locator("header")).toContainText("Administración");
+      await expect(sidebar(page)).toContainText(CREDS.superadmin.email);
+      await expect(sidebar(page)).toContainText("Administración");
     },
   });
 
-  await step(page, "Presiona Cerrar sesión", page.locator("header button", { hasText: "Cerrar sesión" }), {
+  await step(page, "Abre el menú de usuario (arriba a la derecha) y presiona Cerrar sesión", menuItem(page, "Cerrar sesión"), {
+    before: async () => { await userMenu(page).click(); },
     after: async () => { await page.waitForURL(/\/login/); },
   });
 

@@ -56,3 +56,6 @@ docs/manual/Guia_de_uso_NemediClinic.html
 # Despliegue
 deploy/.env
 deploy/backups/
+
+# Imágenes subidas en desarrollo (LocalFileStorage)
+apps/api/src/NemediClinic.Api/App_Data/

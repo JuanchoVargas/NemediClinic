@@ -12,6 +12,7 @@ public class ProductDto
     public decimal StockMinimo { get; set; }
     public decimal? StockMaximo { get; set; }
     public bool Activo { get; set; }
+    public Guid? ImagenId { get; set; }
     /// <summary>"Verde" | "Amarillo" | "Rojo"</summary>
     public string SemaforoStock { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }

@@ -8,6 +8,8 @@
 //   POST   /api/v1/patients/{patientId}/clinical-record/notes
 // ============================================================
 
+import type { EvolutionPhoto } from "@/types/file";
+
 export interface ClinicalRecord {
   id: string;
   patientId: string;
@@ -26,6 +28,17 @@ export interface ClinicalNote {
   procedimiento: string;
   observaciones?: string | null;
   productosUsados?: string | null;
-  fotoEvolucionUrl?: string | null;
+  /** Fotos de la sesión (Antes primero). Se pintan con <SecureImage id>. */
+  fotos: EvolutionPhoto[];
   fechaCreacion: string;
+}
+
+export interface CreateClinicalNoteRequest {
+  esteticistId: string;
+  procedimiento: string;
+  observaciones: string;
+  productosUsados?: string;
+  appointmentId?: string;
+  /** Ids de adjuntos subidos antes (pendientes) que la nota reclama al crearse. */
+  adjuntoIds: string[];
 }

@@ -42,7 +42,9 @@ export const queryClient = new QueryClient({
 
   // ─── Error global de mutations (POST/PUT/DELETE) ───────
   mutationCache: new MutationCache({
-    onError: (error) => {
+    onError: (error, _variables, _context, mutation) => {
+      // meta.silent: la mutation pinta su propio error junto al control (p. ej. subida de imagen)
+      if (mutation.meta?.silent) return;
       useToastStore.report(error);
     },
   }),

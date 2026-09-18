@@ -18,16 +18,17 @@ export type AppointmentStatus =
   (typeof AppointmentStatus)[keyof typeof AppointmentStatus];
 
 /**
- * Color por estado para FullCalendar + badges.
- * Mantener sincronizado con el spec visual de Nemedi.
+ * Clase CSS por estado para los eventos de FullCalendar. Los colores viven en
+ * src/styles/tokens.css (.fc .appt-*), derivados de los tokens: así siguen el tema
+ * claro/oscuro y la marca del canal. No poner colores hex aquí.
  */
-export const APPOINTMENT_COLORS: Record<AppointmentStatus, string> = {
-  Agendada: "#3B82F6", // azul
-  Confirmada: "#10B981", // verde
-  EnCurso: "#F59E0B", // amarillo
-  Completada: "#6B7280", // gris
-  Cancelada: "#EF4444", // rojo
-  NoConfirmo: "#F97316", // naranja
+export const APPOINTMENT_CLASS: Record<AppointmentStatus, string> = {
+  Agendada: "appt-agendada", // primario
+  Confirmada: "appt-confirmada", // éxito
+  EnCurso: "appt-en-curso", // arena
+  Completada: "appt-completada", // neutro
+  Cancelada: "appt-cancelada", // destructivo, tachado
+  NoConfirmo: "appt-no-confirmo", // arena tenue
 };
 
 /**
@@ -84,21 +85,18 @@ export interface CalendarEventDto {
   title: string;
   start: string;
   end: string;
-  backgroundColor: string;
-  borderColor: string;
+  classNames: string[];
   extendedProps: Record<string, unknown>;
 }
 
 export function appointmentToCalendarEvent(a: AppointmentDto): CalendarEventDto {
   const estado = a.estado as AppointmentStatus;
-  const color = APPOINTMENT_COLORS[estado] ?? "#6B7280";
   return {
     id: a.id,
     title: `${a.patientNombre} · ${a.procedureNombre}`,
     start: a.fechaInicio,
     end: a.fechaFin,
-    backgroundColor: color,
-    borderColor: color,
+    classNames: [APPOINTMENT_CLASS[estado] ?? "appt-completada"],
     extendedProps: {
       estado: a.estado,
       esteticistNombre: a.esteticistNombre,

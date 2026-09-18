@@ -16,8 +16,8 @@ public class BrandingResolver
     {
         Canal = "nemedi",
         NombreComercial = "NemediClinic",
-        ColorPrimario = "#171717",
-        ColorSecundario = "#737373",
+        ColorPrimario = "#1F4E79",
+        ColorSecundario = "#D9A441",
         Dominio = string.Empty
     };
 

@@ -96,6 +96,79 @@ namespace NemediClinic.Infrastructure.Persistence.Migrations
                     b.ToTable("Appointments");
                 });
 
+            modelBuilder.Entity("NemediClinic.Domain.Entities.Attachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("EntityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("PurgedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ThumbnailPath")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "EntityType", "EntityId");
+
+                    b.ToTable("Attachments");
+                });
+
             modelBuilder.Entity("NemediClinic.Domain.Entities.Branch", b =>
                 {
                     b.Property<Guid>("Id")
@@ -204,8 +277,8 @@ namespace NemediClinic.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             Activo = true,
-                            ColorPrimario = "#171717",
-                            ColorSecundario = "#737373",
+                            ColorPrimario = "#1F4E79",
+                            ColorSecundario = "#D9A441",
                             CreatedAt = new DateTime(2026, 9, 18, 0, 0, 0, 0, DateTimeKind.Utc),
                             Dominio = "app.nemediclinic.com",
                             Nombre = "Nemedi",
@@ -248,9 +321,6 @@ namespace NemediClinic.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("FotoEvolucionUrl")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -599,6 +669,9 @@ namespace NemediClinic.Infrastructure.Persistence.Migrations
                     b.Property<string>("FotoUrl")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid?>("ImagenId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -856,6 +929,9 @@ namespace NemediClinic.Infrastructure.Persistence.Migrations
                     b.Property<int>("DuracionMinutos")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("ImagenId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -899,6 +975,9 @@ namespace NemediClinic.Infrastructure.Persistence.Migrations
                     b.Property<string>("Descripcion")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("ImagenId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");

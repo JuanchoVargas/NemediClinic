@@ -39,6 +39,7 @@ public class AppDbContext : DbContext
     public DbSet<Product> Products => Set<Product>();
     public DbSet<InventoryEntry> InventoryEntries => Set<InventoryEntry>();
     public DbSet<InventoryMovement> InventoryMovements => Set<InventoryMovement>();
+    public DbSet<Attachment> Attachments => Set<Attachment>();
 
     // Nivel de plataforma: sin TenantId ni filtro global.
     public DbSet<Channel> Channels => Set<Channel>();
@@ -57,6 +58,19 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Tenant>()
             .HasQueryFilter(t => !t.IsDeleted);
 
+        // ── Attachment (imágenes) ───────────────────────────
+        // Relación polimórfica (EntityType + EntityId): sin FK a propósito.
+        modelBuilder.Entity<Attachment>(a =>
+        {
+            a.Property(x => x.EntityType).HasConversion<string>().HasMaxLength(20);
+            a.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
+            a.Property(x => x.FileName).HasMaxLength(200);
+            a.Property(x => x.ContentType).HasMaxLength(100);
+            a.Property(x => x.StoragePath).HasMaxLength(300);
+            a.Property(x => x.ThumbnailPath).HasMaxLength(300);
+            a.HasIndex(x => new { x.TenantId, x.EntityType, x.EntityId });
+        });
+
         // ── Plataforma: Channel / Lead / PlatformAdmin ──────
         modelBuilder.Entity<Channel>(c =>
         {
@@ -74,7 +88,7 @@ public class AppDbContext : DbContext
                 new Channel
                 {
                     Id = NemediChannelId, Nombre = "Nemedi", Slug = "nemedi",
-                    NombreComercial = "NemediClinic", ColorPrimario = "#171717", ColorSecundario = "#737373",
+                    NombreComercial = "NemediClinic", ColorPrimario = "#1F4E79", ColorSecundario = "#D9A441",
                     Dominio = "app.nemediclinic.com", PorcentajeCanal = 0m, Activo = true,
                     CreatedAt = new DateTime(2026, 9, 18, 0, 0, 0, DateTimeKind.Utc)
                 },

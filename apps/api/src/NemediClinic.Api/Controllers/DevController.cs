@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NemediClinic.Api.Services;
 using NemediClinic.Application.Interfaces;
 using NemediClinic.Domain.Entities;
 using NemediClinic.Domain.Enums;
@@ -24,20 +25,25 @@ public class DevController : ControllerBase
     private readonly AppDbContext _db;
     private readonly ITenantProvider _tenantProvider;
     private readonly IWebHostEnvironment _env;
+    private readonly DemoImageSeeder _images;
 
-    public DevController(AppDbContext db, ITenantProvider tenantProvider, IWebHostEnvironment env)
+    public DevController(AppDbContext db, ITenantProvider tenantProvider, IWebHostEnvironment env, DemoImageSeeder images)
     {
         _db = db;
         _tenantProvider = tenantProvider;
         _env = env;
+        _images = images;
     }
 
     // ── POST /api/v1/dev/seed-demo ──────────────────────────────────────
     // Idempotente: si ya existe el paciente con cédula 1000000001 no duplica
     // nada, pero sí vuelve a dejar la contraseña del SuperAdmin en el valor
     // de demo para garantizar el login.
+    // ?reanchor=true → si los datos ya existían, desplaza TODAS las citas los días necesarios para
+    // que la más antigua caiga ayer. Así la agenda demo vuelve a rodear "hoy" sin recrear nada
+    // (el seed original fija las fechas al día en que se ejecutó).
     [HttpPost("seed-demo")]
-    public async Task<IActionResult> SeedDemo()
+    public async Task<IActionResult> SeedDemo([FromQuery] bool reanchor = false)
     {
         if (!_env.IsDevelopment())
             return NotFound();
@@ -77,12 +83,18 @@ public class DevController : ControllerBase
         if (alreadySeeded)
         {
             await _db.SaveChangesAsync();
+            // Las imágenes de muestra tienen su propia idempotencia: una base sembrada antes
+            // de que existieran los adjuntos las recibe en la siguiente ejecución.
+            var imagenesNuevas = await _images.SeedAsync(superAdmin.Id);
+            var diasDesplazados = reanchor ? await ReanchorAgendaAsync() : 0;
             await tx.CommitAsync();
             return Ok(new
             {
                 message = "Datos demo ya existentes. Solo se reseteó la contraseña del SuperAdmin.",
                 superAdminEmail = superAdmin.Email,
-                created = false
+                created = false,
+                imagenes = imagenesNuevas,
+                diasDesplazados
             });
         }
 
@@ -259,6 +271,7 @@ public class DevController : ControllerBase
         }
 
         await _db.SaveChangesAsync();
+        await _images.SeedAsync(superAdmin.Id);
         await tx.CommitAsync();
 
         return Ok(new
@@ -277,6 +290,23 @@ public class DevController : ControllerBase
     }
 
     // ── Helpers de construcción ─────────────────────────────────────────
+
+    /// <summary>Mueve todas las citas del tenant N días para que la más antigua quede en "ayer".</summary>
+    private async Task<int> ReanchorAgendaAsync()
+    {
+        var oldest = await _db.Appointments.OrderBy(a => a.FechaInicio).Select(a => (DateTime?)a.FechaInicio).FirstOrDefaultAsync();
+        if (oldest is null)
+            return 0;
+
+        var days = (DateTime.Now.Date.AddDays(-1) - oldest.Value.Date).Days;
+        if (days == 0)
+            return 0;
+
+        await _db.Appointments.ExecuteUpdateAsync(s => s
+            .SetProperty(a => a.FechaInicio, a => a.FechaInicio.AddDays(days))
+            .SetProperty(a => a.FechaFin, a => a.FechaFin.AddDays(days)));
+        return days;
+    }
 
     private static Procedure Proc(string nombre, string descripcion, decimal precio, int minutos, string area) => new()
     {

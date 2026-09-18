@@ -284,7 +284,7 @@ public class DevController : ControllerBase
             _db.InventoryMovements.Add(new InventoryMovement
             {
                 ProductId = product.Id, Cantidad = cantidad, TipoMovimiento = MovementType.Entrada,
-                Referencia = $"Entrada manual #{entry.Id.ToString()[..8]}", UserId = superAdmin.Id, FechaMovimiento = fecha
+                Referencia = DemoEntryMarker, UserId = superAdmin.Id, FechaMovimiento = fecha
             });
         }
 
@@ -343,8 +343,9 @@ public class DevController : ControllerBase
 
     /// <summary>
     /// La compra inicial del seed se fecha 20 días antes de sembrar, así que con el tiempo queda fuera
-    /// del mes y el panel "Productos del mes" del Dashboard se vacía. Aquí se desplazan las entradas y
-    /// sus movimientos para que esa compra caiga 10 días atrás. No toca el stock: vive en Product.
+    /// del mes y el panel "Productos del mes" del Dashboard se vacía. Aquí se desplaza esa compra para
+    /// que caiga 10 días atrás. No toca el stock (vive en Product) ni las entradas registradas por
+    /// alguien más: solo las marcadas como demo, porque mover las demás las empujaría al futuro.
     /// </summary>
     private async Task ReanchorInventoryAsync()
     {
@@ -360,10 +361,12 @@ public class DevController : ControllerBase
         if (days == 0)
             return;
 
-        await _db.InventoryEntries.ExecuteUpdateAsync(s => s
-            .SetProperty(e => e.FechaEntrada, e => e.FechaEntrada.AddDays(days)));
-        await _db.InventoryMovements.ExecuteUpdateAsync(s => s
-            .SetProperty(m => m.FechaMovimiento, m => m.FechaMovimiento.AddDays(days)));
+        await _db.InventoryEntries
+            .Where(e => e.Observacion == DemoEntryMarker)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.FechaEntrada, e => e.FechaEntrada.AddDays(days)));
+        await _db.InventoryMovements
+            .Where(m => m.Referencia == DemoEntryMarker)
+            .ExecuteUpdateAsync(s => s.SetProperty(m => m.FechaMovimiento, m => m.FechaMovimiento.AddDays(days)));
     }
 
     private const string DemoEntryMarker = "Compra inicial (datos demo)";

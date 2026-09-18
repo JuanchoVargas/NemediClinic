@@ -265,7 +265,7 @@ Bloqueante: no con 480 min de sesión. Sí si la demo se deja abierta de un día
 | F11 Ciclo de cita | ⚠️ tras fix | No | No cierra el paquete al completar la última sesión |
 | F12 Hoja del día | ✅ | No | Flechas sin aria-label |
 | F13 Inventario | ✅ tras fix | No | Sin historial de movimientos (endpoint 500) |
-| F14 Consumo de cabina | ❌ | Solo si se promete | No existe |
+| F14 Consumo de cabina | ✅ desde el 2026-09-18 | No | La nota clínica descuenta inventario |
 | F15 Vencimiento | ❌ | No | No existe |
 | F16 Dashboard | ❌ | Sí (primera pantalla) | Placeholder |
 | F17 Sesión | ⚠️ | No | 480 min; 401 mal manejado; sin refresh |
@@ -283,21 +283,21 @@ Estado de los datos demo tras la ejecución: los registros de prueba (paciente 1
 
 ### Altos
 
-5. **Borrar un paquete del catálogo deja inaccesibles sus asignaciones** (`GET /patient-packages/{id}` → 404 por el filtro global sobre la relación requerida). Bloquear el borrado si hay asignaciones o proyectar sin depender del filtro.
+5. ✅ **Resuelto el 2026-09-18 (`7ba8804`): la asignación guarda su copia del catálogo (nombre, sesiones, vigencia).** ~~Borrar un paquete del catálogo deja inaccesibles sus asignaciones~~ (`GET /patient-packages/{id}` → 404 por el filtro global sobre la relación requerida). Bloquear el borrado si hay asignaciones o proyectar sin depender del filtro.
 6. ✅ **Resuelto el 2026-09-18 (`b019ced`, `PatientPackageService.CompleteSessionAsync` compartido).** ~~Completar la última sesión desde una cita no cierra el paquete~~ (`AppointmentsController.UpdateStatus` no replica la regla de `PatientPackagesController.CompleteSession`). Mover la regla a un servicio compartido.
 7. ✅ **Resuelto (interceptor único: limpia la sesión, avisa y va a `/login?redirect=`).** ~~401 en mitad de la sesión no limpia ni redirige.~~ El segundo interceptor de `axios.ts` recibe un `ApiError` sin `response`. Unificar en un solo interceptor y redirigir a `/login`.
 8. ✅ **Resuelto el 2026-09-18 (`b019ced`; también el listado paginado) y con pestaña "Movimientos" en Inventario.** ~~`GET /inventory/movements/product/{id}` responde 500~~ (`m.Product` sin `Include` en `MapToDto`).
 9. ✅ **Resuelto el 2026-09-18 (`d621b98` notas con fotos, `b019ced` edición de antecedentes y nota desde la cita Completada).** ~~Historia clínica solo lectura en la UI~~ aunque la API soporta editar antecedentes y crear notas.
-10. **Login acepta usuarios de tenants eliminados o inactivos.**
+10. ✅ **Resuelto el 2026-09-18 (`7ba8804`): login y refresh rechazan tenants eliminados, inactivos o suspendidos con mensaje legible.** ~~Login acepta usuarios de tenants eliminados o inactivos.~~
 
 ### Medios
 
-11. Admin no puede crear usuarios: la ruta lo permite, `auth/register` exige SuperAdmin.
+11. ✅ Resuelto (`7ba8804`): recepción crea **esteticistas**; los demás roles siguen siendo del dueño, y la UI lo refleja. ~~Admin no puede crear usuarios.~~
 12. ✅ Resuelto (`b019ced`). ~~Select de procedimiento en "Nueva cita" muestra inactivos.~~
-13. Pagos aceptan sobrepago (saldo negativo).
+13. ✅ Resuelto (`9dced81`): un pago mayor al saldo responde 422. ~~Pagos aceptan sobrepago (saldo negativo).~~
 14. ✅ Resuelto (`d621b98`: `PatientDto.ProximaCita`). ~~`proximaCita` nunca se calcula.~~
-15. No existe endpoint para quitar un procedimiento de un paquete.
-16. ⚠️ Mitad resuelto: el vencimiento existe desde `b019ced` (job Hangfire diario + alerta por `DiasAlertaVencimiento`). **El consumo de cabina (F14) sigue sin existir.**
+15. ✅ Resuelto (`7ba8804`): `DELETE /packages/{id}/procedures/{procedureId}`, solo en paquetes sin asignaciones y nunca el último. ~~No existe endpoint para quitar un procedimiento de un paquete.~~
+16. ✅ Resuelto del todo: el vencimiento desde `b019ced` y el **consumo de cabina (F14) desde `7ba8804`**.
 17. ✅ Resuelto (`b019ced`: `GET /api/v1/dashboard` + gráficas). ~~Dashboard sin endpoint (F16).~~
 18. `LoginResponse.expiration` informa 60 min aunque el JWT dure 480.
 19. El frontend descarta el `refreshToken`.
@@ -306,7 +306,7 @@ Estado de los datos demo tras la ejecución: los registros de prueba (paciente 1
 
 20. Esteticista puede listar todos los usuarios con email.
 21. ✅ Resuelto (`bdbf2d4`). ~~Flechas de navegación de la hoja del día sin `aria-label`; título con capitalización por palabra.~~
-22. Advertencia EF 10622 (`Package` filtrado, `PackageProcedure` requerido sin filtro): mismo mecanismo que el bug 5.
+22. ✅ Resuelto (`7ba8804`): `PackageProcedure` hereda de `BaseEntity` con `TenantId`, así que ya tiene el mismo filtro global. (Queda la misma advertencia para `ValuationProcedure`, que no afecta datos vendidos.)
 
 ---
 
@@ -322,6 +322,9 @@ Cinco commits cerraron la mayor parte de lo anterior y agregaron cinco flujos. T
 | `c1659f3` | Contraseñas: cambio obligatorio, `change-password`, restablecimiento con clave temporal |
 | `a7fb14f` | Valoraciones (embudo y conversión) + consentimiento informado firmado en PDF |
 | `bdbf2d4` | Responsive a 390 px + PWA con la marca del canal |
+| `9dced81` | Pagos con trazabilidad: comprobante, referencia, quién lo registró, tope en el saldo |
+| `9073d29` | Dashboard con alternadores (citas/dinero, procedimientos/productos) |
+| `7ba8804` | Consumo de cabina + copia del catálogo en el paquete vendido + bugs altos |
 
 ### Qué pasó con cada flujo
 
@@ -338,7 +341,7 @@ Cinco commits cerraron la mayor parte de lo anterior y agregaron cinco flujos. T
 | F15 Vencimiento | ❌ no existía | ✅ Job Hangfire 02:00 (`paquetes-vencimiento`), `PorVencer`/`DiasParaVencer` en el DTO, alerta en el dashboard. En Development se fuerza con `POST /dev/run-package-expiration` | API |
 | F16 Dashboard | ❌ placeholder | ✅ 8 indicadores, sparklines, área 14 días, top 5 procedimientos, alertas con enlace, filtro de sede para el dueño | recorrido superadmin cap. 1 |
 | F17 Sesión | ⚠️ 401 mal manejado | ✅ 401 limpia sesión y redirige. El refresh token sigue sin usarse | — |
-| F14 Consumo de cabina | ❌ | ❌ **Sigue sin existir** | — |
+| F14 Consumo de cabina | ❌ no existía | ✅ La nota clínica declara (producto, cantidad); al guardarla sobre una cita Completada se crea la **Salida** con cita y paciente y baja el stock (400 si no alcanza, aviso si queda bajo el mínimo) | `pnpm test` |
 
 ### Flujos nuevos
 
@@ -350,17 +353,21 @@ Cinco commits cerraron la mayor parte de lo anterior y agregaron cinco flujos. T
 | **F21 · Consentimiento** | Plantilla por procedimiento con `{{paciente}} {{cedula}} {{procedimiento}} {{fecha}}`; iniciar una cita sin consentimiento vigente (365 días) abre la firma; firma con el dedo → PDF (QuestPDF) guardado como adjunto; el PDF firmado no se puede borrar (409); pestaña Consentimientos en la ficha | ✅ |
 | **F22 · Móvil y PWA** | 390×844: cero scroll horizontal y cero elementos recortados en todas las rutas de los 4 roles + páginas públicas (50 capturas en `docs/manual/img/mobile/`); tablas como tarjetas; diálogos a pantalla completa; calendario en vista día; manifest con nombre y color del canal; hoja del día legible sin red; la copia offline se borra al cerrar sesión | ✅ (la instalación en un teléfono real y en iOS no se probó) |
 
+### Flujos nuevos del 2026-09-18 (tarde)
+
+| Flujo | Pasos verificados | Estado |
+|---|---|---|
+| **F23 · Pagos con trazabilidad** | El monto se propone con el saldo y no puede pasarse (422 con el saldo en el mensaje); referencia y comprobante (imagen o PDF) al registrar o después desde la fila; la tabla muestra quién lo registró; barra de progreso con el porcentaje y badge Pagado; eliminar un pago se lleva su comprobante | ✅ gate de push |
+| **F24 · Dashboard alternable** | Citas ↔ Dinero (cobrado por día y saldo acumulado, un eje por escala) y Procedimientos ↔ Productos (unidades movidas con semáforo); la elección se recuerda por dispositivo; saludo con la hora de Bogotá | ✅ recorrido dueño cap. 5 |
+| **F25 · Consumo de cabina** | Productos usados como lista en la nota; descuento solo con la cita Completada; salida ligada a cita y paciente; 400 sin stock; aviso al quedar bajo el mínimo; historial en la ficha del paciente y en los movimientos del producto | ✅ gate de push + recorrido esteticista cap. 4 |
+
 ### Lo que sigue abierto
 
 | # | Pendiente | Prioridad |
 |---|---|---|
-| 5 / 22 | Borrar un paquete del catálogo deja inaccesibles sus asignaciones (warning EF 10622) | Alta |
-| 10 | Login acepta usuarios de tenants eliminados | Alta |
-| F14 | Consumo de cabina: ninguna ruta genera `Salida` de inventario | Alta si se promete |
-| 11 | Admin ve "Nuevo usuario" pero `auth/register` exige SuperAdmin (403) | Media |
-| 13 | Pagos aceptan sobrepago | Media |
-| 15 | No hay endpoint para quitar un procedimiento de un paquete | Media |
 | 18 / 19 | `LoginResponse.expiration` fijo en 60 min; el frontend descarta el refresh token | Media |
+| — | Code-splitting: el paquete único (1,8 MB) lo precachea entero el service worker | Media |
+| — | Advertencia EF 10622 restante en `ValuationProcedure` (no afecta datos vendidos) | Baja |
 | 20 | Esteticista puede listar usuarios con email | Baja |
 | — | Instalación de la PWA en iOS: Safari no emite `beforeinstallprompt`, no hay banner (se instala desde Compartir) | Baja |
 | — | Sin cola de escritura offline: sin red la app solo lee | Fuera de alcance |

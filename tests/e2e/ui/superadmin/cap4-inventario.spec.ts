@@ -27,7 +27,7 @@ test("Cap4 · Inventario (dueño)", async ({ page }) => {
     after: async () => { await expect(d()).toBeVisible(); },
   });
 
-  await step(page, "Completa el producto con stock mínimo 100 y presiona Crear: queda en Rojo", d().locator("button[form=product-form]"), {
+  await step(page, "Completa el producto con stock mínimo 100 y presiona Crear: el semáforo queda en Crítico", d().locator("button[form=product-form]"), {
     before: async () => {
       await d().locator("input[name=nombre]").fill(PROD);
       await d().locator("input[name=referencia]").fill("SER-VC-30");
@@ -35,7 +35,7 @@ test("Cap4 · Inventario (dueño)", async ({ page }) => {
       await d().locator("input[name=unidadMedida]").fill("unidad");
       await d().getByLabel(/Stock mínimo/).fill("100");
     },
-    after: async () => { await expect(row()).toContainText("Rojo"); },
+    after: async () => { await expect(row()).toContainText("Crítico"); },
   });
 
   await step(page, "Haz clic en el lápiz del producto para editarlo", page.locator(`button[aria-label="Editar ${PROD}"]`), {

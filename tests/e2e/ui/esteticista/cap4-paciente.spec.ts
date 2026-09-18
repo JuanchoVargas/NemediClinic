@@ -59,11 +59,22 @@ test("Cap4 · Pacientes (esteticista)", async ({ page }) => {
     after: async () => { await expect(dialog(page)).toContainText("Nueva nota clínica"); },
   });
 
-  await step(page, "Elige el procedimiento, escribe las observaciones, agrega una foto en Antes y otra en Después, y presiona Guardar nota", dialog(page).locator("button[form=clinical-note-form]"), {
+  await step(page, "Presiona Agregar producto y anota lo que gastaste en la sesión", dialog(page).locator("button", { hasText: "Agregar producto" }), {
     before: async () => {
       await dialog(page).locator("button[role=combobox]").first().click();
       await option(page, "Limpieza facial profunda").click();
       await dialog(page).locator("textarea[name=observaciones]").fill("Piel mixta. Se realiza limpieza profunda con buena tolerancia.");
+    },
+    after: async () => {
+      await dialog(page).locator('button[aria-label="Producto 1"]').click();
+      await option(page, /Crema hidratante/).click();
+      await dialog(page).locator('input[aria-label="Cantidad del producto 1"]').fill("1");
+      await expect(dialog(page)).toContainText(/Quedan \d+/);
+    },
+  });
+
+  await step(page, "Agrega una foto en Antes y otra en Después, y presiona Guardar nota", dialog(page).locator("button[form=clinical-note-form]"), {
+    before: async () => {
       await dialog(page).locator('input[aria-label="Agregar fotos Antes"]').setInputFiles({ name: "antes.png", mimeType: "image/png", buffer: samplePng([214, 150, 130], [240, 200, 185], 60) });
       await expect(dialog(page).locator('img[alt="Foto Antes"]')).toBeVisible();
       await dialog(page).locator('input[aria-label="Agregar fotos Después"]').setInputFiles({ name: "despues.png", mimeType: "image/png", buffer: samplePng([232, 190, 172], [250, 228, 216], 8) });

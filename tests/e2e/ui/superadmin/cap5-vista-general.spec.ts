@@ -9,6 +9,27 @@ test("Cap5 · Vista general (dueño)", async ({ page }) => {
   startChapter(page, "superadmin", 5);
   await uiLogin(page, CREDS.superadmin.email, CREDS.superadmin.password);
 
+  await step(page, "En el Dashboard, presiona Dinero para ver lo cobrado por día y el saldo acumulado", page.getByRole("radio", { name: "Dinero" }), {
+    before: async () => {
+      await page.goto("/dashboard");
+      await expect(page.locator("main")).toContainText("Citas por día");
+    },
+    after: async () => {
+      await expect(page.locator("main")).toContainText("Dinero por día");
+      await expect(page.getByRole("radio", { name: "Dinero" })).toHaveAttribute("aria-checked", "true");
+    },
+  });
+
+  await step(page, "Presiona Productos para ver los insumos más usados del mes", page.getByRole("radio", { name: "Productos" }), {
+    after: async () => {
+      await expect(page.locator("main")).toContainText("Productos del mes");
+      await expect(page.locator("main")).toContainText("unidades movidas");
+      // Se vuelve a dejar como estaba: la elección se guarda en el dispositivo
+      await page.getByRole("radio", { name: "Citas" }).click();
+      await page.getByRole("radio", { name: "Procedimientos" }).click();
+    },
+  });
+
   await step(page, "Haz clic en Calendario y elige Vista calendario", menuItem(page, "Vista calendario"), {
     before: async () => { await openHeaderMenu(page, "Calendario"); },
     after: async () => {

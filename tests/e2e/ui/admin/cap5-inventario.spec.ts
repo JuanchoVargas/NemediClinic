@@ -53,8 +53,8 @@ test("Cap5 · Inventario (recepción)", async ({ page }) => {
     },
   });
 
-  await step(page, "Abre la pestaña Productos: el semáforo quedó en Verde", tab(page, "Productos"), {
-    after: async () => { await expect(page.locator("main table tr", { hasText: PROD })).toContainText("Verde"); },
+  await step(page, "Abre la pestaña Productos: el semáforo quedó en Óptimo", tab(page, "Productos"), {
+    after: async () => { await expect(page.locator("main table tr", { hasText: PROD })).toContainText("Óptimo"); },
   });
 
   await step(page, "Haz clic en la pestaña Movimientos para ver el historial de entradas y salidas", tab(page, "Movimientos"), {

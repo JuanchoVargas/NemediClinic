@@ -1,6 +1,6 @@
 ---
 title: "NemediClinic — Guía de uso"
-subtitle: "Versión 1.1 · Recorrido guiado por rol con pantallas reales"
+subtitle: "Versión 1.2 · Recorrido guiado por rol con pantallas reales"
 date: "18 de septiembre de 2026"
 lang: es
 ---
@@ -253,7 +253,19 @@ Un producto nuevo arranca con stock 0. **Después verás** que queda en Rojo has
 
 ![](img/superadmin/cap4-07-confirma-con-eliminar.png)
 
-## Capítulo 5 · Vista general de la agenda {.capitulo}
+## Capítulo 5 · Vista general {.capitulo}
+
+### 1. En el Dashboard, presiona Dinero
+
+El panel de la izquierda alterna entre dos lecturas del mismo periodo. **Citas** muestra cuántas se agendaron y cuántas se completaron cada día; **Dinero** muestra lo que entró cada día (área verde) y cuánto te deben en total (línea ámbar). El sistema recuerda cuál dejaste abierta.
+
+![](img/superadmin/cap5-01-en-el-dashboard-presiona-dinero-para-ver-lo-cobr.png)
+
+### 2. Presiona Productos
+
+El panel de la derecha alterna entre los **procedimientos** más agendados del mes y los **productos** con más unidades movidas, cada uno con su semáforo de stock.
+
+![](img/superadmin/cap5-02-presiona-productos-para-ver-los-insumos-mas-usad.png)
 
 **Qué vas a lograr:** ver la agenda de toda la clínica y de cada esteticista.
 
@@ -261,23 +273,23 @@ Un producto nuevo arranca con stock 0. **Después verás** que queda en Rojo has
 
 **Después verás** las citas de todas las esteticistas, con un color por estado.
 
-![](img/superadmin/cap5-01-haz-clic-en-calendario-y-elige-vista-calendario.png)
+![](img/superadmin/cap5-03-haz-clic-en-calendario-y-elige-vista-calendario.png)
 
 ### 2. Abre el selector "Todos los esteticistas"
 
-![](img/superadmin/cap5-02-abre-el-selector-todos-los-esteticistas.png)
+![](img/superadmin/cap5-04-abre-el-selector-todos-los-esteticistas.png)
 
 ### 3. Elige una esteticista
 
 **Después verás** solo su agenda.
 
-![](img/superadmin/cap5-03-elige-camila-ruiz-el-calendario-muestra-solo-sus.png)
+![](img/superadmin/cap5-05-elige-camila-ruiz-el-calendario-muestra-solo-sus.png)
 
 ### 4. Haz clic en Hoja del día
 
 **Después verás** las citas del día en orden, con paciente, procedimiento, esteticista y estado.
 
-![](img/superadmin/cap5-04-haz-clic-en-hoja-del-dia.png)
+![](img/superadmin/cap5-06-haz-clic-en-hoja-del-dia.png)
 
 ## Guía rápida · Dueño {.capitulo}
 
@@ -290,6 +302,8 @@ Un producto nuevo arranca con stock 0. **Después verás** que queda en Rojo has
 | Restablecer la contraseña de alguien | Administración → Usuarios → llave de la fila (muestra una clave temporal una sola vez) |
 | Pedir consentimiento para un servicio | Procedimientos → lápiz → "Requiere consentimiento" y edita la plantilla |
 | Ver cómo va el negocio | Dashboard (elige la sede arriba) |
+| Ver el dinero por día | Dashboard → panel izquierdo → Dinero |
+| Ver los insumos más usados | Dashboard → panel derecho → Productos |
 | Crear o editar un servicio | Procedimientos → Nuevo procedimiento / lápiz |
 | Retirar un servicio del catálogo | Procedimientos → lápiz → interruptor Activo |
 | Armar un paquete con descuento | Paquetes → Nuevo paquete → agrega procedimientos → escribe el precio |
@@ -324,19 +338,25 @@ Recepción administra pacientes, agenda, paquetes, pagos e inventario. No crea s
 
 ### 4. Abre Administración y elige Usuarios
 
-**Después verás** la lista con lápiz para editar. No hay botón Nuevo usuario.
+**Después verás** la lista de usuarios, con el botón **Nuevo usuario**.
 
-![](img/admin/cap1-04-abre-administracion-y-elige-usuarios-puedes-edit.png)
+![](img/admin/cap1-04-abre-administracion-y-elige-usuarios-puedes-dar-.png)
 
-### 5. Si escribes una dirección que no te corresponde, vuelves al inicio
+### 5. Presiona Nuevo usuario
 
-![](img/admin/cap1-05-si-escribes-la-direccion-de-mi-clinica-en-el-nav.png)
+Puedes dar de alta a las **esteticistas** del equipo. Los usuarios de recepción y el dueño solo los crea el dueño, y el formulario te lo recuerda.
 
-### 6. Y verás el aviso "No tienes permisos para acceder a esa sección"
+![](img/admin/cap1-05-presiona-nuevo-usuario-solo-puedes-crear-estetic.png)
+
+### 6. Si escribes una dirección que no te corresponde, vuelves al inicio
+
+![](img/admin/cap1-06-si-escribes-la-direccion-de-mi-clinica-en-el-nav.png)
+
+### 7. Y verás el aviso "No tienes permisos para acceder a esa sección"
 
 El aviso aparece arriba a la derecha y desaparece solo.
 
-![](img/admin/cap1-06-y-deberia-mostrarse-el-aviso-no-tienes-permisos.png)
+![](img/admin/cap1-07-y-deberia-mostrarse-el-aviso-no-tienes-permisos.png)
 
 ## Capítulo 2 · Pacientes {.capitulo}
 
@@ -456,23 +476,31 @@ El precio viene con el valor del paquete; ajústalo si negociaste algo distinto.
 
 ![](img/admin/cap3-05-haz-clic-en-la-pestana-pagos-y-presiona-registra.png)
 
-### 6. Escribe el monto y presiona Registrar pago
+### 6. Escribe el monto, el método y la referencia, y presiona Registrar pago
 
-Mientras quede saldo, **verás** el resumen en amarillo con el saldo pendiente.
+El monto se propone con el saldo pendiente y **no puede pasarse de él**. En **Referencia** escribe el número de la transferencia o del voucher, para poder cuadrar caja después.
 
-![](img/admin/cap3-06-escribe-80000-como-monto-y-presiona-registrar-pa.png)
+**Después verás** la barra con el porcentaje pagado y el pago en la lista, con quién lo registró.
 
-### 7. Presiona Registrar pago otra vez
+![](img/admin/cap3-06-escribe-80000-como-monto-el-numero-de-la-transfe.png)
+
+### 7. En la fila del pago, presiona Adjuntar
+
+Sube la foto o el PDF del comprobante sin salir de la lista. Queda como miniatura (o como ícono de PDF) y se abre con un clic.
+
+![](img/admin/cap3-07-en-la-fila-del-pago-presiona-adjuntar-para-guard.png)
+
+### 8. Presiona Registrar pago otra vez
 
 **Después verás** que el formulario propone el saldo restante.
 
-![](img/admin/cap3-07-presiona-registrar-pago-otra-vez-el-formulario-p.png)
+![](img/admin/cap3-08-presiona-registrar-pago-otra-vez-el-formulario-p.png)
 
-### 8. Presiona Registrar pago para saldar
+### 9. Presiona Registrar pago para saldar
 
-**Después verás** el resumen en verde con saldo $0.
+**Después verás** la barra completa al 100 % con la etiqueta **Pagado** en verde.
 
-![](img/admin/cap3-08-presiona-registrar-pago-para-saldar-el-resumen-p.png)
+![](img/admin/cap3-09-presiona-registrar-pago-para-saldar-la-barra-lle.png)
 
 ## Capítulo 4 · Agenda {.capitulo}
 
@@ -600,7 +628,7 @@ Abre la ficha del paciente y haz clic en Paquetes. **Después verás** el avance
 
 **Después verás** el semáforo del producto repuesto en Verde.
 
-![](img/admin/cap5-05-abre-la-pestana-productos-el-semaforo-quedo-en-v.png)
+![](img/admin/cap5-05-abre-la-pestana-productos-el-semaforo-quedo-en-o.png)
 
 ### 6. Haz clic en la pestaña Movimientos
 
@@ -620,7 +648,9 @@ Abre la ficha del paciente y haz clic en Paquetes. **Después verás** el avance
 | Confirmar o cancelar una cita | Calendario → clic en la cita → Confirmar / Cancelar |
 | Ver el día de la clínica | Calendario → Hoja del día (cambia la fecha con las flechas) |
 | Vender un paquete | Paquetes → Ver → Asignar a paciente |
-| Registrar un pago | Pacientes → Ver → Pagos → Registrar pago |
+| Registrar un pago | Pacientes → Ver → Pagos → Registrar pago (con referencia y comprobante) |
+| Adjuntar un comprobante después | Pacientes → Ver → Pagos → Adjuntar, en la fila del pago |
+| Dar de alta una esteticista | Administración → Usuarios → Nuevo usuario |
 | Reponer stock | Inventario → Alertas → Registrar entrada |
 | Ver entradas y salidas | Inventario → Movimientos |
 | Registrar una valoración | Valoraciones → Nueva valoración |
@@ -783,29 +813,35 @@ Por eso no puedes cambiar el estado de una cita ajena.
 
 ![](img/esteticista/cap4-06-presiona-nueva-nota-para-registrar-la-sesion-de-.png)
 
-### 7. Completa la nota y agrega las fotos
+### 7. Presiona Agregar producto y anota lo que gastaste
+
+En **Productos usados** eliges el insumo y la cantidad. Al guardar la nota de una cita **completada**, esas cantidades **salen solas del inventario** y, si algo queda bajo el mínimo, el sistema te avisa en el momento. Cada línea te dice cuánto queda en existencia.
+
+![](img/esteticista/cap4-07-presiona-agregar-producto-y-anota-lo-que-gastast.png)
+
+### 8. Completa la nota y agrega las fotos
 
 Elige el procedimiento, escribe las observaciones y agrega al menos una foto en **Antes** y otra en **Después**: arrástralas al recuadro o haz clic en Agregar. Las fotos se optimizan solas antes de subir. Presiona Guardar nota. **Después verás** la nota en la lista, con sus fotos.
 
-![](img/esteticista/cap4-07-elige-el-procedimiento-escribe-las-observaciones.png)
+![](img/esteticista/cap4-08-agrega-una-foto-en-antes-y-otra-en-despues-y-pre.png)
 
-### 8. Haz clic en la pestaña Evolución
+### 9. Haz clic en la pestaña Evolución
 
 **Verás** las sesiones del paciente en orden, de la más antigua a la más reciente. Cada una muestra la fecha, el procedimiento, quién atendió, las observaciones y un comparador: desliza la barra para pasar de la foto de antes a la de después.
 
-![](img/esteticista/cap4-08-haz-clic-en-la-pestana-evolucion-la-sesion-apare.png)
+![](img/esteticista/cap4-09-haz-clic-en-la-pestana-evolucion-la-sesion-apare.png)
 
-### 9. Haz clic en una foto para verla en grande
+### 10. Haz clic en una foto para verla en grande
 
 Se abre a pantalla completa. Cierra con la tecla Escape o con la X.
 
-![](img/esteticista/cap4-09-haz-clic-en-una-foto-para-verla-en-grande-cierra.png)
+![](img/esteticista/cap4-10-haz-clic-en-una-foto-para-verla-en-grande-cierra.png)
 
-### 10. No hay pestañas de Paquetes ni Pagos
+### 11. No hay pestañas de Paquetes ni Pagos
 
 La información comercial no está disponible para la esteticista.
 
-![](img/esteticista/cap4-10-observa-que-no-existen-las-pestanas-paquetes-ni-.png)
+![](img/esteticista/cap4-11-observa-que-no-existen-las-pestanas-paquetes-ni-.png)
 
 ## Capítulo 5 · Inventario {.capitulo}
 
@@ -844,6 +880,7 @@ Crear productos es tarea del dueño o de recepción.
 | Registrar un paciente nuevo | Inicio → Ver pacientes → Nuevo paciente |
 | Consultar o completar la historia clínica | Pacientes → Ver → Historia clínica → Editar |
 | Dejar la nota de la sesión con fotos | Pacientes → Ver → Historia clínica → Nueva nota (o desde la cita Completada) |
+| Descontar los insumos que gastaste | En la nota: Productos usados → Agregar producto |
 | Comparar Antes y Después | Pacientes → Ver → Evolución |
 | Hacer firmar el consentimiento | Clic en la cita → Iniciar (si el servicio lo exige, se abre la firma) |
 | Registrar una valoración | Valoraciones → Nueva valoración |

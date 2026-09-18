@@ -38,12 +38,20 @@ test("Cap1 · Entrar y qué puedes hacer (recepción)", async ({ page }) => {
     },
   });
 
-  await step(page, "Abre Administración y elige Usuarios: puedes editar, pero no hay botón Nuevo usuario", menuItem(page, "Usuarios"), {
+  await step(page, "Abre Administración y elige Usuarios: puedes dar de alta esteticistas", menuItem(page, "Usuarios"), {
     before: async () => { await openHeaderMenu(page, "Administración"); },
     after: async () => {
       await expect(page).toHaveURL(/\/admin\/users/);
-      await expect(page.locator("main button", { hasText: "Nuevo usuario" })).toHaveCount(0);
+      await expect(page.locator("main button", { hasText: "Nuevo usuario" })).toBeVisible();
       await expect(page.locator('main button[aria-label^="Editar"]').first()).toBeVisible();
+    },
+  });
+
+  await step(page, "Presiona Nuevo usuario: solo puedes crear esteticistas", page.locator("main button", { hasText: "Nuevo usuario" }), {
+    after: async () => {
+      const d = page.locator("[role=dialog]");
+      await expect(d).toContainText("Solo el dueño puede crear usuarios de recepción");
+      await page.keyboard.press("Escape");
     },
   });
 

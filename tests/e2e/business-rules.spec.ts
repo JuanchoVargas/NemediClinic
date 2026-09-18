@@ -10,6 +10,7 @@
 //
 // Requisitos: los mismos del gate de aislamiento (API en 5055 y el seed demo).
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import { sql } from "./sql";
 import { samplePng } from "./ui/helpers/sample-image";
 import { samplePdf } from "./ui/helpers/sample-pdf";
 
@@ -205,16 +206,11 @@ test.describe("Consumo de cabina", () => {
   });
 
   test.afterAll(async ({ request: api }) => {
-    // Borrar al paciente arrastra sus notas; el stock se devuelve con una entrada de ajuste
+    // El movimiento de inventario es un libro: no se borra por API. Como esto es la base de
+    // desarrollo (y sus datos se usan en las demos), el test limpia lo suyo y devuelve el stock.
     if (productId) {
-      const actual = await get<{ stockActual: number }>(api, token, `/api/v1/products/${productId}`);
-      const faltante = stockInicial - actual.stockActual;
-      if (faltante > 0) {
-        await api.post("/api/v1/inventory/entries", {
-          ...auth(token),
-          data: { productId, cantidad: faltante, motivoEntrada: "Ajuste", observacion: "Devolución del test e2e" },
-        });
-      }
+      sql(`DELETE FROM InventoryMovements WHERE Referencia LIKE 'Consumo de cabina · Sesión%';`);
+      sql(`UPDATE Products SET StockActual = ${stockInicial} WHERE Id = '${productId}';`);
     }
     if (appointmentId) {
       await api.put(`/api/v1/appointments/${appointmentId}/status`, { ...auth(token), data: { estado: "Agendada" } });

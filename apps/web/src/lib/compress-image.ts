@@ -54,6 +54,21 @@ export async function compressImage(file: File): Promise<PreparedImage> {
   }
 }
 
+export const PDF_TYPE = "application/pdf";
+/** Valor de `accept` para un <input type="file"> de comprobantes: imágenes + PDF. */
+export const DOCUMENT_ACCEPT = [...ACCEPTED_IMAGE_TYPES, PDF_TYPE].join(",");
+
+/** Comprobantes y consentimientos: imagen o PDF. El PDF no se comprime, así que aplica el tope del servidor. */
+export function validateDocumentFile(file: File): string | null {
+  if (file.type !== PDF_TYPE) {
+    return ACCEPTED_IMAGE_TYPES.includes(file.type)
+      ? validateImageFile(file)
+      : "Formato no permitido. Usa un PDF o una imagen JPG, PNG o WebP.";
+  }
+  if (file.size > MAX_UPLOAD_BYTES) return "El PDF supera el máximo de 10 MB.";
+  return null;
+}
+
 /** Mensaje de error legible si el archivo no se puede subir; null si está bien. */
 export function validateImageFile(file: File): string | null {
   if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) return "Formato no permitido. Usa una imagen JPG, PNG o WebP.";

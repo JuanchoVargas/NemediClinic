@@ -315,6 +315,17 @@ public class AppDbContext : DbContext
             .HasMaxLength(20);
 
         modelBuilder.Entity<PatientPayment>()
+            .Property(p => p.Referencia)
+            .HasMaxLength(100);
+
+        // Quién registró el pago. Restrict: borrar (soft) un usuario nunca toca sus pagos.
+        modelBuilder.Entity<PatientPayment>()
+            .HasOne(p => p.RegistradoPor)
+            .WithMany()
+            .HasForeignKey(p => p.RegistradoPorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PatientPayment>()
             .HasOne(p => p.PatientPackage)
             .WithMany(pp => pp.Payments)
             .HasForeignKey(p => p.PatientPackageId)

@@ -51,6 +51,8 @@ export interface PatientPackageSummary {
   estado: string; // "Activo" | "Pausado" | "Completado" | "Vencido"
   sesionesCompletadas: number;
   sesionesTotales: number;
+  /** 0–100; null para Esteticista (no ve datos financieros). */
+  porcentajePagado?: number | null;
 }
 
 /**

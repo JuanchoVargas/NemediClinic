@@ -8,8 +8,6 @@
 // ============================================================
 import { useState } from "react";
 import { ReactCompareSlider } from "react-compare-slider";
-import Lightbox from "yet-another-react-lightbox";
-import "yet-another-react-lightbox/styles.css";
 import { CalendarDays, Plus, UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { SignedLightbox } from "@/components/shared/SignedLightbox";
 import { SecureImage } from "@/components/shared/SecureImage";
 import { MotionLi, staggerProps } from "@/components/shared/motion-elements";
 import { usePatientEvolution } from "@/api/files.api";
@@ -87,7 +86,11 @@ export function EvolutionTab({ patientId, onNewNote }: EvolutionTabProps) {
       </ol>
 
       {lightbox && (
-        <PhotoLightbox photos={lightbox.photos} index={lightbox.index} onClose={() => setLightbox(null)} />
+        <SignedLightbox
+          items={lightbox.photos.map((p) => ({ id: p.id, alt: p.kind === "Antes" ? "Antes" : "Después" }))}
+          index={lightbox.index}
+          onClose={() => setLightbox(null)}
+        />
       )}
     </>
   );
@@ -191,36 +194,6 @@ function BeforeAfter({ antes, despues }: { antes: EvolutionPhoto; despues: Evolu
         <span>Desliza para comparar</span>
         <span>Después</span>
       </figcaption>
-    </figure>
-  );
-}
-
-/** Lightbox: pide la URL firmada (original) de cada foto de la sesión. */
-function PhotoLightbox({ photos, index, onClose }: { photos: EvolutionPhoto[]; index: number; onClose: () => void }) {
-  return (
-    <Lightbox
-      open
-      close={onClose}
-      index={index}
-      // El slide real lo pinta SignedSlide; `src` solo identifica la foto
-      slides={photos.map((p) => ({ src: p.id, alt: p.kind === "Antes" ? "Antes" : "Después" }))}
-      render={{
-        slide: ({ slide }) => <SignedSlide id={slide.src} alt={slide.alt ?? ""} />,
-        buttonPrev: photos.length <= 1 ? () => null : undefined,
-        buttonNext: photos.length <= 1 ? () => null : undefined,
-      }}
-      styles={{ container: { backgroundColor: "rgb(18 22 28 / 0.94)" } }}
-    />
-  );
-}
-
-function SignedSlide({ id, alt }: { id: string; alt: string }) {
-  const { data } = useSignedImage(id);
-  if (!data) return <Skeleton className="h-64 w-64" />;
-  return (
-    <figure className="flex h-full w-full flex-col items-center justify-center gap-3 p-4">
-      <img src={data.url} alt={alt} className="max-h-[85%] max-w-full rounded-lg object-contain" />
-      <figcaption className="text-sm font-medium text-white/80">{alt}</figcaption>
     </figure>
   );
 }

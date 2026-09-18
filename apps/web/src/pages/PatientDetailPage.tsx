@@ -7,24 +7,9 @@
 // el usuario abre el tab, TanStack Query lo cachea por 5min).
 // ============================================================
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { AlarmClock, ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
-
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { AlarmClock, ArrowLeft, Pencil, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,29 +20,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { CurrencyInput } from "@/components/ui/CurrencyInput";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { FormDialog } from "@/components/shared/FormDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ConfirmDeleteButton } from "@/components/shared/ConfirmDeleteButton";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { SecureImage } from "@/components/shared/SecureImage";
+import { PackageStatusBadge } from "@/components/patient/PackageStatusBadge";
+import { PaymentsTab } from "@/components/patient/PaymentsTab";
 import { PatientHeader } from "@/components/patient/PatientHeader";
 import { EvolutionTab } from "@/components/patient/EvolutionTab";
 import { ConsentsTab } from "@/components/patient/ConsentsTab";
@@ -68,20 +38,9 @@ import { usePermissions } from "@/hooks/use-permissions";
 
 import { usePatient } from "@/api/patients.api";
 import { useClinicalNotes, useClinicalRecord } from "@/api/clinical-records.api";
-import {
-  useDeletePatientPackage,
-  useDeletePayment,
-  usePatientPackagePayments,
-  usePatientPackagesByPatient,
-  useRegisterPayment,
-} from "@/api/patient-packages.api";
+import { useDeletePatientPackage, usePatientPackagesByPatient } from "@/api/patient-packages.api";
 import { useToastStore } from "@/stores/toast.store";
-import { cn } from "@/lib/utils";
 import type { PatientPackage } from "@/types/patient-package";
-
-import { toLocalDate } from "@/lib/dates";
-
-const todayISO = () => toLocalDate(new Date());
 
 const NOTES_PAGE_SIZE = 10;
 
@@ -361,21 +320,6 @@ function ClinicalTab({ patientId, onNewNote }: { patientId: string; onNewNote?: 
 // ────────────────────────────────────────────────────────────
 // Tab: Paquetes
 // ────────────────────────────────────────────────────────────
-function statusBadge(estado: string) {
-  switch (estado) {
-    case "Activo":
-      return <Badge variant="success">Activo</Badge>;
-    case "Pausado":
-      return <Badge variant="warning">Pausado</Badge>;
-    case "Completado":
-      return <Badge variant="secondary">Completado</Badge>;
-    case "Vencido":
-      return <Badge variant="destructive">Vencido</Badge>;
-    default:
-      return <Badge variant="outline">{estado}</Badge>;
-  }
-}
-
 function PackagesTab({ patientId }: { patientId: string }) {
   const { data: packages, isLoading } = usePatientPackagesByPatient(patientId);
 
@@ -411,7 +355,7 @@ function PackageCard({ pkg }: { pkg: PatientPackage }) {
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-lg">{pkg.packageNombre}</CardTitle>
-          {statusBadge(pkg.estado)}
+          <PackageStatusBadge estado={pkg.estado} />
         </div>
         <CardDescription>
           Inicio: {formatShortDate(pkg.fechaInicio)}
@@ -463,377 +407,5 @@ function PackageCard({ pkg }: { pkg: PatientPackage }) {
         )}
       </CardContent>
     </Card>
-  );
-}
-
-/** Botón de borrado con confirmación (asignaciones y pagos). */
-function ConfirmDeleteButton({
-  label,
-  title,
-  description,
-  pending,
-  onConfirm,
-  iconOnly = false,
-}: {
-  label: string;
-  title: string;
-  description: string;
-  pending: boolean;
-  onConfirm: () => Promise<void>;
-  iconOnly?: boolean;
-}) {
-  return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        {iconOnly ? (
-          <Button variant="ghost" size="icon" className="text-destructive" disabled={pending} aria-label={label}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Button variant="ghost" size="sm" className="text-destructive" disabled={pending}>
-            <Trash2 className="mr-1.5 h-4 w-4" />
-            {label}
-          </Button>
-        )}
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
-          <AlertDialogAction
-            disabled={pending}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            onClick={() => {
-              // el toast global reporta el error
-              onConfirm().catch(() => undefined);
-            }}
-          >
-            Eliminar
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
-// ────────────────────────────────────────────────────────────
-// Tab: Pagos
-// ────────────────────────────────────────────────────────────
-function PaymentsTab({ patientId }: { patientId: string }) {
-  const { data: packages, isLoading } = usePatientPackagesByPatient(patientId);
-
-  if (isLoading) return <Skeleton className="h-32 w-full" />;
-  if (!packages || packages.length === 0) {
-    return (
-      <Card>
-        <CardContent className="pt-6 text-center text-muted-foreground">
-          Sin paquetes activos para mostrar pagos.
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const activos = packages.filter((p) => p.estado === "Activo");
-  if (activos.length === 0) {
-    return (
-      <Card>
-        <CardContent className="pt-6 text-center text-muted-foreground">
-          No hay paquetes activos en este momento.
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {activos.map((pkg) => (
-        <PackagePaymentsSection key={pkg.id} pkg={pkg} />
-      ))}
-    </div>
-  );
-}
-
-function PackagePaymentsSection({ pkg }: { pkg: PatientPackage }) {
-  const { data: payments, isLoading } = usePatientPackagePayments(pkg.id);
-  const { can } = usePermissions();
-  const [registerOpen, setRegisterOpen] = useState(false);
-  const deletePayment = useDeletePayment(pkg.id);
-
-  const saldoCero = pkg.saldoPendiente <= 0;
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <CardTitle className="text-lg">{pkg.packageNombre}</CardTitle>
-            <CardDescription>
-              Fecha inicio: {new Date(pkg.fechaInicio).toLocaleDateString("es-CO")}
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            {statusBadge(pkg.estado)}
-            {can("payments.create") && (
-              <Button size="sm" onClick={() => setRegisterOpen(true)}>
-                <Plus className="mr-1 h-4 w-4" />
-                Registrar pago
-              </Button>
-            )}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Resumen acordado / pagado / saldo */}
-        <div
-          className={cn(
-            "rounded-md px-3 py-2 grid grid-cols-3 gap-2 text-sm",
-            saldoCero
-              ? "bg-success-soft text-success"
-              : "bg-sand-soft text-sand-foreground dark:text-sand",
-          )}
-        >
-          <div>
-            <p className="text-xs opacity-75">Total acordado</p>
-            <p className="font-medium">
-              ${pkg.precioAcordado.toLocaleString("es-CO")}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs opacity-75">Total pagado</p>
-            <p className="font-medium">
-              ${pkg.totalPagado.toLocaleString("es-CO")}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs opacity-75">Saldo pendiente</p>
-            <p className="font-medium">
-              ${pkg.saldoPendiente.toLocaleString("es-CO")}
-            </p>
-          </div>
-        </div>
-
-        {isLoading && <Skeleton className="h-16 w-full" />}
-        {payments && payments.length === 0 && (
-          <p className="text-sm text-muted-foreground">Sin pagos registrados.</p>
-        )}
-        {payments && payments.length > 0 && (
-          <ul className="divide-y">
-            {payments.map((pay) => (
-              <li key={pay.id} className="py-2 flex items-center justify-between text-sm">
-                <div>
-                  <p className="font-medium">${pay.monto.toLocaleString("es-CO")}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(pay.fechaPago).toLocaleDateString("es-CO")} · {pay.metodoPago}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {pay.observacion && (
-                    <p className="text-xs text-muted-foreground italic max-w-xs text-right">
-                      {pay.observacion}
-                    </p>
-                  )}
-                  {can("payments.delete") && (
-                    <ConfirmDeleteButton
-                      iconOnly
-                      label={`Eliminar pago de ${pay.monto.toLocaleString("es-CO")}`}
-                      title="¿Eliminar este pago?"
-                      description="El saldo pendiente del paquete vuelve a incluir este valor."
-                      pending={deletePayment.isPending}
-                      onConfirm={async () => {
-                        await deletePayment.mutateAsync(pay.id);
-                        useToastStore.success("Pago eliminado");
-                      }}
-                    />
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-
-      <RegisterPaymentSheet
-        open={registerOpen}
-        packageId={pkg.id}
-        saldoPendiente={pkg.saldoPendiente}
-        onClose={() => setRegisterOpen(false)}
-      />
-    </Card>
-  );
-}
-
-// ────────────────────────────────────────────────────────────
-// Sheet: registrar pago
-// ────────────────────────────────────────────────────────────
-const METODOS_PAGO = ["Efectivo", "Transferencia", "Tarjeta", "Otro"] as const;
-
-const paymentSchema = z.object({
-  monto: z.number().positive("Monto debe ser mayor a 0"),
-  fechaPago: z.string().min(1, "Requerido"),
-  metodoPago: z.enum(METODOS_PAGO),
-  observacion: z.string().optional().or(z.literal("")),
-});
-
-type PaymentFormValues = z.infer<typeof paymentSchema>;
-
-function RegisterPaymentSheet({
-  open,
-  packageId,
-  saldoPendiente,
-  onClose,
-}: {
-  open: boolean;
-  packageId: string;
-  saldoPendiente: number;
-  onClose: () => void;
-}) {
-  const register = useRegisterPayment(packageId);
-
-  const form = useForm<PaymentFormValues>({
-    resolver: zodResolver(paymentSchema),
-    defaultValues: {
-      monto: 0,
-      fechaPago: todayISO(),
-      metodoPago: "Efectivo",
-      observacion: "",
-    },
-  });
-
-  useEffect(() => {
-    if (open) {
-      form.reset({
-        monto: saldoPendiente > 0 ? saldoPendiente : 0,
-        fechaPago: todayISO(),
-        metodoPago: "Efectivo",
-        observacion: "",
-      });
-    }
-  }, [open, saldoPendiente, form]);
-
-  const onSubmit = async (values: PaymentFormValues) => {
-    try {
-      await register.mutateAsync({
-        monto: values.monto,
-        fechaPago: values.fechaPago,
-        metodoPago: values.metodoPago,
-        observacion: values.observacion || undefined,
-      });
-      useToastStore.success("Pago registrado");
-      onClose();
-    } catch {
-      // toast global
-    }
-  };
-
-  return (
-    <FormDialog
-      open={open}
-      onOpenChange={(o) => !o && onClose()}
-      title={<>Registrar pago</>}
-      description={<>Registra un pago para este paquete. Saldo actual: $
-            {saldoPendiente.toLocaleString("es-CO")}.</>}
-      dirty={form.formState.isDirty}
-      actions={
-        <Button
-            form="payment-form"
-            type="submit"
-            disabled={register.isPending}
-          >
-            {register.isPending ? "Guardando..." : "Registrar pago"}
-          </Button>
-      }
-    >
-        <div className="pt-1">
-          <Form {...form}>
-            <form
-              id="payment-form"
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-4"
-            >
-              <FormField
-                control={form.control}
-                name="monto"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Monto *</FormLabel>
-                    <FormControl>
-                      <CurrencyInput
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="0"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="fechaPago"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Fecha de pago *</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="metodoPago"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Método de pago *</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona un método" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {METODOS_PAGO.map((m) => (
-                          <SelectItem key={m} value={m}>
-                            {m}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="observacion"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Observación</FormLabel>
-                    <FormControl>
-                      <textarea
-                        rows={3}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </form>
-          </Form>
-        </div>
-
-        </FormDialog>
   );
 }

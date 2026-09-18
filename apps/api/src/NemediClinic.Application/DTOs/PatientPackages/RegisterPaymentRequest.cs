@@ -16,4 +16,17 @@ public class RegisterPaymentRequest
 
     [MaxLength(500)]
     public string? Observacion { get; set; }
+
+    /// <summary>Número de transferencia, voucher, recibo…</summary>
+    [MaxLength(100)]
+    public string? Referencia { get; set; }
+
+    /// <summary>Adjunto subido antes como pendiente (POST /files, entityType Payment, kind Comprobante).</summary>
+    public Guid? ComprobanteId { get; set; }
+}
+
+public class SetComprobanteRequest
+{
+    [Required]
+    public Guid ComprobanteId { get; set; }
 }

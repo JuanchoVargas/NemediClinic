@@ -63,6 +63,7 @@ export function PatientHeader({ patient, onRegisterPayment, onNewNote }: Patient
                 <Badge variant="success" className="h-auto max-w-full gap-1 whitespace-normal">
                   <Package className="h-3 w-3" aria-hidden />
                   {activePackage.packageNombre} · {activePackage.sesionesCompletadas}/{activePackage.sesionesTotales}
+                  {activePackage.porcentajePagado != null && ` · ${activePackage.porcentajePagado}% pagado`}
                 </Badge>
               ) : (
                 <Badge variant="outline">Sin paquete activo</Badge>

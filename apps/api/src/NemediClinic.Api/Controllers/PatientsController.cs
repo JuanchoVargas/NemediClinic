@@ -125,6 +125,8 @@ public class PatientsController : ControllerBase
             .AsNoTracking()
             .Include(p => p.PatientPackages.Where(pp => pp.Estado == PackageStatus.Activo))
                 .ThenInclude(pp => pp.Package)
+            .Include(p => p.PatientPackages.Where(pp => pp.Estado == PackageStatus.Activo))
+                .ThenInclude(pp => pp.Payments)
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (patient is null)
@@ -160,7 +162,11 @@ public class PatientsController : ControllerBase
                 PackageNombre = pp.Package.Nombre,
                 Estado = pp.Estado.ToString(),
                 SesionesCompletadas = pp.SesionesCompletadas,
-                SesionesTotales = pp.Package.SesionesTotales
+                SesionesTotales = pp.Package.SesionesTotales,
+                // Dato financiero: solo recepción y dueño (misma regla que /patient-packages)
+                PorcentajePagado = User.IsInRole("Esteticista")
+                    ? null
+                    : PatientPackageService.PaymentSummary(pp.PrecioAcordado, pp.Payments.Sum(x => x.Monto)).Porcentaje
             }).ToList()
         });
     }

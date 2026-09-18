@@ -8,6 +8,7 @@
 // ============================================================
 
 export type PackageEstado = "Activo" | "Pausado" | "Completado" | "Vencido";
+export type PaymentState = "SinPagos" | "Parcial" | "Pagado";
 
 export interface PatientPackage {
   id: string;
@@ -22,6 +23,9 @@ export interface PatientPackage {
   sesionesTotales: number;
   totalPagado: number;
   saldoPendiente: number;
+  /** 0–100, calculado por el backend. Solo es 100 cuando el saldo es 0. */
+  porcentajePagado: number;
+  estadoPago: PaymentState;
   /** Inicio + vigencia del paquete; null si no vence. */
   fechaVencimiento?: string | null;
   diasParaVencer?: number | null;
@@ -47,4 +51,11 @@ export interface PatientPayment {
   fechaPago: string;
   metodoPago: string; // enum serializado
   observacion?: string | null;
+  /** Número de transferencia, voucher, recibo… */
+  referencia?: string | null;
+  /** Nombre de quien lo registró; null en pagos anteriores a la trazabilidad. */
+  registradoPor?: string | null;
+  comprobanteId?: string | null;
+  /** image/* o application/pdf */
+  comprobanteContentType?: string | null;
 }

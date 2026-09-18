@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -63,7 +64,10 @@ public class PatientPackagesController : ControllerBase
             .ToListAsync();
 
         foreach (var package in packages)
+        {
             ApplyExpiry(package, package.DiasParaVencer ?? 0);
+            PatientPackageService.ApplyPaymentSummary(package);
+        }
 
         return Ok(packages);
     }
@@ -114,18 +118,10 @@ public class PatientPackagesController : ControllerBase
                     FechaCompletada = s.FechaCompletada,
                     ClinicalNoteId = s.ClinicalNoteId
                 }).ToList(),
-            Pagos = pp.Payments
-                .OrderByDescending(p => p.FechaPago)
-                .Select(p => new PatientPaymentDto
-                {
-                    Id = p.Id,
-                    Monto = p.Monto,
-                    FechaPago = p.FechaPago,
-                    MetodoPago = p.MetodoPago.ToString(),
-                    Observacion = p.Observacion
-                }).ToList()
+            Pagos = await _packages.ListPaymentsAsync(id)
         };
         ApplyExpiry(dto, pp.Package.DiasAlertaVencimiento);
+        PatientPackageService.ApplyPaymentSummary(dto);
         return Ok(dto);
     }
 
@@ -174,31 +170,16 @@ public class PatientPackagesController : ControllerBase
     [HttpPost("{id:guid}/payments")]
     public async Task<IActionResult> RegisterPayment(Guid id, [FromBody] RegisterPaymentRequest request)
     {
-        var patientPackage = await _db.PatientPackages.AnyAsync(p => p.Id == id);
-        if (!patientPackage)
-            return NotFound(new { error = "Paquete de paciente no encontrado." });
-
-        var payment = new PatientPayment
-        {
-            PatientPackageId = id,
-            Monto = request.Monto,
-            FechaPago = request.FechaPago,
-            MetodoPago = request.MetodoPago,
-            Observacion = request.Observacion
-        };
-
-        _db.PatientPayments.Add(payment);
-        await _db.SaveChangesAsync();
-
-        return Created($"api/v1/patient-packages/{id}/payments", new PatientPaymentDto
-        {
-            Id = payment.Id,
-            Monto = payment.Monto,
-            FechaPago = payment.FechaPago,
-            MetodoPago = payment.MetodoPago.ToString(),
-            Observacion = payment.Observacion
-        });
+        // 422 si el monto supera el saldo pendiente; guarda quién lo registró
+        var userId = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : Guid.Empty;
+        var payment = await _packages.RegisterPaymentAsync(id, request, userId);
+        return Created($"api/v1/patient-packages/{id}/payments", payment);
     }
+
+    // ── PUT /api/v1/patient-packages/{id}/payments/{paymentId}/comprobante ── adjunta o reemplaza el soporte
+    [HttpPut("{id:guid}/payments/{paymentId:guid}/comprobante")]
+    public async Task<IActionResult> SetComprobante(Guid id, Guid paymentId, [FromBody] SetComprobanteRequest request) =>
+        Ok(await _packages.SetComprobanteAsync(id, paymentId, request.ComprobanteId));
 
     [HttpGet("{id:guid}/payments")]
     public async Task<IActionResult> GetPayments(Guid id)
@@ -207,21 +188,7 @@ public class PatientPackagesController : ControllerBase
         if (!exists)
             return NotFound(new { error = "Paquete de paciente no encontrado." });
 
-        var payments = await _db.PatientPayments
-            .AsNoTracking()
-            .Where(p => p.PatientPackageId == id)
-            .OrderByDescending(p => p.FechaPago)
-            .Select(p => new PatientPaymentDto
-            {
-                Id = p.Id,
-                Monto = p.Monto,
-                FechaPago = p.FechaPago,
-                MetodoPago = p.MetodoPago.ToString(),
-                Observacion = p.Observacion
-            })
-            .ToListAsync();
-
-        return Ok(payments);
+        return Ok(await _packages.ListPaymentsAsync(id));
     }
 
     [HttpPut("{id:guid}/sessions/{sessionId:guid}/complete")]

@@ -14,6 +14,10 @@ public class PatientPackageDto
     public int SesionesTotales { get; set; }
     public decimal TotalPagado { get; set; }
     public decimal SaldoPendiente { get; set; }
+    /// <summary>0–100, redondeado. Solo llega a 100 cuando el saldo es 0 (99,6 % se muestra como 99).</summary>
+    public int PorcentajePagado { get; set; }
+    /// <summary>SinPagos / Parcial / Pagado.</summary>
+    public string EstadoPago { get; set; } = string.Empty;
     /// <summary>FechaInicio + VigenciaDias del paquete. Null si el paquete no vence (VigenciaDias = 0).</summary>
     public DateOnly? FechaVencimiento { get; set; }
     public int? DiasParaVencer { get; set; }
@@ -41,4 +45,11 @@ public class PatientPaymentDto
     public DateOnly FechaPago { get; set; }
     public string MetodoPago { get; set; } = string.Empty;
     public string? Observacion { get; set; }
+    public string? Referencia { get; set; }
+    /// <summary>Nombre de quien registró el pago; null en pagos anteriores a la trazabilidad.</summary>
+    public string? RegistradoPor { get; set; }
+    /// <summary>Adjunto con el soporte (se abre con GET /files/{id}/url).</summary>
+    public Guid? ComprobanteId { get; set; }
+    /// <summary>image/* o application/pdf: la web decide entre miniatura e icono de PDF.</summary>
+    public string? ComprobanteContentType { get; set; }
 }

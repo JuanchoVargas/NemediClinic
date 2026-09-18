@@ -1,12 +1,12 @@
 // ============================================================
-// file.ts — Adjuntos de imagen
+// file.ts — Adjuntos (imágenes; comprobantes y consentimientos también en PDF)
 //
 // Backend: FilesController (/api/v1/files) y GET /patients/{id}/evolution.
 // Espejo de NemediClinic.Application/DTOs/Files/AttachmentDtos.cs.
 // ============================================================
 
-export type AttachmentEntityType = "Patient" | "ClinicalNote" | "Product" | "Procedure" | "Tenant" | "Valuation";
-export type AttachmentKind = "Perfil" | "Antes" | "Despues" | "Producto" | "Procedimiento" | "Logo" | "Consentimiento";
+export type AttachmentEntityType = "Patient" | "ClinicalNote" | "Product" | "Procedure" | "Tenant" | "Valuation" | "Payment";
+export type AttachmentKind = "Perfil" | "Antes" | "Despues" | "Producto" | "Procedimiento" | "Logo" | "Consentimiento" | "Comprobante";
 
 export interface Attachment {
   id: string;

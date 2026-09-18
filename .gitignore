@@ -59,3 +59,6 @@ deploy/backups/
 
 # Imágenes subidas en desarrollo (LocalFileStorage)
 apps/api/src/NemediClinic.Api/App_Data/
+
+# Scripts puntuales de verificación (no se commitean)
+*.tmp.mjs

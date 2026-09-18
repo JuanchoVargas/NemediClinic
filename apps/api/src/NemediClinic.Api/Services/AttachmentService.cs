@@ -14,9 +14,10 @@ using SixLabors.ImageSharp.Processing;
 namespace NemediClinic.Api.Services;
 
 /// <summary>
-/// Adjuntos de imagen. Reglas:
-///  - Solo jpeg/png/webp, máx 10 MB, y el tipo se decide por los magic bytes (no por la extensión
-///    ni por el Content-Type que diga el cliente).
+/// Adjuntos (imágenes y, para comprobantes y consentimientos, también PDF). Reglas:
+///  - Solo jpeg/png/webp — más application/pdf en Kind Comprobante y Consentimiento —, máx 10 MB, y el
+///    tipo se decide por los magic bytes (no por la extensión ni por el Content-Type que diga el cliente).
+///  - Un PDF se guarda tal cual (no se re-codifica ni tiene miniatura) y se sirve inline con nosniff.
 ///  - La imagen se re-codifica SIN metadatos (EXIF/IPTC/XMP: GPS, modelo de cámara, fecha) tras
 ///    aplicar la orientación EXIF, y se genera una miniatura de 400 px.
 ///  - Un adjunto se sube "pendiente" (EntityId null) y la entidad lo reclama al guardarse.
@@ -30,14 +31,18 @@ public class AttachmentService
 
     private static readonly Dictionary<AttachmentEntityType, AttachmentKind[]> AllowedKinds = new()
     {
-        [AttachmentEntityType.Patient] = [AttachmentKind.Perfil],
+        // Consentimiento subido = el firmado en papel, escaneado; el firmado en pantalla lo genera el sistema.
+        [AttachmentEntityType.Patient] = [AttachmentKind.Perfil, AttachmentKind.Consentimiento],
         [AttachmentEntityType.ClinicalNote] = [AttachmentKind.Antes, AttachmentKind.Despues],
         [AttachmentEntityType.Product] = [AttachmentKind.Producto],
         [AttachmentEntityType.Procedure] = [AttachmentKind.Procedimiento],
         [AttachmentEntityType.Tenant] = [AttachmentKind.Logo],
         [AttachmentEntityType.Valuation] = [AttachmentKind.Antes],
-        // Kind.Consentimiento no aparece: ese PDF lo genera el sistema (SaveGeneratedPdfAsync), no se sube.
+        [AttachmentEntityType.Payment] = [AttachmentKind.Comprobante],
     };
+
+    /// <summary>Tipos de adjunto que, además de imagen, aceptan PDF.</summary>
+    private static readonly AttachmentKind[] PdfKinds = [AttachmentKind.Comprobante, AttachmentKind.Consentimiento];
 
     private readonly AppDbContext _db;
     private readonly IFileStorage _storage;
@@ -58,17 +63,45 @@ public class AttachmentService
         if (file is null || file.Length == 0)
             throw ApiException.BadRequest("No se recibió ningún archivo.");
         if (file.Length > MaxBytes)
-            throw new ApiException(StatusCodes.Status413PayloadTooLarge, "La imagen supera el máximo de 10 MB.");
+            throw new ApiException(StatusCodes.Status413PayloadTooLarge, "El archivo supera el máximo de 10 MB.");
 
         EnsureKindMatches(entityType, kind);
         EnsureRoleCanWrite(entityType, role);
+        // Un consentimiento no se puede borrar: no puede quedar "pendiente" sin paciente.
+        if (kind == AttachmentKind.Consentimiento && !entityId.HasValue)
+            throw ApiException.BadRequest("Indica el paciente al que pertenece el consentimiento.");
         if (entityId.HasValue)
             await EnsureEntityExistsAsync(entityType, entityId.Value, ct);
 
+        var acceptsPdf = PdfKinds.Contains(kind);
         await using var input = file.OpenReadStream();
-        var format = await DetectFormatAsync(input, ct)
-            ?? throw new ApiException(StatusCodes.Status415UnsupportedMediaType,
-                "Formato no permitido. Sube una imagen JPG, PNG o WebP.");
+        var header = await ReadHeaderAsync(input, ct);
+
+        if (acceptsPdf && IsPdf(header))
+        {
+            input.Position = 0;
+            var pdfPath = await _storage.SaveAsync(_db.CurrentTenantId, ".pdf", input, ct);
+            var pdf = new Attachment
+            {
+                EntityType = entityType,
+                EntityId = entityId,
+                Kind = kind,
+                FileName = SanitizeFileName(file.FileName, ".pdf"),
+                ContentType = "application/pdf",
+                Size = file.Length,
+                StoragePath = pdfPath,
+                ThumbnailPath = pdfPath, // un PDF no tiene miniatura
+                CreatedBy = userId
+            };
+            _db.Attachments.Add(pdf);
+            await _db.SaveChangesAsync(ct);
+            return ToDto(pdf);
+        }
+
+        var format = (header is null ? null : DetectFormat(header))
+            ?? throw new ApiException(StatusCodes.Status415UnsupportedMediaType, acceptsPdf
+                ? "Formato no permitido. Sube un PDF o una imagen JPG, PNG o WebP."
+                : "Formato no permitido. Sube una imagen JPG, PNG o WebP.");
 
         Image image;
         try
@@ -250,6 +283,10 @@ public class AttachmentService
                     await _db.Tenants.Where(t => t.Id == entityId && t.LogoId == id)
                         .ExecuteUpdateAsync(s => s.SetProperty(t => t.LogoId, (Guid?)null), ct);
                     break;
+                case AttachmentEntityType.Payment:
+                    await _db.PatientPayments.Where(p => p.Id == entityId && p.ComprobanteId == id)
+                        .ExecuteUpdateAsync(s => s.SetProperty(p => p.ComprobanteId, (Guid?)null), ct);
+                    break;
             }
         }
 
@@ -313,12 +350,12 @@ public class AttachmentService
             throw ApiException.BadRequest($"El tipo de imagen {kind} no aplica a {entityType}.");
     }
 
-    /// <summary>Misma matriz que los controllers: productos y procedimientos los escribe Admin; el logo, SuperAdmin.</summary>
+    /// <summary>Misma matriz que los controllers: productos, procedimientos y pagos los escribe Admin; el logo, SuperAdmin.</summary>
     private static void EnsureRoleCanWrite(AttachmentEntityType entityType, string role)
     {
         var allowed = entityType switch
         {
-            AttachmentEntityType.Product or AttachmentEntityType.Procedure => role is "SuperAdmin" or "Admin",
+            AttachmentEntityType.Product or AttachmentEntityType.Procedure or AttachmentEntityType.Payment => role is "SuperAdmin" or "Admin",
             AttachmentEntityType.Tenant => role is "SuperAdmin",
             _ => true
         };
@@ -337,22 +374,27 @@ public class AttachmentService
             AttachmentEntityType.Procedure => await _db.Procedures.AnyAsync(x => x.Id == entityId, ct),
             AttachmentEntityType.Tenant => entityId == _db.CurrentTenantId,
             AttachmentEntityType.Valuation => await _db.Valuations.AnyAsync(x => x.Id == entityId, ct),
+            AttachmentEntityType.Payment => await _db.PatientPayments.AnyAsync(x => x.Id == entityId, ct),
             _ => false
         };
         if (!exists)
-            throw ApiException.NotFound("El registro al que quieres adjuntar la imagen no existe.");
+            throw ApiException.NotFound("El registro al que quieres adjuntar el archivo no existe.");
     }
 
     private sealed record DetectedFormat(string ContentType, string Extension, IImageEncoder Encoder);
 
-    /// <summary>Tipo real por magic bytes: JPEG FF D8 FF · PNG 89 50 4E 47 0D 0A 1A 0A · WebP "RIFF"...."WEBP".</summary>
-    private static async Task<DetectedFormat?> DetectFormatAsync(Stream stream, CancellationToken ct)
+    /// <summary>Primeros 12 bytes del archivo, o null si es más corto que eso.</summary>
+    private static async Task<byte[]?> ReadHeaderAsync(Stream stream, CancellationToken ct)
     {
         var header = new byte[12];
         var read = await stream.ReadAtLeastAsync(header, header.Length, throwOnEndOfStream: false, ct);
-        return read < 12 ? null : DetectFormat(header);
+        return read < 12 ? null : header;
     }
 
+    /// <summary>Un PDF empieza por "%PDF-" (25 50 44 46 2D).</summary>
+    private static bool IsPdf(byte[]? header) => header is not null && header.AsSpan(0, 5).SequenceEqual("%PDF-"u8);
+
+    /// <summary>Tipo real por magic bytes: JPEG FF D8 FF · PNG 89 50 4E 47 0D 0A 1A 0A · WebP "RIFF"...."WEBP".</summary>
     private static DetectedFormat? DetectFormat(ReadOnlySpan<byte> header)
     {
         if (header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF)

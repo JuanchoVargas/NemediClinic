@@ -26,4 +26,6 @@ public class PatientPackageSummary
     public string Estado { get; set; } = string.Empty;
     public int SesionesCompletadas { get; set; }
     public int SesionesTotales { get; set; }
+    /// <summary>0–100. Null para Esteticista: no ve datos financieros.</summary>
+    public int? PorcentajePagado { get; set; }
 }

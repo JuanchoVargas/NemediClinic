@@ -16,7 +16,10 @@ public class FilesController : ControllerBase
 
     public FilesController(AttachmentService service) => _service = service;
 
-    /// <summary>multipart/form-data: file + entityType + kind (+ entityId si la entidad ya existe).</summary>
+    /// <summary>
+    /// multipart/form-data: file + entityType + kind (+ entityId si la entidad ya existe).
+    /// Imágenes jpeg/png/webp; los Kind Comprobante y Consentimiento aceptan además PDF. Máx 10 MB.
+    /// </summary>
     [HttpPost]
     // Límite del framework holgado (25 MB): entre 10 y 25 MB responde el service con un 413 legible.
     [RequestSizeLimit(25 * 1024 * 1024)]

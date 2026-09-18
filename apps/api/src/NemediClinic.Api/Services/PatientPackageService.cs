@@ -1,4 +1,6 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using NemediClinic.Application.DTOs.PatientPackages;
 using NemediClinic.Domain.Entities;
 using NemediClinic.Domain.Enums;
 using NemediClinic.Infrastructure.Persistence;
@@ -11,16 +13,142 @@ namespace NemediClinic.Api.Services;
 ///   · completar una sesión suma al contador y, si era la última, cierra el paquete (Completado)
 ///   · un paquete Activo/Pausado cuya vigencia venció pasa a Vencido (job diario de Hangfire)
 ///   · eliminar una asignación o un pago es soft delete y solo lo hace Admin
+///   · un pago nunca deja el saldo por debajo de 0 (422) y guarda quién lo registró, referencia y comprobante
 /// </summary>
 public class PatientPackageService
 {
+    private static readonly CultureInfo EsCo = CultureInfo.GetCultureInfo("es-CO");
+
     private readonly AppDbContext _db;
+    private readonly AttachmentService _attachments;
     private readonly ILogger<PatientPackageService> _logger;
 
-    public PatientPackageService(AppDbContext db, ILogger<PatientPackageService> logger)
+    public PatientPackageService(AppDbContext db, AttachmentService attachments, ILogger<PatientPackageService> logger)
     {
         _db = db;
+        _attachments = attachments;
         _logger = logger;
+    }
+
+    // ── Pagos ───────────────────────────────────────────────────────
+    /// <summary>Porcentaje pagado (0–100) y estado de pago de un paquete asignado.</summary>
+    public static (int Porcentaje, PaymentState Estado) PaymentSummary(decimal precioAcordado, decimal totalPagado)
+    {
+        if (precioAcordado <= 0 || totalPagado >= precioAcordado)
+            return (100, PaymentState.Pagado);
+        if (totalPagado <= 0)
+            return (0, PaymentState.SinPagos);
+
+        var porcentaje = (int)Math.Round(totalPagado / precioAcordado * 100m, MidpointRounding.AwayFromZero);
+        // Con saldo pendiente nunca se muestra 100 %, ni 0 % si ya hay un abono
+        return (Math.Clamp(porcentaje, 1, 99), PaymentState.Parcial);
+    }
+
+    public static void ApplyPaymentSummary(PatientPackageDto dto)
+    {
+        var (porcentaje, estado) = PaymentSummary(dto.PrecioAcordado, dto.TotalPagado);
+        dto.PorcentajePagado = porcentaje;
+        dto.EstadoPago = estado.ToString();
+    }
+
+    /// <summary>
+    /// Registra un pago. Regla: el monto no puede superar el saldo pendiente → 422. La asignación se
+    /// marca como modificada para que su RowVersion detecte dos pagos simultáneos (el segundo recibe 409
+    /// en vez de dejar el saldo negativo).
+    /// </summary>
+    public async Task<PatientPaymentDto> RegisterPaymentAsync(Guid patientPackageId, RegisterPaymentRequest request, Guid userId, CancellationToken ct = default)
+    {
+        var patientPackage = await _db.PatientPackages.FirstOrDefaultAsync(p => p.Id == patientPackageId, ct)
+            ?? throw ApiException.NotFound("Paquete de paciente no encontrado.");
+
+        var pagado = await _db.PatientPayments.Where(p => p.PatientPackageId == patientPackageId).SumAsync(p => p.Monto, ct);
+        var saldo = patientPackage.PrecioAcordado - pagado;
+        if (request.Monto > saldo)
+            throw new ApiException(StatusCodes.Status422UnprocessableEntity,
+                $"El pago supera el saldo pendiente (${Math.Max(saldo, 0).ToString("N0", EsCo)})");
+
+        var payment = new PatientPayment
+        {
+            PatientPackageId = patientPackageId,
+            Monto = request.Monto,
+            FechaPago = request.FechaPago,
+            MetodoPago = request.MetodoPago,
+            Observacion = string.IsNullOrWhiteSpace(request.Observacion) ? null : request.Observacion.Trim(),
+            Referencia = string.IsNullOrWhiteSpace(request.Referencia) ? null : request.Referencia.Trim(),
+            RegistradoPorId = userId == Guid.Empty ? null : userId
+        };
+        _db.PatientPayments.Add(payment);
+
+        if (request.ComprobanteId.HasValue)
+        {
+            await _attachments.AssignImageAsync(AttachmentEntityType.Payment, payment.Id, request.ComprobanteId, null, ct);
+            payment.ComprobanteId = request.ComprobanteId;
+        }
+
+        _db.Entry(patientPackage).State = EntityState.Modified;
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw ApiException.Conflict("Otra persona acaba de registrar un pago en este paquete. Revisa el saldo e inténtalo de nuevo.");
+        }
+
+        return (await ListPaymentsAsync(patientPackageId, ct)).First(p => p.Id == payment.Id);
+    }
+
+    /// <summary>Adjunta (o reemplaza) el comprobante de un pago ya registrado.</summary>
+    public async Task<PatientPaymentDto> SetComprobanteAsync(Guid patientPackageId, Guid paymentId, Guid comprobanteId, CancellationToken ct = default)
+    {
+        var payment = await _db.PatientPayments
+            .FirstOrDefaultAsync(p => p.Id == paymentId && p.PatientPackageId == patientPackageId, ct)
+            ?? throw ApiException.NotFound("Pago no encontrado.");
+
+        await _attachments.AssignImageAsync(AttachmentEntityType.Payment, payment.Id, comprobanteId, payment.ComprobanteId, ct);
+        payment.ComprobanteId = comprobanteId;
+        await _db.SaveChangesAsync(ct);
+
+        return (await ListPaymentsAsync(patientPackageId, ct)).First(p => p.Id == paymentId);
+    }
+
+    /// <summary>Pagos de una asignación, del más reciente al más antiguo, con quién los registró y su comprobante.</summary>
+    public async Task<List<PatientPaymentDto>> ListPaymentsAsync(Guid patientPackageId, CancellationToken ct = default)
+    {
+        var payments = await _db.PatientPayments.AsNoTracking()
+            .Where(p => p.PatientPackageId == patientPackageId)
+            .OrderByDescending(p => p.FechaPago).ThenByDescending(p => p.CreatedAt)
+            .ToListAsync(ct);
+
+        // Nombres aparte y sin el filtro de soft delete: un usuario eliminado sigue firmando sus pagos.
+        var tenantId = _db.CurrentTenantId;
+        var userIds = payments.Where(p => p.RegistradoPorId.HasValue).Select(p => p.RegistradoPorId!.Value).Distinct().ToList();
+        var users = await _db.Users.IgnoreQueryFilters().AsNoTracking()
+            .Where(u => u.TenantId == tenantId && userIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => (u.Nombre + " " + u.Apellido).Trim(), ct);
+
+        var attachmentIds = payments.Where(p => p.ComprobanteId.HasValue).Select(p => p.ComprobanteId!.Value).ToList();
+        var contentTypes = await _db.Attachments.AsNoTracking()
+            .Where(a => attachmentIds.Contains(a.Id))
+            .ToDictionaryAsync(a => a.Id, a => a.ContentType, ct);
+
+        return payments.Select(p =>
+        {
+            // Un comprobante borrado (soft) deja de existir para la web
+            var comprobanteId = p.ComprobanteId.HasValue && contentTypes.ContainsKey(p.ComprobanteId.Value) ? p.ComprobanteId : null;
+            return new PatientPaymentDto
+            {
+                Id = p.Id,
+                Monto = p.Monto,
+                FechaPago = p.FechaPago,
+                MetodoPago = p.MetodoPago.ToString(),
+                Observacion = p.Observacion,
+                Referencia = p.Referencia,
+                RegistradoPor = p.RegistradoPorId.HasValue ? users.GetValueOrDefault(p.RegistradoPorId.Value) : null,
+                ComprobanteId = comprobanteId,
+                ComprobanteContentType = comprobanteId.HasValue ? contentTypes[comprobanteId.Value] : null
+            };
+        }).ToList();
     }
 
     /// <summary>Último día de vigencia: inicio + VigenciaDias del paquete de catálogo.</summary>
@@ -126,6 +254,12 @@ public class PatientPackageService
             ?? throw ApiException.NotFound("Pago no encontrado.");
 
         payment.IsDeleted = true;
+        if (payment.ComprobanteId.HasValue)
+        {
+            // El soporte se va con el pago (AttachmentCleanupService borra el archivo 24 h después)
+            var comprobante = await _db.Attachments.FirstOrDefaultAsync(a => a.Id == payment.ComprobanteId.Value, ct);
+            if (comprobante is not null) comprobante.IsDeleted = true;
+        }
         await _db.SaveChangesAsync(ct);
     }
 

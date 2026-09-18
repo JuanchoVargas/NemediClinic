@@ -95,6 +95,7 @@ public class DevController : ControllerBase
         var alreadySeeded = await _db.Patients.AnyAsync(p => p.Cedula == DemoCedulaMarker);
         if (alreadySeeded)
         {
+            await BackfillPaymentTraceabilityAsync(superAdmin.Id);
             await _db.SaveChangesAsync();
             // Las imágenes de muestra tienen su propia idempotencia: una base sembrada antes
             // de que existieran los adjuntos las recibe en la siguiente ejecución.
@@ -209,11 +210,11 @@ public class DevController : ControllerBase
         var pp5 = Assign(p5, piernasLaser, 850_000m, todayOnly.AddDays(-2), completed: 0, completedDays: Array.Empty<int>());
 
         _db.PatientPayments.AddRange(
-            Pay(pp1, 320_000m, -12, PaymentMethod.Efectivo, "Abono inicial"),
-            Pay(pp1, 300_000m, -5, PaymentMethod.Transferencia, "Saldo"),
-            Pay(pp2, 850_000m, -14, PaymentMethod.Tarjeta, "Pago total"),
-            Pay(pp3, 300_000m, -8, PaymentMethod.Efectivo, "Abono inicial"),
-            Pay(pp4, 200_000m, -7, PaymentMethod.Transferencia, "Abono inicial"));
+            Pay(pp1, 320_000m, -12, PaymentMethod.Efectivo, "Abono inicial", superAdmin.Id),
+            Pay(pp1, 300_000m, -5, PaymentMethod.Transferencia, "Saldo", superAdmin.Id),
+            Pay(pp2, 850_000m, -14, PaymentMethod.Tarjeta, "Pago total", superAdmin.Id),
+            Pay(pp3, 300_000m, -8, PaymentMethod.Efectivo, "Abono inicial", superAdmin.Id),
+            Pay(pp4, 200_000m, -7, PaymentMethod.Transferencia, "Abono inicial", superAdmin.Id));
 
         // ── Citas: ayer a +5 días, sin choques por esteticista ──────────
         var appointments = new List<Appointment>
@@ -431,11 +432,35 @@ public class DevController : ControllerBase
         return new AssignedPackage { PatientPackage = pp, Sessions = sessions };
     }
 
-    private static PatientPayment Pay(AssignedPackage pp, decimal monto, int dayOffset, PaymentMethod metodo, string? obs) => new()
+    // Ningún pago demo supera el precio acordado de su paquete (la API lo rechazaría con 422).
+    private static PatientPayment Pay(AssignedPackage pp, decimal monto, int dayOffset, PaymentMethod metodo, string? obs, Guid registradoPor)
     {
-        PatientPackageId = pp.Id, Monto = monto, FechaPago = DateOnly.FromDateTime(DateTime.Now.Date.AddDays(dayOffset)),
-        MetodoPago = metodo, Observacion = obs
+        var payment = new PatientPayment
+        {
+            PatientPackageId = pp.Id, Monto = monto, FechaPago = DateOnly.FromDateTime(DateTime.Now.Date.AddDays(dayOffset)),
+            MetodoPago = metodo, Observacion = obs, RegistradoPorId = registradoPor
+        };
+        payment.Referencia = DemoReferencia(payment);
+        return payment;
+    }
+
+    private static string? DemoReferencia(PatientPayment payment) => payment.MetodoPago switch
+    {
+        PaymentMethod.Transferencia => $"TRF-{payment.Id.ToString()[..8].ToUpperInvariant()}",
+        PaymentMethod.Tarjeta => $"Voucher {payment.Id.ToString()[..6].ToUpperInvariant()}",
+        _ => null
     };
+
+    /// <summary>Una base sembrada antes de la trazabilidad de pagos: los pagos demo reciben quién los registró y su referencia.</summary>
+    private async Task BackfillPaymentTraceabilityAsync(Guid superAdminId)
+    {
+        var pagos = await _db.PatientPayments.Where(p => p.RegistradoPorId == null).ToListAsync();
+        foreach (var pago in pagos)
+        {
+            pago.RegistradoPorId = superAdminId;
+            pago.Referencia ??= DemoReferencia(pago);
+        }
+    }
 
     private Appointment Appt(DateTime inicio, User esteticista, Patient patient, Procedure procedure, AppointmentStatus estado,
         PatientPackageSession? session, string? notas)

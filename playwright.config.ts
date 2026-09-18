@@ -32,7 +32,7 @@ export default defineConfig({
   projects: [
     {
       name: "api",
-      testMatch: /tenant-isolation\.spec\.ts/,
+      testMatch: /(tenant-isolation|business-rules)\.spec\.ts/,
       // Sin Content-Type global: Playwright pone application/json cuando `data` es un objeto y
       // multipart/form-data (con su boundary) cuando se usa `multipart` — p. ej. al subir imágenes.
       use: { baseURL: API_URL },

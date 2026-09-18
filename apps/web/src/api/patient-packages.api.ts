@@ -86,6 +86,9 @@ export interface RegisterPaymentBody {
   fechaPago: string; // YYYY-MM-DD
   metodoPago: string;
   observacion?: string;
+  referencia?: string;
+  /** Adjunto subido antes como pendiente (entityType Payment, kind Comprobante). */
+  comprobanteId?: string;
 }
 
 export function useRegisterPayment(packageId: string) {
@@ -101,6 +104,25 @@ export function useRegisterPayment(packageId: string) {
     onSuccess: () => {
       // Prefix-match: refresca by-patient list, paquete individual y payments
       qc.invalidateQueries({ queryKey: ["patient-packages"] });
+      qc.invalidateQueries({ queryKey: ["patients"] }); // el badge de la ficha muestra el % pagado
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+/** Adjunta (o reemplaza) el comprobante de un pago ya registrado: PUT …/payments/{id}/comprobante. */
+export function useSetPaymentComprobante(packageId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ paymentId, comprobanteId }: { paymentId: string; comprobanteId: string }) => {
+      const { data } = await api.put<PatientPayment>(
+        `/api/v1/patient-packages/${packageId}/payments/${paymentId}/comprobante`,
+        { comprobanteId },
+      );
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["patient-packages", packageId, "payments"] });
     },
   });
 }
@@ -131,6 +153,7 @@ export function useDeletePayment(packageId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patient-packages"] });
+      qc.invalidateQueries({ queryKey: ["patients"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });

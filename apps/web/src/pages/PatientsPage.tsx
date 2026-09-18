@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -92,7 +93,7 @@ export function PatientsPage() {
         />
       </div>
 
-      <div className="rounded-md border">
+      <ResponsiveTable>
         <Table>
           <TableHeader>
             <TableRow>
@@ -174,7 +175,7 @@ export function PatientsPage() {
             ))}
           </TableBody>
         </Table>
-      </div>
+      </ResponsiveTable>
 
       {/* paginación abajo */}
       {data && data.totalCount > 0 && (

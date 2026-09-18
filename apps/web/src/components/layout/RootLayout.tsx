@@ -19,6 +19,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Footer } from "@/components/layout/Footer";
 import { PageTransition } from "@/components/shared/motion";
+import { InstallBanner } from "@/components/shared/InstallBanner";
 import { SuspendedBanner } from "@/components/shared/SuspendedBanner";
 import { useApplyBranding } from "@/hooks/use-apply-branding";
 import { useAuthStore } from "@/stores/auth.store";
@@ -54,6 +55,7 @@ export function RootLayout() {
             </PageTransition>
           </main>
           <Footer />
+          <InstallBanner />
         </div>
       </MotionConfig>
     );
@@ -72,6 +74,7 @@ export function RootLayout() {
             </PageTransition>
           </div>
         </SidebarInset>
+        <InstallBanner />
       </SidebarProvider>
     </MotionConfig>
   );

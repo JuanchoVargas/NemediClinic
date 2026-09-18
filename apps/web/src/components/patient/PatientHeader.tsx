@@ -48,10 +48,10 @@ export function PatientHeader({ patient, onRegisterPayment, onNewNote }: Patient
             nombre={patient.nombre}
             apellido={patient.apellido}
             imagenId={patient.imagenId}
-            className="h-20 w-20 text-2xl ring-4 ring-card"
+            className="h-14 w-14 text-lg ring-4 ring-card sm:h-20 sm:w-20 sm:text-2xl"
           />
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-bold md:text-3xl">
+            <h1 className="text-2xl font-bold break-words md:text-3xl">
               {patient.nombre} {patient.apellido}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -60,7 +60,7 @@ export function PatientHeader({ patient, onRegisterPayment, onNewNote }: Patient
             <div className="mt-2 flex flex-wrap gap-2">
               {!patient.isActive && <Badge variant="secondary">Inactivo</Badge>}
               {activePackage ? (
-                <Badge variant="success" className="gap-1">
+                <Badge variant="success" className="h-auto max-w-full gap-1 whitespace-normal">
                   <Package className="h-3 w-3" aria-hidden />
                   {activePackage.packageNombre} · {activePackage.sesionesCompletadas}/{activePackage.sesionesTotales}
                 </Badge>
@@ -68,7 +68,7 @@ export function PatientHeader({ patient, onRegisterPayment, onNewNote }: Patient
                 <Badge variant="outline">Sin paquete activo</Badge>
               )}
               {patient.proximaCita ? (
-                <Badge className="gap-1 border-transparent bg-sand-soft text-sand-foreground">
+                <Badge className="h-auto max-w-full gap-1 border-transparent bg-sand-soft text-left whitespace-normal text-sand-foreground">
                   <CalendarClock className="h-3 w-3" aria-hidden />
                   Próxima cita: {formatNextAppointment(patient.proximaCita)}
                 </Badge>

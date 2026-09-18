@@ -42,6 +42,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 import { PageContainer } from "@/components/shared/PageContainer";
 
 import {
@@ -111,7 +112,7 @@ export function BranchesPage() {
         />
       </div>
 
-      <div className="rounded-md border">
+      <ResponsiveTable>
         <Table>
           <TableHeader>
             <TableRow>
@@ -163,7 +164,7 @@ export function BranchesPage() {
             ))}
           </TableBody>
         </Table>
-      </div>
+      </ResponsiveTable>
 
       {data && data.totalCount > 0 && (
         <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">

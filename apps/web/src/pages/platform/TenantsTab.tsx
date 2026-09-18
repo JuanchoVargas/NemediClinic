@@ -52,6 +52,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 import { FormDialog } from "@/components/shared/FormDialog";
 import { CredentialsDialog } from "@/components/shared/CredentialsDialog";
 
@@ -124,7 +125,7 @@ export function TenantsTab() {
         </Button>
       </div>
 
-      <div className="rounded-md border">
+      <ResponsiveTable>
         <Table>
           <TableHeader>
             <TableRow>
@@ -212,7 +213,7 @@ export function TenantsTab() {
             ))}
           </TableBody>
         </Table>
-      </div>
+      </ResponsiveTable>
 
       {/* Montados solo al abrir: el form nace con los valores del tenant, sin efectos de reset */}
       {formState.open && (

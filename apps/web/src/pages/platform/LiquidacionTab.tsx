@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 
 import { useLiquidacion } from "@/api/platform.api";
 import { toLocalDate } from "@/lib/dates";
@@ -103,7 +104,7 @@ export function LiquidacionTab() {
                     <span className="font-semibold">{formatCop(c.montoNemedi)}</span>
                   </p>
                 </div>
-                <div className="rounded-md border">
+                <ResponsiveTable>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -146,7 +147,7 @@ export function LiquidacionTab() {
                       ))}
                     </TableBody>
                   </Table>
-                </div>
+                </ResponsiveTable>
               </section>
             ))}
           </div>

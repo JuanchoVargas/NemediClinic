@@ -4,6 +4,7 @@
 // Lista cronológica de citas de un día específico.
 // Vista pensada para uso operativo (recepción / esteticista),
 // imprimible.
+// Pensada para tablet: dos columnas entre 768 y 1279 px y controles de 44 px para el dedo.
 // ============================================================
 
 import { useState } from "react";
@@ -21,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { useDaySheet } from "@/api/appointments.api";
 import {
   APPOINTMENT_LABELS,
@@ -85,12 +87,14 @@ export function DaySheetPage() {
       <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold">Hoja del día</h1>
-          <p className="text-muted-foreground capitalize">{fullDate}</p>
+          <p className="text-muted-foreground first-letter:uppercase">{fullDate}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
+            className="max-lg:size-11"
+            aria-label="Día anterior"
             onClick={() => setDate(addDays(date, -1))}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -99,16 +103,19 @@ export function DaySheetPage() {
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-44"
+            aria-label="Fecha"
+            className="w-44 max-lg:h-11"
           />
           <Button
             variant="outline"
             size="sm"
+            className="max-lg:size-11"
+            aria-label="Día siguiente"
             onClick={() => setDate(addDays(date, 1))}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setDate(todayISO())}>
+          <Button variant="outline" size="sm" className="max-lg:h-11 max-lg:px-4" onClick={() => setDate(todayISO())}>
             Hoy
           </Button>
         </div>
@@ -124,14 +131,18 @@ export function DaySheetPage() {
 
       {data && data.length === 0 && (
         <Card>
-          <CardContent className="pt-6 text-center text-muted-foreground">
-            No hay citas agendadas para este día.
+          <CardContent>
+            <EmptyState
+              illustration="calendar"
+              title="No hay citas agendadas para este día"
+              description="Usa las flechas para revisar otro día o agenda desde el calendario."
+            />
           </CardContent>
         </Card>
       )}
 
       {data && data.length > 0 && (
-        <div className="space-y-3">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
           {data.map((a) => (
             <AppointmentRow key={a.id} a={a} />
           ))}
@@ -147,10 +158,10 @@ function AppointmentRow({ a }: { a: AppointmentDto }) {
     <Card>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            {formatTime(a.fechaInicio)} – {formatTime(a.fechaFin)}
-            <span className="text-sm font-normal text-muted-foreground">
+          <CardTitle className="flex flex-wrap items-center gap-x-2 text-base">
+            <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="whitespace-nowrap">{formatTime(a.fechaInicio)} – {formatTime(a.fechaFin)}</span>
+            <span className="whitespace-nowrap text-sm font-normal text-muted-foreground">
               ({dur} min)
             </span>
           </CardTitle>

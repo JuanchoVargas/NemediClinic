@@ -58,6 +58,7 @@ import { useEsteticistas } from "@/api/users.api";
 import { usePatient, usePatients } from "@/api/patients.api";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ClinicalNoteDialog } from "@/components/patient/ClinicalNoteDialog";
 import { ConsentSignDialog } from "@/components/consent/ConsentSignDialog";
 import { ApiError } from "@/types/api";
@@ -90,7 +91,9 @@ export function CalendarPage() {
   const { can } = usePermissions();
   const canFilter = can("appointments.filterByEsteticist");
 
-  const [view, setView] = useState<CalendarView>("timeGridWeek");
+  // En un teléfono la semana no cabe: se parte de la vista de día
+  const isMobile = useIsMobile();
+  const [view, setView] = useState<CalendarView>(() => (isMobile ? "timeGridDay" : "timeGridWeek"));
   const [title, setTitle] = useState("");
   const [range, setRange] = useState<{ start: string; end: string }>(() => {
     const now = new Date();

@@ -8,7 +8,8 @@
     "prepare": "git config core.hooksPath .githooks",
     "test:ui": "playwright test --project=admin",
     "test:all": "playwright test",
-    "guide:pdf": "node docs/manual/build-pdf.mjs"
+    "guide:pdf": "node docs/manual/build-pdf.mjs",
+    "test:mobile": "playwright test --project=mobile"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.0",

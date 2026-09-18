@@ -53,6 +53,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 import { FormDialog } from "@/components/shared/FormDialog";
 
 import {
@@ -106,7 +107,7 @@ export function LeadsTab() {
         </Button>
       </div>
 
-      <div className="rounded-md border">
+      <ResponsiveTable>
         <Table>
           <TableHeader>
             <TableRow>
@@ -169,7 +170,7 @@ export function LeadsTab() {
             ))}
           </TableBody>
         </Table>
-      </div>
+      </ResponsiveTable>
 
       {creating && <LeadFormDialog onClose={() => setCreating(false)} />}
       {activating && (

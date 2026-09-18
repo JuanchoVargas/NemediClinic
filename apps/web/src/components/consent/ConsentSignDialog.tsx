@@ -141,10 +141,10 @@ export function ConsentSignDialog({ patientId, procedureId, appointmentId, onClo
         </div>
 
         <DialogFooter className="m-0 flex-row gap-2 border-t px-5 py-3 sm:justify-end">
-          <Button variant="outline" className="flex-1 sm:flex-none" onClick={onClose} disabled={sign.isPending}>
+          <Button variant="outline" className="h-11 flex-1 px-6 sm:flex-none" onClick={onClose} disabled={sign.isPending}>
             Cancelar
           </Button>
-          <Button className="flex-1 sm:flex-none" onClick={handleSign} disabled={!hasSignature || sign.isPending}>
+          <Button className="h-11 flex-1 px-6 sm:flex-none" onClick={handleSign} disabled={!hasSignature || sign.isPending}>
             {sign.isPending ? "Guardando..." : "Firmar y guardar"}
           </Button>
         </DialogFooter>

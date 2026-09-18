@@ -34,6 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 import { PageContainer } from "@/components/shared/PageContainer";
 
 import { useTenantsPaged, useUpdateTenant } from "@/api/tenants.api";
@@ -94,7 +95,7 @@ export function TenantsPage() {
         />
       </div>
 
-      <div className="rounded-md border">
+      <ResponsiveTable>
         <Table>
           <TableHeader>
             <TableRow>
@@ -153,7 +154,7 @@ export function TenantsPage() {
             ))}
           </TableBody>
         </Table>
-      </div>
+      </ResponsiveTable>
 
       {data && data.totalCount > 0 && (
         <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">

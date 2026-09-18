@@ -4,6 +4,7 @@ import { defineConfig, devices } from "@playwright/test";
 //   - api:          gate de push (aislamiento multi-tenant), solo APIRequestContext.
 //   - setup + superadmin → esteticista → admin: recorrido de UI por rol con
 //     capturas para docs/manual (orden forzado con `dependencies`).
+//   - mobile:       cero scroll horizontal a 390×844 en toda ruta y rol (pnpm test:mobile).
 // Los servidores se levantan solos si no hay nada escuchando (API 5055, Vite 5173).
 const API_URL = process.env.E2E_API_URL ?? "http://localhost:5055";
 const WEB_URL = process.env.E2E_WEB_URL ?? "http://localhost:5173";
@@ -40,6 +41,12 @@ export default defineConfig({
     { name: "superadmin", testMatch: /ui\/superadmin\/.*\.spec\.ts/, dependencies: ["setup"], use: uiUse },
     { name: "esteticista", testMatch: /ui\/esteticista\/.*\.spec\.ts/, dependencies: ["superadmin"], use: uiUse },
     { name: "admin", testMatch: /ui\/admin\/.*\.spec\.ts/, dependencies: ["esteticista"], use: uiUse },
+    // Responsive: 390×844 táctil. Falla si alguna ruta tiene scroll horizontal; capturas en docs/manual/img/mobile.
+    {
+      name: "mobile",
+      testMatch: /mobile\/.*\.spec\.ts/,
+      use: { ...uiUse, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
+    },
   ],
   webServer: [
     {

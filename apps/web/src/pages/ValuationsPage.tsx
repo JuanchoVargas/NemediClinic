@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CountUp } from "@/components/shared/motion";
@@ -112,7 +113,7 @@ export function ValuationsPage() {
         </Select>
       </div>
 
-      <div className="rounded-md border">
+      <ResponsiveTable>
         <Table>
           <TableHeader>
             <TableRow>
@@ -208,7 +209,7 @@ export function ValuationsPage() {
             ))}
           </TableBody>
         </Table>
-      </div>
+      </ResponsiveTable>
 
       {formState.open && (
         <ValuationFormDialog

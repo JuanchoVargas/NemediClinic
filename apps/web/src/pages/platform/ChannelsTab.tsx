@@ -44,6 +44,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 import { FormDialog } from "@/components/shared/FormDialog";
 
 import { useChannels, useDeleteChannel, useSaveChannel } from "@/api/platform.api";
@@ -80,7 +81,7 @@ export function ChannelsTab() {
         </Button>
       </div>
 
-      <div className="rounded-md border">
+      <ResponsiveTable>
         <Table>
           <TableHeader>
             <TableRow>
@@ -145,7 +146,7 @@ export function ChannelsTab() {
             ))}
           </TableBody>
         </Table>
-      </div>
+      </ResponsiveTable>
 
       {formState.open && (
         <ChannelFormDialog

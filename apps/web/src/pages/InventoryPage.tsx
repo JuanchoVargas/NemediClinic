@@ -86,6 +86,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { MovementsTab } from "@/components/inventory/MovementsTab";
@@ -261,7 +262,7 @@ function ProductsTab({
         )}
       </div>
 
-      <div className="rounded-md border">
+      <ResponsiveTable>
         <Table>
           <TableHeader>
             <TableRow>
@@ -343,7 +344,7 @@ function ProductsTab({
             ))}
           </TableBody>
         </Table>
-      </div>
+      </ResponsiveTable>
 
       {data && data.totalCount > 0 && (
         <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
@@ -714,7 +715,7 @@ function EntriesTab({ onNew }: { onNew: () => void }) {
         )}
       </div>
 
-      <div className="rounded-md border">
+      <ResponsiveTable>
         <Table>
           <TableHeader>
             <TableRow>
@@ -766,7 +767,7 @@ function EntriesTab({ onNew }: { onNew: () => void }) {
             ))}
           </TableBody>
         </Table>
-      </div>
+      </ResponsiveTable>
 
       {data && data.totalCount > 0 && (
         <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">

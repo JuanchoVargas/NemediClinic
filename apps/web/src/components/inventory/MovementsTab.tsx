@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { MotionTableRow, staggerProps } from "@/components/shared/motion-elements";
 import { useInventoryMovements, useProducts } from "@/api/inventory.api";
@@ -48,7 +49,7 @@ export function MovementsTab() {
         </Select>
       </div>
 
-      <div className="rounded-md border">
+      <ResponsiveTable>
         <Table>
           <TableHeader>
             <TableRow>
@@ -103,7 +104,7 @@ export function MovementsTab() {
             })}
           </TableBody>
         </Table>
-      </div>
+      </ResponsiveTable>
     </div>
   );
 }

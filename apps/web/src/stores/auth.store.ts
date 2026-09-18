@@ -15,6 +15,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { decodeJwt } from "jose";
 import type { User, JwtPayload } from "@/types/auth";
+import { clearOfflineCache } from "@/lib/offline-cache";
 
 interface AuthState {
   token: string | null;
@@ -36,10 +37,12 @@ export const useAuthStore = create<AuthState>()(
       user: null,
 
       setSession: (token, user) => {
+        clearOfflineCache(); // otra persona pudo usar antes este dispositivo
         set({ token, user });
       },
 
       clearSession: () => {
+        clearOfflineCache();
         set({ token: null, user: null });
       },
 

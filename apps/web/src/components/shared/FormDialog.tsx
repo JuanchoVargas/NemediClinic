@@ -3,6 +3,7 @@
 //
 // Reemplaza los <Sheet> laterales. Reglas:
 //   - Centrado, max-w-lg, el cuerpo hace scroll si excede la altura.
+//   - En móvil (< 640 px) ocupa toda la pantalla.
 //   - Footer: "Cancelar" a la izquierda del botón primario (derecha).
 //   - Escape, click fuera, la X y Cancelar cierran directo si `dirty`
 //     es false; si hay cambios, piden confirmación antes de descartar.
@@ -78,7 +79,9 @@ export function FormDialog({
       >
         <DialogContent
           className={cn(
-            "flex max-h-[90vh] w-full flex-col gap-0 p-0 sm:max-w-lg",
+            // Móvil: pantalla completa (el formulario hace scroll, el pie con las acciones queda fijo).
+            // Desde sm: diálogo centrado de ancho máximo lg.
+            "flex w-full flex-col gap-0 p-0 max-sm:top-0 max-sm:left-0 max-sm:h-dvh max-sm:max-h-dvh max-sm:max-w-full max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none sm:max-h-[90vh] sm:max-w-lg",
             className,
           )}
         >
@@ -93,7 +96,7 @@ export function FormDialog({
 
           <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">{children}</div>
 
-          <DialogFooter className="m-0 rounded-b-xl">
+          <DialogFooter className="m-0 rounded-b-xl max-sm:flex-row max-sm:rounded-none max-sm:*:flex-1">
             <Button type="button" variant="outline" onClick={requestClose}>
               {cancelLabel}
             </Button>

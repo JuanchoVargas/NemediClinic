@@ -346,6 +346,106 @@
   color: inherit;
 }
 
+/* ── ResponsiveTable: en móvil cada fila es una tarjeta ──────────────────── */
+/* data-label lo escribe ResponsiveTable.tsx con el texto del encabezado de la columna. */
+@media (max-width: 767px) {
+  .rt-cards [data-slot="table-container"] {
+    overflow: visible;
+    background: transparent;
+  }
+  .rt-cards table,
+  .rt-cards tbody {
+    display: block;
+    width: 100%;
+  }
+  /* El encabezado sigue existiendo para lectores de pantalla, pero no ocupa espacio */
+  .rt-cards thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .rt-cards tbody {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .rt-cards tbody tr {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background-color: var(--card);
+    padding: 0.875rem;
+    box-shadow: var(--shadow-1);
+  }
+  .rt-cards tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.3rem 0;
+    text-align: right;
+    white-space: normal;
+    max-width: none;
+  }
+  .rt-cards tbody td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    text-align: left;
+  }
+  /* Primera celda = título de la tarjeta */
+  .rt-cards tbody td:first-child {
+    display: block;
+    padding-bottom: 0.5rem;
+    font-size: 1rem;
+    text-align: left;
+  }
+  .rt-cards tbody td:first-child::before,
+  .rt-cards tbody td[data-label="Acciones"]::before,
+  .rt-cards tbody td[data-label=""]::before,
+  .rt-cards tbody td[colspan]::before {
+    content: none;
+  }
+  /* Acciones: al pie de la tarjeta, alineadas a la derecha */
+  .rt-cards tbody td[data-label="Acciones"] {
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+    padding-top: 0.625rem;
+    border-top: 1px solid var(--border);
+  }
+  /* Filas de una sola celda (vacío, skeleton): sin formato de tarjeta con etiquetas */
+  .rt-cards tbody td[colspan] {
+    display: block;
+    text-align: center;
+  }
+}
+
+/* ── Móvil: nada se sale del ancho de la pantalla ───────────────────────── */
+@media (max-width: 767px) {
+  /* Pestañas con muchas opciones: se desplazan dentro de su propia barra */
+  [data-slot="tabs-list"] {
+    max-width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  [data-slot="tabs-list"]::-webkit-scrollbar {
+    display: none;
+  }
+  .fc .fc-toolbar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .fc .fc-toolbar-title {
+    font-size: 1rem;
+  }
+}
+
 /* ── Movimiento reducido: sin animaciones ni desplazamientos ────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,

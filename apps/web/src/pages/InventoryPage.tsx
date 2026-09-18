@@ -23,6 +23,8 @@ import {
   Search,
   Trash2,
   Package2,
+  FileSpreadsheet,
+  Layers,
 } from "lucide-react";
 
 import {
@@ -87,6 +89,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ResponsiveTable } from "@/components/shared/ResponsiveTable";
+import { LoteBadge } from "@/components/shared/LoteBadge";
+import { ProductLotsTable } from "@/components/inventory/ProductLotsTable";
+import { RegulatoryReportDialog } from "@/components/inventory/RegulatoryReportDialog";
 import { SemaforoBadge } from "@/components/shared/SemaforoBadge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -94,7 +99,8 @@ import { MovementsTab } from "@/components/inventory/MovementsTab";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ImageUpload } from "@/components/shared/ImageUpload";
 import { SecureImage } from "@/components/shared/SecureImage";
-import { MotionTableRow, staggerProps } from "@/components/shared/motion-elements";
+import { MotionLi, MotionTableRow, staggerProps } from "@/components/shared/motion-elements";
+import { formatShortDate } from "@/lib/format-platform";
 
 import {
   useCreateProduct,
@@ -102,6 +108,7 @@ import {
   useInventoryEntries,
   useProducts,
   useRegisterEntry,
+  useLotAlerts,
   useStockAlerts,
   useUpdateProduct,
 } from "@/api/inventory.api";
@@ -115,6 +122,10 @@ import {
   ENTRY_REASON_LABELS,
   EntryReason,
   PRODUCT_TYPE_LABELS,
+  REGULATORY_LABELS,
+  type LotAlerta,
+  REGULATORY_PLURAL,
+  RegulatoryType,
   ProductType,
   type Product,
   type StockStatus,
@@ -139,13 +150,24 @@ export function InventoryPage() {
   const openEntry = (defaultProduct?: Product) =>
     setEntrySheet((s) => ({ open: true, defaultProduct, seq: s.seq + 1 }));
 
+  const { can } = usePermissions();
+  const [reporteOpen, setReporteOpen] = useState(false);
+
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Inventario</h1>
-        <p className="text-muted-foreground">
-          Productos en venta y consumo de cabina, entradas y alertas de stock.
-        </p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold">Inventario</h1>
+          <p className="text-muted-foreground">
+            Productos con su lote, vencimiento y registro sanitario, entradas y alertas.
+          </p>
+        </div>
+        {can("products.update") && (
+          <Button variant="outline" onClick={() => setReporteOpen(true)}>
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Reporte para Secretaría de Salud
+          </Button>
+        )}
       </div>
 
       <Tabs defaultValue="products">
@@ -172,6 +194,8 @@ export function InventoryPage() {
           <AlertsTab onRegisterEntry={(p) => openEntry(p)} />
         </TabsContent>
       </Tabs>
+
+      {reporteOpen && <RegulatoryReportDialog onClose={() => setReporteOpen(false)} />}
 
       <ProductSheet
         open={productSheet.open}
@@ -203,7 +227,11 @@ function ProductsTab({
   const search = useDebounce(searchInput, 300);
   const [tipo, setTipo] = useState<string>("all");
   const [semaforo, setSemaforo] = useState<string>("all");
-  const [page, setPage] = usePageReset(`${search}|${tipo}|${semaforo}`);
+  // Cómo lo clasifica el INVIMA: separa lo que hay que reportar de lo que no
+  const [regulatorio, setRegulatorio] = useState<string>("all");
+  // Ficha de lotes del producto elegido
+  const [lotesDe, setLotesDe] = useState<Product | null>(null);
+  const [page, setPage] = usePageReset(`${search}|${tipo}|${semaforo}|${regulatorio}`);
 
   const { data, isLoading } = useProducts(
     page,
@@ -211,6 +239,7 @@ function ProductsTab({
     search,
     tipo !== "all" ? (tipo as ProductType) : undefined,
     semaforo !== "all" ? (semaforo as "Verde" | "Amarillo" | "Rojo") : undefined,
+    regulatorio !== "all" ? (regulatorio as RegulatoryType) : undefined,
   );
 
   const totalPages = data ? Math.max(1, Math.ceil(data.totalCount / PAGE_SIZE)) : 1;
@@ -218,6 +247,37 @@ function ProductsTab({
 
   return (
     <div>
+      {lotesDe && (
+        <FormDialog
+          open
+          onOpenChange={(o) => !o && setLotesDe(null)}
+          title={<>Lotes · {lotesDe.nombre}</>}
+          description={
+            <>
+              {REGULATORY_LABELS[lotesDe.tipoRegulatorio]}
+              {lotesDe.registroSanitarioInvima && ` · ${lotesDe.registroSanitarioInvima}`}
+              {lotesDe.requiereCadenaFrio && " · requiere cadena de frío"}
+            </>
+          }
+          className="sm:max-w-3xl"
+          actions={<Button variant="outline" onClick={() => setLotesDe(null)}>Cerrar</Button>}
+        >
+          <ProductLotsTable productId={lotesDe.id} unidadMedida={lotesDe.unidadMedida} />
+        </FormDialog>
+      )}
+
+      {/* Tipo regulatorio: es el primer corte con el que piensa la Secretaría de Salud */}
+      <Tabs value={regulatorio} onValueChange={setRegulatorio} className="mb-4">
+        <TabsList>
+          <TabsTrigger value="all">Todos</TabsTrigger>
+          {Object.entries(REGULATORY_PLURAL).map(([valor, etiqueta]) => (
+            <TabsTrigger key={valor} value={valor}>
+              {etiqueta}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2 flex-1">
           <div className="relative max-w-sm flex-1 min-w-[220px]">
@@ -331,6 +391,9 @@ function ProductsTab({
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
+                    <Button variant="outline" size="sm" onClick={() => setLotesDe(p)} aria-label={`Ver los lotes de ${p.nombre}`}>
+                      <Layers className="h-4 w-4" />
+                    </Button>
                     {can("products.update") && (
                       <Button variant="outline" size="sm" onClick={() => onEdit(p)} aria-label={`Editar ${p.nombre}`}>
                         <Pencil className="h-4 w-4" />
@@ -800,14 +863,24 @@ function RegisterEntrySheet({
   const [motivo, setMotivo] = useState<EntryReason>("Compra");
   const [observacion, setObservacion] = useState<string>("");
   const [fecha, setFecha] = useState<string>(() => toLocalDate(new Date()));
+  // Datos del lote: lo que pide la Secretaría de Salud para poder trazar el insumo
+  const [numeroLote, setNumeroLote] = useState<string>("");
+  const [vencimiento, setVencimiento] = useState<string>("");
+  const [proveedor, setProveedor] = useState<string>("");
+  const [factura, setFactura] = useState<string>("");
+
+  // Un medicamento o un dispositivo médico sin lote ni vencimiento no se puede reportar
+  const exigeLote = product?.tipoRegulatorio === "Medicamento" || product?.tipoRegulatorio === "DispositivoMedico";
 
   const entryDirty =
     (product?.id ?? null) !== (defaultProduct?.id ?? null) ||
     cantidad > 0 ||
     motivo !== "Compra" ||
-    observacion !== "";
+    observacion !== "" ||
+    numeroLote !== "" ||
+    vencimiento !== "";
 
-  const canSubmit = !!product && cantidad > 0 && !!fecha;
+  const canSubmit = !!product && cantidad > 0 && !!fecha && (!exigeLote || (!!numeroLote && !!vencimiento));
 
   const handleSubmit = async () => {
     if (!product) return;
@@ -818,6 +891,12 @@ function RegisterEntrySheet({
         motivoEntrada: motivo,
         observacion: observacion || undefined,
         fechaEntrada: toLocalIso(new Date(`${fecha}T00:00:00`)),
+        lote: {
+          numeroLote: numeroLote || undefined,
+          fechaVencimiento: vencimiento || undefined,
+          proveedor: proveedor || undefined,
+          numeroFactura: factura || undefined,
+        },
       });
       useToastStore.success(
         "Entrada registrada",
@@ -888,6 +967,39 @@ function RegisterEntrySheet({
               onChange={(e) => setFecha(e.target.value)}
             />
           </div>
+
+          <fieldset className="space-y-4 rounded-xl border p-4">
+            <legend className="px-1 text-sm font-medium text-muted-foreground">
+              Lote{exigeLote ? "" : " (opcional)"}
+            </legend>
+            {exigeLote && (
+              <p className="text-xs text-muted-foreground">
+                {REGULATORY_LABELS[product!.tipoRegulatorio]}: el número de lote y el vencimiento son obligatorios para poder reportarlo.
+              </p>
+            )}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="entry-lote">Número de lote{exigeLote && " *"}</Label>
+                <Input id="entry-lote" name="numeroLote" value={numeroLote} onChange={(e) => setNumeroLote(e.target.value)} placeholder="El de la caja" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="entry-vence">Vencimiento{exigeLote && " *"}</Label>
+                <Input id="entry-vence" name="fechaVencimiento" type="date" value={vencimiento} onChange={(e) => setVencimiento(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="entry-proveedor">Proveedor</Label>
+                <Input id="entry-proveedor" name="proveedor" value={proveedor} onChange={(e) => setProveedor(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="entry-factura">Número de factura</Label>
+                <Input id="entry-factura" name="numeroFactura" value={factura} onChange={(e) => setFactura(e.target.value)} />
+              </div>
+            </div>
+          </fieldset>
         </div>
 
         </FormDialog>
@@ -980,6 +1092,10 @@ function ProductCombobox({
 // ────────────────────────────────────────────────────────────
 function AlertsTab({ onRegisterEntry }: { onRegisterEntry: (p: Product) => void }) {
   const { data, isLoading } = useStockAlerts();
+  const { data: lotes } = useLotAlerts();
+
+  const vencidos = lotes?.filter((l) => l.estado === "Vencido") ?? [];
+  const porVencer = lotes?.filter((l) => l.estado !== "Vencido") ?? [];
 
   if (isLoading) {
     return (
@@ -991,14 +1107,15 @@ function AlertsTab({ onRegisterEntry }: { onRegisterEntry: (p: Product) => void 
     );
   }
 
-  if (!data || data.length === 0) {
+  const sinStockAlerta = !data || data.length === 0;
+  if (sinStockAlerta && lotes && lotes.length === 0) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
           <PackageOpen className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
           <p className="text-lg font-medium">Todo el inventario está en nivel óptimo</p>
           <p className="text-sm text-muted-foreground mt-1">
-            No hay productos en estado Amarillo ni Rojo.
+            No hay productos bajo el mínimo ni lotes próximos a vencer.
           </p>
         </CardContent>
       </Card>
@@ -1006,11 +1123,60 @@ function AlertsTab({ onRegisterEntry }: { onRegisterEntry: (p: Product) => void 
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {data.map((p) => (
-        <AlertCard key={p.id} product={p} onRegisterEntry={() => onRegisterEntry(p)} />
-      ))}
+    <div className="space-y-6">
+      {vencidos.length > 0 && <LotAlertSection titulo="Lotes vencidos" descripcion="No se pueden usar: retíralos del inventario físico." lotes={vencidos} />}
+      {porVencer.length > 0 && <LotAlertSection titulo="Lotes por vencer" descripcion="Úsalos primero: el sistema ya los saca antes que los demás." lotes={porVencer} />}
+
+      {!sinStockAlerta && (
+        <section>
+          <h2 className="mb-1 font-heading text-lg font-semibold">Stock bajo el mínimo</h2>
+          <p className="mb-3 text-sm text-muted-foreground">Conviene reponer antes de que se agoten.</p>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {data.map((p) => (
+              <AlertCard key={p.id} product={p} onRegisterEntry={() => onRegisterEntry(p)} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
+  );
+}
+
+/** Lotes vencidos o próximos a vencer, agrupados bajo un título. */
+function LotAlertSection({ titulo, descripcion, lotes }: { titulo: string; descripcion: string; lotes: LotAlerta[] }) {
+  return (
+    <section>
+      <h2 className="mb-1 font-heading text-lg font-semibold">{titulo}</h2>
+      <p className="mb-3 text-sm text-muted-foreground">{descripcion}</p>
+      <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {lotes.map((lote, i) => (
+          <MotionLi key={lote.id} {...staggerProps(i)}>
+            <Card className={cn("h-full border-2", lote.estado === "Vencido" ? "border-destructive/50" : "border-sand/60")}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">{lote.productoNombre}</CardTitle>
+                <CardDescription>
+                  {REGULATORY_LABELS[lote.tipoRegulatorio]}
+                  {lote.registroSanitario ? " · " + lote.registroSanitario : ""}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <LoteBadge estado={lote.estado} diasParaVencer={lote.diasParaVencer} />
+                <p>
+                  <span className="text-muted-foreground">Lote </span>
+                  <span className="font-medium">{lote.numeroLote ?? "sin número"}</span>
+                  {lote.fechaVencimiento && (
+                    <span className="text-muted-foreground"> · vence {formatShortDate(lote.fechaVencimiento)}</span>
+                  )}
+                </p>
+                <p className="tabular-nums">
+                  Quedan {lote.cantidadDisponible.toLocaleString("es-CO")} {lote.unidadMedida}
+                </p>
+              </CardContent>
+            </Card>
+          </MotionLi>
+        ))}
+      </ul>
+    </section>
   );
 }
 

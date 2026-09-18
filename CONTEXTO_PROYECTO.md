@@ -72,7 +72,14 @@ pnpm guide:pdf    # docs/manual/Guia_de_uso_NemediClinic.pdf
 - `.gitignore` ignora `bin/`, `obj/`, `node_modules/`, `dist/`, `.env*` (salvo `.env.example`) y `.claude/settings.local.json`.
 
 ## Antes de una demo
-`curl -X POST "http://localhost:5055/api/v1/dev/seed-demo?reanchor=true"` → re-ancla la agenda demo a hoy (la cita más antigua queda en ayer) y siembra las imágenes de muestra si faltan. Sin esto el Dashboard y la Hoja del día salen vacíos, porque el seed fija las fechas al día en que se ejecutó por primera vez.
+En PowerShell (`curl` ahí es alias de `Invoke-WebRequest` y NO acepta `-X`):
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:5055/api/v1/dev/seed-demo?reanchor=true"
+# o, si prefieres curl de verdad: curl.exe -X POST "http://..."
+```
+
+Re-ancla la agenda demo a hoy (la cita más antigua queda en ayer) y siembra las imágenes de muestra si faltan. Sin esto el Dashboard y la Hoja del día salen vacíos, porque el seed fija las fechas al día en que se ejecutó por primera vez.
 
 ## Módulos con backend + frontend
 - Auth + JWT + roles; contraseñas (cambio obligatorio en el primer ingreso, `/change-password`, restablecimiento con clave temporal por SuperAdmin/Admin y por la plataforma). El frontend no usa el refresh token.

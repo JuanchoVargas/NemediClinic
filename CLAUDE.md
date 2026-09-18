@@ -77,7 +77,9 @@ pnpm lint         # eslint . (passes with 0 problems; keep it that way)
 
 `pnpm` is on the PATH of this machine through `corepack enable` (pnpm 11). If a fresh shell does not find it, run `corepack enable` once, or fall back to `corepack pnpm ...`.
 
-VS Code: `Ctrl+Shift+B` runs the task "NemediClinic: Levantar todo" (API + Web).
+VS Code: `Ctrl+Shift+B` runs the task "NemediClinic: Levantar todo" (API + Web). It fails if anything already holds 5055 or 5173 (Vite runs with `--strictPort`), so stop any API or Vite left running first: `Get-Process NemediClinic.Api | Stop-Process -Force`.
+
+Calling the API from a terminal: VS Code opens **Windows PowerShell 5.1**, where `curl` is an alias of `Invoke-WebRequest` and `-X` fails with "A parameter cannot be found that matches parameter name X". Use `Invoke-RestMethod -Method Post -Uri "…"` or `curl.exe`; plain `curl -X` only works in pwsh 7, which dropped that alias.
 
 ## API architecture
 

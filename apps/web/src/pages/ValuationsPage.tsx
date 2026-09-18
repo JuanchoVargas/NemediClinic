@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Package as PackageIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -168,7 +169,7 @@ export function ValuationsPage() {
                     ) : (
                       v.nombre
                     )}
-                    {v.esProspecto && <Badge variant="outline">Prospecto</Badge>}
+                    <Badge variant={v.esProspecto ? "outline" : "info"}>{v.esProspecto ? "Prospecto" : "Paciente"}</Badge>
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {v.telefono} · {v.esteticista}
@@ -176,7 +177,21 @@ export function ValuationsPage() {
                 </TableCell>
                 <TableCell className="whitespace-nowrap">{formatShortDate(v.fecha)}</TableCell>
                 <TableCell className="max-w-xs">
-                  <div className="truncate">{v.paquete ?? (v.procedimientos.map((p) => p.nombre).join(", ") || "—")}</div>
+                  {/* En las aceptadas el paquete lleva a la ficha, pestaña Paquetes: es la venta que salió de aquí */}
+                  {v.patientPackageId && v.patientId ? (
+                    <Link
+                      to="/patients/$id"
+                      params={{ id: v.patientId }}
+                      className="flex items-center gap-1 truncate font-medium hover:text-primary hover:underline"
+                    >
+                      <PackageIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      {v.paquete ?? "Paquete asignado"}
+                    </Link>
+                  ) : (
+                    <div className="truncate">
+                      {v.paquete ?? (v.procedimientos.map((p) => p.nombre).join(", ") || v.tratamientoSugerido || "—")}
+                    </div>
+                  )}
                   <div className="truncate text-xs text-muted-foreground">{v.diagnostico}</div>
                 </TableCell>
                 <TableCell className="text-right whitespace-nowrap">{formatCop(v.precioCotizado)}</TableCell>

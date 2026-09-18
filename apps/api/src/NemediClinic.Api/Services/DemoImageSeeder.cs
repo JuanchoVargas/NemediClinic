@@ -132,6 +132,18 @@ public class DemoImageSeeder
     private static string Esc(string s) => SecurityElement.Escape(s) ?? string.Empty;
 
     /// <summary>Textura abstracta tipo "piel": fondo cálido + manchas. texture 1 = marcada, 0 = lisa.</summary>
+    /// <summary>Foto "Antes" de una valoración. Idempotente por el nombre del archivo.</summary>
+    public async Task SeedValuationPhotoAsync(Guid valuationId, Guid userId, CancellationToken ct = default)
+    {
+        var fileName = $"{Prefix}valoracion-{valuationId.ToString()[..8]}.svg";
+        if (await _db.Attachments.AnyAsync(a => a.FileName == fileName, ct))
+            return;
+
+        await _attachments.SaveGeneratedSvgAsync(
+            SkinSvg("ANTES", "Valoración inicial", "#e8c5b5", "#f6ded2", texture: 1.0),
+            fileName, AttachmentEntityType.Valuation, valuationId, AttachmentKind.Antes, userId, ct);
+    }
+
     private static string SkinSvg(string etiqueta, string titulo, string from, string to, double texture)
     {
         var rnd = new Random(HashCode.Combine(titulo.Length, etiqueta.Length, (int)(texture * 100)));

@@ -97,6 +97,7 @@ public class DevController : ControllerBase
         {
             await BackfillPaymentTraceabilityAsync(superAdmin.Id);
             await BackfillEvolutionDetailAsync();
+            await SeedValuationsAsync();
             await SeedCabinConsumptionAsync(superAdmin.Id);
             await _db.SaveChangesAsync();
             // Las imágenes de muestra tienen su propia idempotencia: una base sembrada antes
@@ -306,6 +307,7 @@ public class DevController : ControllerBase
         }
 
         await _db.SaveChangesAsync();
+        await SeedValuationsAsync(laura.Id, camila.Id);
         await SeedCabinConsumptionAsync(superAdmin.Id);
         await _images.SeedAsync(superAdmin.Id);
         await tx.CommitAsync();
@@ -387,6 +389,7 @@ public class DevController : ControllerBase
     }
 
     private const string DemoEntryMarker = "Compra inicial (datos demo)";
+    private const string DemoValuationPhone = "3164477120";
     private const string DemoConsumptionMarker = "Consumo de cabina (datos demo)";
 
     /// <summary>
@@ -615,6 +618,133 @@ public class DevController : ControllerBase
             var entidad = await _db.PatientPackageSessions.FirstAsync(s => s.Id == sesion.Id);
             entidad.ClinicalNoteId = nota.Id;
         }
+    }
+
+    /// <summary>
+    /// Ocho valoraciones del mes en curso: 3 aceptadas (dos de pacientes con su paquete ya asignado,
+    /// una de un prospecto convertido), 3 pendientes de prospectos sin cédula y 2 rechazadas con su
+    /// motivo. Sirven para que el embudo y la tasa de conversión de /valoraciones muestren algo real
+    /// (3 de 8 = 37,5 %). Idempotente por el marcador en el diagnóstico.
+    ///
+    /// Las fechas se reparten en el mes en curso, así que no necesitan re-anclaje: siempre caen
+    /// dentro del periodo que mira la pantalla.
+    /// </summary>
+    private async Task SeedValuationsAsync(Guid? lauraId = null, Guid? camilaId = null)
+    {
+        if (await _db.Valuations.AnyAsync(v => v.ProspectoTelefono == DemoValuationPhone))
+            return;
+
+        var esteticistas = lauraId.HasValue && camilaId.HasValue
+            ? new[] { lauraId.Value, camilaId.Value }
+            : (await _db.Users.Where(u => u.Rol == UserRole.Esteticista && u.IsActive).OrderBy(u => u.Email).Select(u => u.Id).ToListAsync()).ToArray();
+        if (esteticistas.Length == 0)
+            return;
+
+        var hoy = DateTime.Now.Date;
+        var primero = new DateTime(hoy.Year, hoy.Month, 1);
+        // Un día dentro del mes en curso, sin pasarse de hoy
+        DateTime Dia(int dia) => DateTime.SpecifyKind(
+            primero.AddDays(Math.Min(dia, hoy.Day) - 1).AddHours(9 + dia % 6), DateTimeKind.Unspecified);
+
+        var pacientes = await _db.Patients.Where(p => p.Cedula.StartsWith("100000000")).OrderBy(p => p.Cedula).ToListAsync();
+        var paquetes = await _db.Packages.OrderBy(p => p.Nombre).ToListAsync();
+        var asignaciones = await _db.PatientPackages.OrderBy(pp => pp.FechaInicio).ToListAsync();
+
+        Valuation V(int i, string diagnostico, string tratamiento, decimal precio, ValuationEstado estado, int dia,
+            Patient? paciente = null, string? prospectoNombre = null, string? prospectoTelefono = null,
+            Package? paquete = null, string? motivo = null, Guid? patientPackageId = null) => new()
+        {
+            PatientId = paciente?.Id,
+            ProspectoNombre = prospectoNombre,
+            ProspectoTelefono = prospectoTelefono,
+            EsteticistId = esteticistas[i % esteticistas.Length],
+            Fecha = Dia(dia),
+            Diagnostico = diagnostico,
+            TratamientoSugerido = tratamiento,
+            PackageId = paquete?.Id,
+            PrecioCotizado = precio,
+            Estado = estado,
+            MotivoRechazo = motivo,
+            FechaCierre = estado == ValuationEstado.Pendiente ? null : Dia(Math.Min(dia + 2, 28)),
+            PatientPackageId = patientPackageId
+        };
+
+        var rostroRadiante = paquetes.FirstOrDefault(p => p.Nombre.Contains("Rostro"));
+        var piernasLaser = paquetes.FirstOrDefault(p => p.Nombre.Contains("Piernas"));
+        var cuerpoFirme = paquetes.FirstOrDefault(p => p.Nombre.Contains("Cuerpo"));
+
+        var valoraciones = new List<Valuation>();
+
+        // ── 3 aceptadas ──
+        if (pacientes.Count > 1)
+        {
+            valoraciones.Add(V(0, "Melasma leve en pómulos y frente, fototipo III. Piel con deshidratación marcada.",
+                "Protocolo despigmentante: 5 sesiones de limpieza profunda + peeling de mantenimiento.",
+                620_000m, ValuationEstado.Acepto, 3, paciente: pacientes[0], paquete: rostroRadiante,
+                patientPackageId: asignaciones.FirstOrDefault(a => a.PatientId == pacientes[0].Id)?.Id));
+
+            valoraciones.Add(V(1, "Vello grueso en piernas completas, fototipo IV. Sin contraindicaciones para láser.",
+                "Depilación láser diodo, 4 sesiones cada 6 semanas.",
+                850_000m, ValuationEstado.Acepto, 6, paciente: pacientes[1], paquete: piernasLaser,
+                patientPackageId: asignaciones.FirstOrDefault(a => a.PatientId == pacientes[1].Id)?.Id));
+        }
+
+        // Prospecto que se convirtió en paciente (el tercero aceptado)
+        var convertida = await _db.Patients.FirstOrDefaultAsync(p => p.Cedula == "1098765432");
+        if (convertida is null)
+        {
+            convertida = new Patient
+            {
+                Nombre = "Mónica", Apellido = "Salazar", Cedula = "1098765432", Telefono = "3123456789",
+                Email = "monica.salazar@example.com", FechaNacimiento = new DateOnly(1988, 4, 22),
+                NotasGenerales = "Llegó por valoración de contorno corporal."
+            };
+            _db.Patients.Add(convertida);
+            _db.ClinicalRecords.Add(new ClinicalRecord { PatientId = convertida.Id });
+        }
+        // La conversión le dejó su paquete asignado, como haría "Convertir" en la pantalla
+        Guid? paqueteConvertida = null;
+        if (cuerpoFirme is not null)
+        {
+            var asignada = await _packages.AssignAsync(convertida.Id, cuerpoFirme.Id, 1_450_000m,
+                DateOnly.FromDateTime(Dia(9)), patientIsNew: true);
+            paqueteConvertida = asignada.Id;
+        }
+        valoraciones.Add(V(0, "Flacidez abdominal posparto y acumulación localizada en cintura.",
+            "Plan corporal: 8 sesiones de masaje reductor con radiofrecuencia de cierre.",
+            1_450_000m, ValuationEstado.Acepto, 9, paciente: convertida, paquete: cuerpoFirme,
+            patientPackageId: paqueteConvertida));
+
+        // ── 3 pendientes: prospectos sin cédula ──
+        valoraciones.Add(V(1, "Arrugas de expresión en zona periocular. Consulta por rejuvenecimiento sin cirugía.",
+            "Radiofrecuencia facial, 6 sesiones quincenales.", 980_000m, ValuationEstado.Pendiente, 12,
+            prospectoNombre: "Paula Andrea Gil", prospectoTelefono: "3164477120"));
+        valoraciones.Add(V(0, "Acné activo grado II en mentón y espalda. Piel mixta con poros dilatados.",
+            "Limpiezas profundas quincenales + peeling salicílico. Se cotiza plan de 6 sesiones.",
+            720_000m, ValuationEstado.Pendiente, 15,
+            prospectoNombre: "Daniela Ochoa", prospectoTelefono: "3001129384"));
+        valoraciones.Add(V(1, "Consulta por remodelación corporal completa: abdomen, flancos y glúteos.",
+            "Plan integral de 12 sesiones combinando masaje reductor y radiofrecuencia.",
+            2_450_000m, ValuationEstado.Pendiente, 18,
+            prospectoNombre: "Carolina Mejía", prospectoTelefono: "3209988771"));
+
+        // ── 2 rechazadas ──
+        valoraciones.Add(V(0, "Manchas solares en dorso de manos y escote.",
+            "Peeling químico despigmentante, 4 sesiones.", 800_000m, ValuationEstado.Rechazo, 8,
+            prospectoNombre: "Luz Marina Cifuentes", prospectoTelefono: "3112233445",
+            motivo: "El precio se sale de su presupuesto este semestre."));
+        valoraciones.Add(V(1, "Celulitis grado II en muslos posteriores.",
+            "Masaje reductor con drenaje, 10 sesiones.", 1_200_000m, ValuationEstado.Rechazo, 14,
+            prospectoNombre: "Sandra Patricia Rojas", prospectoTelefono: "3145566778",
+            motivo: "Lo va a pensar y vuelve después de vacaciones."));
+
+        _db.Valuations.AddRange(valoraciones);
+        await _db.SaveChangesAsync();
+
+        // Foto "Antes" en una de las pendientes, para que se vea el adjunto de la valoración
+        var conFoto = valoraciones.First(v => v.Estado == ValuationEstado.Pendiente);
+        await _images.SeedValuationPhotoAsync(conFoto.Id, esteticistas[0]);
+        await _db.SaveChangesAsync();
     }
 
     private static ClinicalNote Nota(

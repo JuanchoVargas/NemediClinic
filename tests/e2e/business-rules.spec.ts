@@ -8,6 +8,7 @@
 //   · Un paquete de catálogo eliminado no esconde ni altera las asignaciones ya vendidas.
 //   · Recepción crea esteticistas, no administradores.
 //   · La evolución llega agrupada por paquete, con el detalle de cada sesión y sin dinero para la esteticista.
+//   · El embudo de valoraciones cuadra con los datos demo y convertir un prospecto crea paciente + paquete.
 //
 // Requisitos: los mismos del gate de aislamiento (API en 5055 y el seed demo).
 import { test, expect, type APIRequestContext } from "@playwright/test";
@@ -469,5 +470,88 @@ test.describe("Evolución agrupada por paquete", () => {
       api, laura.token, `/api/v1/patients/${patientId}/evolution`);
     expect(evolucion.grupos[0].sesiones.length).toBeGreaterThan(0);
     expect(evolucion.grupos[0].porcentajePagado).toBeNull();
+  });
+});
+
+test.describe("Valoraciones: embudo y conversión", () => {
+  test("los datos demo dan 3 de 8 aceptadas y el monto aceptado cuadra", async ({ request: api }) => {
+    const token = (await login(api, ADMIN_EMAIL, ADMIN_PASSWORD)).token;
+
+    const valoraciones = await get<{
+      id: string; estado: string; esProspecto: boolean; patientId: string | null;
+      patientPackageId: string | null; precioCotizado: number; motivoRechazo: string | null;
+      fotos: unknown[];
+    }[]>(api, token, "/api/v1/valuations");
+
+    const delMes = valoraciones.filter((v) => v.estado);
+    expect(delMes.length, "el seed demo siembra 8 valoraciones").toBeGreaterThanOrEqual(8);
+
+    const aceptadas = delMes.filter((v) => v.estado === "Acepto");
+    const pendientes = delMes.filter((v) => v.estado === "Pendiente");
+    const rechazadas = delMes.filter((v) => v.estado === "Rechazo");
+    expect(aceptadas.length).toBe(3);
+    expect(pendientes.length).toBe(3);
+    expect(rechazadas.length).toBe(2);
+
+    // Las aceptadas son de pacientes y llevan su paquete asignado: la trazabilidad valoración → venta
+    expect(aceptadas.every((v) => !v.esProspecto && v.patientId)).toBe(true);
+    expect(aceptadas.every((v) => v.patientPackageId), "cada aceptada enlaza su asignación").toBe(true);
+
+    // Las pendientes son prospectos sin cédula y una trae foto
+    expect(pendientes.every((v) => v.esProspecto && !v.patientId)).toBe(true);
+    expect(pendientes.some((v) => v.fotos.length > 0), "una pendiente trae foto Antes").toBe(true);
+
+    // Las rechazadas dicen por qué
+    expect(rechazadas.every((v) => !!v.motivoRechazo)).toBe(true);
+    expect(rechazadas.map((v) => v.motivoRechazo!.toLowerCase()).some((m) => m.includes("precio"))).toBe(true);
+    expect(rechazadas.map((v) => v.motivoRechazo!.toLowerCase()).some((m) => m.includes("pensar"))).toBe(true);
+
+    const stats = await get<{
+      total: number; pendientes: number; aceptadas: number; rechazadas: number;
+      tasaConversion: number; valorCotizado: number; valorAceptado: number;
+    }>(api, token, "/api/v1/valuations/stats");
+
+    expect(stats).toMatchObject({ total: 8, pendientes: 3, aceptadas: 3, rechazadas: 2 });
+    expect(Number(stats.tasaConversion.toFixed(3)), "3 de 8 = 37,5 %").toBe(0.375);
+    expect(stats.valorCotizado).toBe(delMes.reduce((sum, v) => sum + v.precioCotizado, 0));
+    expect(stats.valorAceptado).toBe(aceptadas.reduce((sum, v) => sum + v.precioCotizado, 0));
+  });
+
+  test("convertir un prospecto crea el paciente con su paquete y lo deja en la ficha", async ({ request: api }) => {
+    const token = (await login(api, ADMIN_EMAIL, ADMIN_PASSWORD)).token;
+    const users = await get<{ items: { id: string; rol: string }[] }>(api, token, "/api/v1/users?page=1&pageSize=50");
+    const esteticistId = users.items.find((u) => u.rol === "Esteticista")!.id;
+    const packages = await get<{ items: { id: string; nombre: string }[] }>(api, token, "/api/v1/packages?page=1&pageSize=20");
+    const paquete = packages.items[0];
+
+    const valoracion = await post<{ id: string }>(api, token, "/api/v1/valuations", {
+      prospectoNombre: `Prospecto E2E ${RUN}`, prospectoTelefono: "3001112233",
+      esteticistId, fecha: `${today()}T10:00:00`,
+      diagnostico: "Consulta de prueba automatizada.",
+      tratamientoSugerido: "Plan sugerido de prueba.",
+      packageId: paquete.id, precioCotizado: 500_000,
+    });
+
+    const convertida = await post<{ patientId: string; patientPackageId: string | null }>(
+      api, token, `/api/v1/valuations/${valoracion.id}/convert`,
+      { cedula: `81${RUN}`, precioAcordado: 500_000, fechaInicio: today() });
+
+    expect(convertida.patientId, "la conversión crea el paciente").toBeTruthy();
+    expect(convertida.patientPackageId, "y le asigna el paquete cotizado").toBeTruthy();
+
+    // La valoración queda aceptada y apuntando a la asignación
+    const despues = await get<{ estado: string; esProspecto: boolean; patientPackageId: string | null }>(
+      api, token, `/api/v1/valuations/${valoracion.id}`);
+    expect(despues).toMatchObject({ estado: "Acepto", esProspecto: false, patientPackageId: convertida.patientPackageId });
+
+    // Y el paquete aparece en la ficha del paciente nuevo
+    const asignados = await get<{ id: string; packageNombre: string }[]>(
+      api, token, `/api/v1/patient-packages/patient/${convertida.patientId}`);
+    expect(asignados.map((p) => p.id)).toContain(convertida.patientPackageId);
+    expect(asignados[0].packageNombre).toBe(paquete.nombre);
+
+    await api.delete(`/api/v1/patient-packages/${convertida.patientPackageId}`, auth(token));
+    await api.delete(`/api/v1/valuations/${valoracion.id}`, auth(token));
+    await api.delete(`/api/v1/patients/${convertida.patientId}`, auth(token));
   });
 });

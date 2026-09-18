@@ -20,12 +20,14 @@ public class ClinicalRecordsController : ControllerBase
     private readonly AppDbContext _db;
     private readonly AttachmentService _attachments;
     private readonly CabinConsumptionService _consumption;
+    private readonly EvolutionService _evolution;
 
-    public ClinicalRecordsController(AppDbContext db, AttachmentService attachments, CabinConsumptionService consumption)
+    public ClinicalRecordsController(AppDbContext db, AttachmentService attachments, CabinConsumptionService consumption, EvolutionService evolution)
     {
         _db = db;
         _attachments = attachments;
         _consumption = consumption;
+        _evolution = evolution;
     }
 
     [HttpGet]
@@ -96,6 +98,11 @@ public class ClinicalRecordsController : ControllerBase
                 EsteticistNombre = n.Esteticist.Nombre + " " + n.Esteticist.Apellido,
                 Procedimiento = n.Procedimiento,
                 Observaciones = n.Observaciones,
+                ZonaTratada = n.ZonaTratada,
+                Parametros = n.Parametros,
+                IndicacionesPost = n.IndicacionesPost,
+                ProximaSesionSugerida = n.ProximaSesionSugerida,
+                EvaluacionPaciente = n.EvaluacionPaciente,
                 ProductosUsados = n.ProductosUsados,
                 FechaCreacion = n.FechaCreacion
             })
@@ -139,6 +146,11 @@ public class ClinicalRecordsController : ControllerBase
             EsteticistId = request.EsteticistId,
             Procedimiento = request.Procedimiento,
             Observaciones = request.Observaciones,
+            ZonaTratada = Limpio(request.ZonaTratada),
+            Parametros = Limpio(request.Parametros),
+            IndicacionesPost = Limpio(request.IndicacionesPost),
+            ProximaSesionSugerida = request.ProximaSesionSugerida,
+            EvaluacionPaciente = request.EvaluacionPaciente,
             FechaCreacion = DateTime.Now
         };
 
@@ -173,6 +185,11 @@ public class ClinicalRecordsController : ControllerBase
                 EsteticistId = note.EsteticistId,
                 Procedimiento = note.Procedimiento,
                 Observaciones = note.Observaciones,
+                ZonaTratada = note.ZonaTratada,
+                Parametros = note.Parametros,
+                IndicacionesPost = note.IndicacionesPost,
+                ProximaSesionSugerida = note.ProximaSesionSugerida,
+                EvaluacionPaciente = note.EvaluacionPaciente,
                 Productos = productos.GetValueOrDefault(note.Id, []),
                 Fotos = fotos.GetValueOrDefault(note.Id, []),
                 FechaCreacion = note.FechaCreacion
@@ -186,41 +203,10 @@ public class ClinicalRecordsController : ControllerBase
     /// Evolución del paciente: sus sesiones (notas clínicas) en orden cronológico, cada una con
     /// sus fotos Antes/Después. Las fotos van como ids: la web pide la URL firmada de cada una.
     /// </summary>
+    /// <summary>Evolución agrupada por el paquete que pagó el paciente (ver EvolutionService).</summary>
     [HttpGet("/api/v1/patients/{patientId:guid}/evolution")]
-    public async Task<IActionResult> GetEvolution(Guid patientId)
-    {
-        var record = await _db.ClinicalRecords
-            .AsNoTracking()
-            .FirstOrDefaultAsync(r => r.PatientId == patientId);
-
-        if (record is null)
-            return NotFound(new { error = "Historia clínica no encontrada." });
-
-        var sessions = await _db.ClinicalNotes
-            .AsNoTracking()
-            .Where(n => n.ClinicalRecordId == record.Id)
-            .OrderBy(n => n.FechaCreacion)
-            .Select(n => new EvolutionSessionDto
-            {
-                NoteId = n.Id,
-                AppointmentId = n.AppointmentId,
-                Fecha = n.FechaCreacion,
-                Procedimiento = n.Procedimiento,
-                Esteticista = n.Esteticist.Nombre + " " + n.Esteticist.Apellido,
-                Observaciones = n.Observaciones,
-                ProductosUsados = n.ProductosUsados
-            })
-            .ToListAsync();
-
-        var fotos = await LoadPhotosAsync(sessions.Select(s => s.NoteId).ToList());
-        var consumo = await LoadProductsAsync(sessions.Select(s => s.NoteId).ToList());
-        foreach (var session in sessions)
-            session.Productos = consumo.GetValueOrDefault(session.NoteId, []);
-        foreach (var session in sessions)
-            session.Fotos = fotos.GetValueOrDefault(session.NoteId, []);
-
-        return Ok(sessions);
-    }
+    public async Task<ActionResult<EvolutionDto>> GetEvolution(Guid patientId, CancellationToken ct) =>
+        Ok(await _evolution.GetAsync(patientId, verFinanzas: !User.IsInRole("Esteticista"), ct));
 
     /// <summary>Historial de consumo de cabina del paciente: qué producto se gastó en cada sesión.</summary>
     [HttpGet("~/api/v1/patients/{patientId:guid}/consumption")]
@@ -257,6 +243,9 @@ public class ClinicalRecordsController : ControllerBase
 
         return rows.GroupBy(r => r.ClinicalNoteId).ToDictionary(g => g.Key, g => g.Select(r => r.Dto).ToList());
     }
+
+    /// <summary>Un campo opcional en blanco se guarda como null, no como cadena vacía.</summary>
+    private static string? Limpio(string? valor) => string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();
 
     private Guid GetUserId() =>
         Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id) ? id : Guid.Empty;

@@ -15,6 +15,11 @@ public class ClinicalNoteDto
     public string EsteticistNombre { get; set; } = string.Empty;
     public string Procedimiento { get; set; } = string.Empty;
     public string Observaciones { get; set; } = string.Empty;
+    public string? ZonaTratada { get; set; }
+    public string? Parametros { get; set; }
+    public string? IndicacionesPost { get; set; }
+    public DateOnly? ProximaSesionSugerida { get; set; }
+    public int? EvaluacionPaciente { get; set; }
     /// <summary>Texto libre heredado: solo las notas anteriores al consumo de cabina lo traen.</summary>
     public string? ProductosUsados { get; set; }
     /// <summary>Consumo de cabina de la sesión.</summary>

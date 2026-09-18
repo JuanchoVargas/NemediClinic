@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { startChapter, step, endChapter } from "../helpers/guide";
 import { uiLogin, chooseCombobox, pickCombobox, pickSelect, option, dialog, closeDialog, lastToast, tab, activePanel, headerMenu, openHeaderMenu, menuItem, selectCalendarSlot, goToCalendarWeek, readState } from "../walk";
-import { apiLogin, CREDS, req, localDate, localIso, dayAt } from "../api";
+import { apiLogin, CREDS, req, listAll, safeDelete, localDate, localIso, dayAt } from "../api";
 
 test.describe.configure({ mode: "serial" });
 
@@ -29,8 +29,15 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   const sa = await apiLogin(CREDS.superadmin.email, CREDS.superadmin.password);
   for (const id of created) await purgeAppointment(sa.token, id);
-  const st = readState() as { linkedAppointmentId?: string; walkPackageId?: string };
+  const st = readState() as { linkedAppointmentId?: string; walkPackageId?: string; julianaId?: string };
   if (st.linkedAppointmentId) await purgeAppointment(sa.token, st.linkedAppointmentId);
+  // La asignación se borra aparte: desde que guarda su copia del catálogo, borrar el paquete ya
+  // no la esconde y cada corrida dejaría una tarjeta más en la ficha de Juliana.
+  if (st.walkPackageId && st.julianaId) {
+    const asignadas = await listAll<{ id: string; packageId: string }>(sa.token, `/api/v1/patient-packages/patient/${st.julianaId}`);
+    for (const a of asignadas.filter((x) => x.packageId === st.walkPackageId))
+      await safeDelete(sa.token, `/api/v1/patient-packages/${a.id}`);
+  }
   if (st.walkPackageId) await req("DELETE", `/api/v1/packages/${st.walkPackageId}`, { token: sa.token });
 });
 

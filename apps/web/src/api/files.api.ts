@@ -13,11 +13,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, API_BASE_URL } from "@/lib/axios";
+import type { Evolution } from "@/types/clinical-record";
 import type {
   Attachment,
   AttachmentEntityType,
   AttachmentKind,
-  EvolutionSession,
   SignedImage,
 } from "@/types/file";
 
@@ -85,12 +85,12 @@ export async function fetchSignedImage(id: string): Promise<SignedImage> {
   };
 }
 
-/** Sesiones del paciente en orden cronológico, con sus fotos Antes/Después. */
+/** Evolución del paciente agrupada por paquete (ver EvolutionService en el backend). */
 export function usePatientEvolution(patientId: string | undefined) {
   return useQuery({
     queryKey: ["patients", patientId, "evolution"],
     queryFn: async () => {
-      const { data } = await api.get<EvolutionSession[]>(`/api/v1/patients/${patientId}/evolution`);
+      const { data } = await api.get<Evolution>(`/api/v1/patients/${patientId}/evolution`);
       return data;
     },
     enabled: !!patientId,

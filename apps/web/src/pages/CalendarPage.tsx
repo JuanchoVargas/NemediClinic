@@ -105,23 +105,36 @@ export function CalendarPage() {
   });
   const [esteticistFilter, setEsteticistFilter] = useState<string>("all");
 
-  // /calendar?patientId=… (botón "Agendar" de la ficha del paciente): abre el diálogo de
-  // nueva cita con ese paciente ya elegido y la próxima hora en punto.
-  const { patientId: presetPatientId } = useSearch({ strict: false }) as { patientId?: string };
+  // Precarga desde la ficha del paciente (botón "Agendar" y "Agendar" de la próxima sesión
+  // sugerida en Evolución): paciente, procedimiento y fecha. Sin ?fecha= se propone la próxima
+  // hora en punto; con ella, las 9:00 de ese día, que es cuando abre la clínica.
+  const {
+    patientId: presetPatientId,
+    procedureId: presetProcedureId,
+    fecha: presetFecha,
+    appointmentId: presetAppointmentId,
+  } = useSearch({ strict: false }) as { patientId?: string; procedureId?: string; fecha?: string; appointmentId?: string };
 
   // Estado de diálogos. `seq` remonta el formulario de creación en cada apertura.
   const [createSheet, setCreateSheet] = useState<{
     open: boolean;
     defaultStart?: Date;
     defaultPatientId?: string;
+    defaultProcedureId?: string;
     seq: number;
   }>(() => {
     if (!presetPatientId) return { open: false, seq: 0 };
-    const nextHour = new Date();
-    nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
-    return { open: true, defaultStart: nextHour, defaultPatientId: presetPatientId, seq: 0 };
+    const inicio = presetFecha ? new Date(`${presetFecha}T09:00:00`) : new Date();
+    if (!presetFecha) inicio.setHours(inicio.getHours() + 1, 0, 0, 0);
+    return {
+      open: true,
+      defaultStart: inicio,
+      defaultPatientId: presetPatientId,
+      defaultProcedureId: presetProcedureId,
+      seq: 0,
+    };
   });
-  const [detailSheetId, setDetailSheetId] = useState<string | undefined>();
+  const [detailSheetId, setDetailSheetId] = useState<string | undefined>(presetAppointmentId);
 
   const { data: appointments, isLoading } = useAppointments(
     range.start,
@@ -258,6 +271,7 @@ export function CalendarPage() {
         open={createSheet.open}
         defaultStart={createSheet.defaultStart}
         defaultPatientId={createSheet.defaultPatientId}
+        defaultProcedureId={createSheet.defaultProcedureId}
         onClose={() => setCreateSheet((s) => ({ ...s, open: false }))}
       />
       <AppointmentDetailSheet
@@ -275,11 +289,13 @@ function CreateAppointmentSheet({
   open,
   defaultStart,
   defaultPatientId,
+  defaultProcedureId,
   onClose,
 }: {
   open: boolean;
   defaultStart?: Date;
   defaultPatientId?: string;
+  defaultProcedureId?: string;
   onClose: () => void;
 }) {
   const create = useCreateAppointment();
@@ -299,14 +315,14 @@ function CreateAppointmentSheet({
   const { data: presetPatient } = usePatient(defaultPatientId);
   const [pickedPatient, setPatient] = useState<PatientSummary | null | undefined>(undefined);
   const patient: PatientSummary | null = pickedPatient === undefined ? (presetPatient ?? null) : pickedPatient;
-  const [procedureId, setProcedureId] = useState<string>("");
+  const [procedureId, setProcedureId] = useState<string>(defaultProcedureId ?? "");
   const [esteticistId, setEsteticistId] = useState<string>(lockedToSelf ? userId : "");
   const [fechaInicio, setFechaInicio] = useState<string>(initialFecha);
   const [notas, setNotas] = useState<string>("");
 
   const createDirty =
     !!pickedPatient ||
-    !!procedureId ||
+    procedureId !== (defaultProcedureId ?? "") ||
     !!notas ||
     fechaInicio !== initialFecha ||
     (!lockedToSelf && !!esteticistId);

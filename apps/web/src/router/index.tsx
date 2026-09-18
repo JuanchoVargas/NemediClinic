@@ -157,8 +157,17 @@ const daySheetRoute = createRoute({
 const calendarRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/calendar",
-  // ?patientId= abre "Nueva cita" con el paciente elegido (acción rápida de la ficha)
-  validateSearch: z.object({ patientId: z.string().optional() }),
+  // Precarga de "Nueva cita" desde la ficha del paciente:
+  //   ?patientId=       paciente elegido (acción rápida "Agendar")
+  //   &procedureId=     procedimiento de la sesión anterior
+  //   &fecha=           próxima sesión sugerida (YYYY-MM-DD)
+  //   ?appointmentId=   abre el detalle de una cita (enlace "Ver la cita" de Evolución)
+  validateSearch: z.object({
+    patientId: z.string().optional(),
+    procedureId: z.string().optional(),
+    fecha: z.string().optional(),
+    appointmentId: z.string().optional(),
+  }),
   component: CalendarPage,
 });
 

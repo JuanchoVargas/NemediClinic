@@ -253,6 +253,14 @@ public class AppDbContext : DbContext
             .HasForeignKey(pp => pp.PackageId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // ── ClinicalNote ────────────────────────────────────
+        modelBuilder.Entity<ClinicalNote>(n =>
+        {
+            n.Property(x => x.ZonaTratada).HasMaxLength(150);
+            n.Property(x => x.Parametros).HasMaxLength(300);
+            n.Property(x => x.IndicacionesPost).HasMaxLength(1000);
+        });
+
         // ── ClinicalNoteProduct ─────────────────────────────
         modelBuilder.Entity<ClinicalNoteProduct>(cnp =>
         {

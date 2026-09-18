@@ -91,6 +91,7 @@ builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 builder.Services.AddSingleton<FileTokenService>();
 builder.Services.AddScoped<AttachmentService>();
 builder.Services.AddScoped<CabinConsumptionService>();
+builder.Services.AddScoped<EvolutionService>();
 builder.Services.AddScoped<DemoImageSeeder>();
 
 // ── Dashboard y ciclo de vida de paquetes ───────────────────────

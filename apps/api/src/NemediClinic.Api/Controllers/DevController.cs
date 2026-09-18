@@ -96,6 +96,7 @@ public class DevController : ControllerBase
         if (alreadySeeded)
         {
             await BackfillPaymentTraceabilityAsync(superAdmin.Id);
+            await BackfillEvolutionDetailAsync();
             await SeedCabinConsumptionAsync(superAdmin.Id);
             await _db.SaveChangesAsync();
             // Las imágenes de muestra tienen su propia idempotencia: una base sembrada antes
@@ -236,25 +237,41 @@ public class DevController : ControllerBase
         _db.Appointments.AddRange(appointments);
 
         // Notas de evolución para las dos citas completadas ligadas a sesión.
-        var note1 = new ClinicalNote
-        {
-            ClinicalRecordId = records[p1.Id].Id, AppointmentId = appointments[0].Id, EsteticistId = laura.Id,
-            Procedimiento = limpieza.Nombre,
-            Observaciones = "Piel con leve enrojecimiento post extracción, tolerancia buena. Se aplicó mascarilla calmante.",
-            ProductosUsados = "Crema hidratante facial, Mascarilla de colágeno",
-            FechaCreacion = At(-1, 10)
-        };
-        var note2 = new ClinicalNote
-        {
-            ClinicalRecordId = records[p3.Id].Id, AppointmentId = appointments[1].Id, EsteticistId = camila.Id,
-            Procedimiento = masaje.Nombre,
-            Observaciones = "Tercera sesión. Reducción de 1,5 cm en contorno de cintura respecto a la medición inicial.",
-            ProductosUsados = "Aceite reductor",
-            FechaCreacion = At(-1, 12)
-        };
-        _db.ClinicalNotes.AddRange(note1, note2);
-        pp1.Sessions[1].ClinicalNoteId = note1.Id;
-        pp3.Sessions[2].ClinicalNoteId = note2.Id;
+        // Una nota por sesión completada: así la pestaña Evolución muestra el tratamiento
+        // agrupado por paquete y con progresión, no una sola sesión suelta.
+        var note1a = Nota(records[p1.Id].Id, null, laura.Id, limpieza.Nombre, At(-10, 10),
+            "Primera sesión del plan. Piel deshidratada, poros dilatados en zona T. Extracción completa sin incidentes.",
+            zona: "Rostro completo", parametros: "Vapor 10 min · extracción manual · mascarilla calmante 15 min",
+            indicaciones: "No exponerse al sol 48 h. Protector solar cada 3 horas. No maquillaje hasta mañana.",
+            proxima: todayOnly.AddDays(-1), evaluacion: 4);
+        var note1b = Nota(records[p1.Id].Id, appointments[0].Id, laura.Id, limpieza.Nombre, At(-1, 10),
+            "Segunda sesión. Piel con leve enrojecimiento post extracción, tolerancia buena. Se nota mejoría en textura frente a la primera sesión.",
+            zona: "Rostro completo", parametros: "Vapor 8 min · extracción suave · mascarilla de colágeno",
+            indicaciones: "Mantener hidratación nocturna. Evitar exfoliantes esta semana.",
+            proxima: todayOnly.AddDays(13), evaluacion: 5);
+
+        var note3a = Nota(records[p3.Id].Id, null, camila.Id, masaje.Nombre, At(-9, 11),
+            "Primera sesión. Medición inicial: cintura 82 cm, abdomen 91 cm. Tejido con retención marcada.",
+            zona: "Abdomen y cintura", parametros: "Maniobras de drenaje 40 min · presión media",
+            indicaciones: "Tomar 2 litros de agua al día. Evitar sal las próximas 48 h.",
+            proxima: todayOnly.AddDays(-5), evaluacion: 3);
+        var note3b = Nota(records[p3.Id].Id, null, camila.Id, masaje.Nombre, At(-5, 11),
+            "Segunda sesión. Cintura 81 cm. Mejor respuesta del tejido, menos dolor durante las maniobras.",
+            zona: "Abdomen y cintura", parametros: "Drenaje 45 min · presión media-alta",
+            indicaciones: "Continuar con la hidratación. Caminar 30 min diarios.",
+            proxima: todayOnly.AddDays(-1), evaluacion: 4);
+        var note3c = Nota(records[p3.Id].Id, appointments[1].Id, camila.Id, masaje.Nombre, At(-1, 12),
+            "Tercera sesión. Reducción de 1,5 cm en contorno de cintura respecto a la medición inicial.",
+            zona: "Abdomen y cintura", parametros: "Drenaje 45 min · presión alta · terminación con maniobras de cierre",
+            indicaciones: "Mantener rutina de caminata. Próxima medición en la sesión 5.",
+            proxima: todayOnly.AddDays(6), evaluacion: 5);
+
+        _db.ClinicalNotes.AddRange(note1a, note1b, note3a, note3b, note3c);
+        pp1.Sessions[0].ClinicalNoteId = note1a.Id;
+        pp1.Sessions[1].ClinicalNoteId = note1b.Id;
+        pp3.Sessions[0].ClinicalNoteId = note3a.Id;
+        pp3.Sessions[1].ClinicalNoteId = note3b.Id;
+        pp3.Sessions[2].ClinicalNoteId = note3c.Id;
 
         // ── Consumo de cabina de las citas completadas del historial ────
         // Se siembra al final de SeedDemo, cuando ya existen productos, notas y citas.
@@ -494,7 +511,10 @@ public class DevController : ControllerBase
         var pp = new PatientPackage
         {
             PatientId = patient.Id, PackageId = package.Id, PrecioAcordado = precio, FechaInicio = inicio,
-            Estado = PackageStatus.Activo, SesionesCompletadas = completed
+            Estado = PackageStatus.Activo, SesionesCompletadas = completed,
+            // Copia del catálogo, igual que PatientPackageService.AssignAsync
+            PackageNombre = package.Nombre, SesionesTotales = package.SesionesTotales,
+            VigenciaDias = package.VigenciaDias, DiasAlertaVencimiento = package.DiasAlertaVencimiento
         };
         _db.PatientPackages.Add(pp);
 
@@ -522,6 +542,91 @@ public class DevController : ControllerBase
     }
 
     // Ningún pago demo supera el precio acordado de su paquete (la API lo rechazaría con 422).
+    /// <summary>
+    /// Una base sembrada antes del detalle de sesión: las notas demo reciben zona, parámetros,
+    /// indicaciones y evaluación, y cada sesión de paquete ya completada que no tenga nota recibe
+    /// una, para que la pestaña Evolución muestre el tratamiento agrupado y con progresión.
+    /// Idempotente: si alguna nota ya tiene ZonaTratada, no hace nada.
+    /// </summary>
+    private async Task BackfillEvolutionDetailAsync()
+    {
+        if (await _db.ClinicalNotes.AnyAsync(n => n.ZonaTratada != null))
+            return;
+
+        var hoy = DateOnly.FromDateTime(DateTime.Now);
+
+        // 1. Detalle para las notas que ya existen
+        foreach (var nota in await _db.ClinicalNotes.ToListAsync())
+        {
+            nota.ZonaTratada ??= "Rostro completo";
+            nota.Parametros ??= "Según protocolo del procedimiento";
+            nota.IndicacionesPost ??= "Protector solar y buena hidratación. Consultar ante cualquier molestia.";
+            nota.ProximaSesionSugerida ??= hoy.AddDays(14);
+            nota.EvaluacionPaciente ??= 4;
+        }
+
+        // 2. Una nota por sesión completada que aún no tenga una
+        var sesiones = await _db.PatientPackageSessions
+            .Where(s => s.Estado == SessionStatus.Completada && s.ClinicalNoteId == null)
+            .Select(s => new
+            {
+                s.Id,
+                s.Numero,
+                s.FechaCompletada,
+                Procedimiento = s.Procedure.Nombre,
+                s.PatientPackage.PatientId,
+                Paquete = s.PatientPackage.PackageNombre
+            })
+            .ToListAsync();
+        if (sesiones.Count == 0)
+            return;
+
+        var patientIds = sesiones.Select(s => s.PatientId).Distinct().ToList();
+        var records = await _db.ClinicalRecords
+            .Where(r => patientIds.Contains(r.PatientId))
+            .ToDictionaryAsync(r => r.PatientId, r => r.Id);
+        var esteticistas = await _db.Users
+            .Where(u => u.Rol == UserRole.Esteticista && u.IsActive)
+            .OrderBy(u => u.Email)
+            .ToListAsync();
+        if (esteticistas.Count == 0)
+            return;
+
+        // El Id de BaseEntity se genera en cliente, así que la sesión se puede enlazar en el acto
+        var n = 0;
+        foreach (var sesion in sesiones)
+        {
+            if (!records.TryGetValue(sesion.PatientId, out var recordId)) continue;
+            var fecha = sesion.FechaCompletada ?? DateTime.Now.AddDays(-sesion.Numero);
+            var nota = new ClinicalNote
+            {
+                ClinicalRecordId = recordId,
+                EsteticistId = esteticistas[n++ % esteticistas.Count].Id,
+                Procedimiento = sesion.Procedimiento,
+                Observaciones = $"Sesión {sesion.Numero} de {sesion.Paquete}. Evolución dentro de lo esperado, buena tolerancia al procedimiento.",
+                ZonaTratada = "Según el procedimiento",
+                Parametros = "Según protocolo",
+                IndicacionesPost = "Hidratación y protector solar. Evitar exposición directa 48 h.",
+                ProximaSesionSugerida = DateOnly.FromDateTime(fecha).AddDays(14),
+                EvaluacionPaciente = 4 + (sesion.Numero % 2),
+                FechaCreacion = fecha
+            };
+            _db.ClinicalNotes.Add(nota);
+            var entidad = await _db.PatientPackageSessions.FirstAsync(s => s.Id == sesion.Id);
+            entidad.ClinicalNoteId = nota.Id;
+        }
+    }
+
+    private static ClinicalNote Nota(
+        Guid recordId, Guid? appointmentId, Guid esteticistId, string procedimiento, DateTime fecha,
+        string observaciones, string zona, string parametros, string indicaciones, DateOnly proxima, int evaluacion) => new()
+    {
+        ClinicalRecordId = recordId, AppointmentId = appointmentId, EsteticistId = esteticistId,
+        Procedimiento = procedimiento, Observaciones = observaciones, FechaCreacion = fecha,
+        ZonaTratada = zona, Parametros = parametros, IndicacionesPost = indicaciones,
+        ProximaSesionSugerida = proxima, EvaluacionPaciente = evaluacion
+    };
+
     private static PatientPayment Pay(AssignedPackage pp, decimal monto, int dayOffset, PaymentMethod metodo, string? obs, Guid registradoPor)
     {
         var payment = new PatientPayment

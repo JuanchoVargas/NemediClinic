@@ -7,6 +7,7 @@
 //     al paciente; sin cita completada no mueve stock y nunca lo deja negativo.
 //   · Un paquete de catálogo eliminado no esconde ni altera las asignaciones ya vendidas.
 //   · Recepción crea esteticistas, no administradores.
+//   · La evolución llega agrupada por paquete, con el detalle de cada sesión y sin dinero para la esteticista.
 //
 // Requisitos: los mismos del gate de aislamiento (API en 5055 y el seed demo).
 import { test, expect, type APIRequestContext } from "@playwright/test";
@@ -19,8 +20,11 @@ const ADMIN_PASSWORD = process.env.E2E_SUPERADMIN_PASSWORD ?? "Admin2026!";
 const RUN = Date.now().toString().slice(-8);
 
 const pad = (n: number) => String(n).padStart(2, "0");
-const today = () => {
+const today = () => enDias(0);
+/** Fecha local a N días de hoy (YYYY-MM-DD). Los tests agendan lejos para no chocar con la demo. */
+const enDias = (n: number) => {
   const d = new Date();
+  d.setDate(d.getDate() + n);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 const auth = (token: string) => ({ headers: { Authorization: `Bearer ${token}` } });
@@ -350,5 +354,120 @@ test.describe("Quién puede crear usuarios", () => {
     expect((await otroAdmin.json()).error).toContain("Solo el dueño");
 
     for (const id of creados) await api.delete(`/api/v1/users/${id}`, auth(superToken));
+  });
+});
+
+test.describe("Evolución agrupada por paquete", () => {
+  // Los ids se guardan fuera del test: así la limpieza corre aunque una aserción falle
+  // (si no, cada corrida fallida dejaría una cita que choca con la siguiente).
+  let token = "";
+  let patientId = "";
+  let packageId = "";
+  let patientPackageId = "";
+  let appointmentId = "";
+  let esteticistId = "";
+  let procedimientos: { id: string; nombre: string; duracionMinutos: number }[] = [];
+
+  test.beforeAll(async ({ request: api }) => {
+    token = (await login(api, ADMIN_EMAIL, ADMIN_PASSWORD)).token;
+
+    const patient = await post<{ id: string }>(api, token, "/api/v1/patients", {
+      nombre: "Evolución", apellido: `E2E ${RUN}`, cedula: `80${RUN}`, telefono: "3000000003",
+    });
+    patientId = patient.id;
+
+    const users = await get<{ items: { id: string; rol: string }[] }>(api, token, "/api/v1/users?page=1&pageSize=50");
+    esteticistId = users.items.find((u) => u.rol === "Esteticista")!.id;
+    procedimientos = (await get<{ items: { id: string; nombre: string; duracionMinutos: number }[] }>(
+      api, token, "/api/v1/procedures?page=1&pageSize=20")).items;
+
+    const paquete = await post<{ id: string }>(api, token, "/api/v1/packages", {
+      nombre: `Paquete evolución ${RUN}`, descripcion: "Dos sesiones", precioTotal: 300_000,
+      sesionesTotales: 2, vigenciaDias: 60, diasAlertaVencimiento: 10,
+    });
+    packageId = paquete.id;
+    await post(api, token, `/api/v1/packages/${packageId}/procedures`, { procedureId: procedimientos[0].id, cantidadSesiones: 2 });
+
+    const asignacion = await post<{ id: string }>(api, token, "/api/v1/patient-packages", {
+      patientId, packageId, precioAcordado: 300_000, fechaInicio: today(),
+    });
+    patientPackageId = asignacion.id;
+    await post(api, token, `/api/v1/patient-packages/${patientPackageId}/payments`, { monto: 150_000, fechaPago: today(), metodoPago: "Efectivo" });
+
+    // Una nota ligada a la sesión 1 del paquete, con todo el detalle. La cita va lejos en el
+    // calendario para no chocar con la agenda demo.
+    const detalle = await get<{ sesiones: { id: string; numero: number }[] }>(api, token, `/api/v1/patient-packages/${patientPackageId}`);
+    const sesion1 = detalle.sesiones.find((s) => s.numero === 1)!;
+    const branches = await get<{ items: { id: string }[] }>(api, token, "/api/v1/branches");
+    const cita = await post<{ id: string }>(api, token, "/api/v1/appointments", {
+      patientId, esteticistId, procedureId: procedimientos[0].id, branchId: branches.items[0].id,
+      fechaInicio: `${enDias(45)}T08:00:00`, fechaFin: `${enDias(45)}T09:00:00`, patientPackageSessionId: sesion1.id,
+    });
+    appointmentId = cita.id;
+
+    await post(api, token, `/api/v1/patients/${patientId}/clinical-record/notes`, {
+      esteticistId, appointmentId, procedimiento: procedimientos[0].nombre,
+      observaciones: "Sesión del paquete.", zonaTratada: "Abdomen",
+      parametros: "Intensidad media · 30 min", indicacionesPost: "Tomar agua.",
+      proximaSesionSugerida: today(), evaluacionPaciente: 5, productos: [],
+    });
+
+    // Una nota suelta, sin cita
+    await post(api, token, `/api/v1/patients/${patientId}/clinical-record/notes`, {
+      esteticistId, procedimiento: procedimientos[1].nombre, observaciones: "Consulta aparte.", productos: [],
+    });
+  });
+
+  test.afterAll(async ({ request: api }) => {
+    if (appointmentId) {
+      await api.put(`/api/v1/appointments/${appointmentId}/status`, { ...auth(token), data: { estado: "Agendada" } });
+      await api.delete(`/api/v1/appointments/${appointmentId}`, auth(token));
+    }
+    if (patientPackageId) await api.delete(`/api/v1/patient-packages/${patientPackageId}`, auth(token));
+    if (packageId) await api.delete(`/api/v1/packages/${packageId}`, auth(token));
+    if (patientId) await api.delete(`/api/v1/patients/${patientId}`, auth(token));
+  });
+
+  test("las sesiones del paquete van en su grupo y las notas sueltas en el suyo", async ({ request: api }) => {
+    const evolucion = await get<{
+      grupos: {
+        patientPackageId: string | null; nombre: string; estado: string;
+        sesionesCompletadas: number; sesionesTotales: number; porcentajePagado: number | null;
+        sesiones: { numeroSesion: number | null; zonaTratada: string | null; parametros: string | null; evaluacionPaciente: number | null; duracionMinutos: number | null; procedureId: string | null }[];
+      }[];
+    }>(api, token, `/api/v1/patients/${patientId}/evolution`);
+
+    expect(evolucion.grupos).toHaveLength(2);
+
+    const delPaquete = evolucion.grupos[0];
+    expect(delPaquete.patientPackageId).toBe(patientPackageId);
+    expect(delPaquete.nombre).toBe(`Paquete evolución ${RUN}`);
+    expect(delPaquete.estado).toBe("Activo");
+    expect(delPaquete.sesionesTotales).toBe(2);
+    expect(delPaquete.porcentajePagado, "la mitad pagada").toBe(50);
+    expect(delPaquete.sesiones).toHaveLength(1);
+    expect(delPaquete.sesiones[0]).toMatchObject({
+      numeroSesion: 1, zonaTratada: "Abdomen", parametros: "Intensidad media · 30 min",
+      evaluacionPaciente: 5,
+      // La duración real sale de la cita, que el API cierra con la duración del procedimiento
+      duracionMinutos: procedimientos[0].duracionMinutos,
+    });
+
+    const sueltas = evolucion.grupos[1];
+    expect(sueltas.patientPackageId).toBeNull();
+    expect(sueltas.nombre).toBe("Sesiones sueltas");
+    expect(sueltas.sesiones).toHaveLength(1);
+    expect(sueltas.sesiones[0].numeroSesion).toBeNull();
+    // Sin cita no hay duración, pero el procedimiento se resuelve por nombre para poder agendar
+    expect(sueltas.sesiones[0].duracionMinutos).toBeNull();
+    expect(sueltas.sesiones[0].procedureId).toBe(procedimientos[1].id);
+  });
+
+  test("la esteticista ve la evolución pero no el dinero", async ({ request: api }) => {
+    const laura = await login(api, "laura.perez@nemedi.demo", "Demo2026!");
+    const evolucion = await get<{ grupos: { porcentajePagado: number | null; sesiones: unknown[] }[] }>(
+      api, laura.token, `/api/v1/patients/${patientId}/evolution`);
+    expect(evolucion.grupos[0].sesiones.length).toBeGreaterThan(0);
+    expect(evolucion.grupos[0].porcentajePagado).toBeNull();
   });
 });

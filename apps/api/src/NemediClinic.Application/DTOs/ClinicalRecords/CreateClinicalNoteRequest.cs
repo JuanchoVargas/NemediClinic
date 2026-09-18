@@ -15,6 +15,22 @@ public class CreateClinicalNoteRequest
     [Required, MaxLength(4000)]
     public string Observaciones { get; set; } = string.Empty;
 
+    // ── Detalle de la sesión: todo opcional ──
+    [MaxLength(150)]
+    public string? ZonaTratada { get; set; }
+
+    /// <summary>Intensidad, disparos, tiempo por zona… en texto libre.</summary>
+    [MaxLength(300)]
+    public string? Parametros { get; set; }
+
+    [MaxLength(1000)]
+    public string? IndicacionesPost { get; set; }
+
+    public DateOnly? ProximaSesionSugerida { get; set; }
+
+    [Range(1, 5)]
+    public int? EvaluacionPaciente { get; set; }
+
     /// <summary>Productos gastados en la sesión. Si la cita está Completada, salen del inventario.</summary>
     public List<NemediClinic.Application.DTOs.Inventory.ClinicalNoteProductRequest> Productos { get; set; } = [];
 
